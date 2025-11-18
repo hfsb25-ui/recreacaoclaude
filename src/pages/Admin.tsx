@@ -3,21 +3,45 @@ import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { LogOut, Download } from "lucide-react";
+import { LogOut, Download, CalendarIcon } from "lucide-react";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import jsPDF from "jspdf";
 import AgeGroupsManager from "@/components/admin/AgeGroupsManager";
 import ActivitiesManager from "@/components/admin/ActivitiesManager";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Calendar } from "@/components/ui/calendar";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { cn } from "@/lib/utils";
 
 const Admin = () => {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
+  const [exportDialogOpen, setExportDialogOpen] = useState(false);
+  const [selectedDate, setSelectedDate] = useState<Date>(new Date());
+  const [selectedAgeGroup, setSelectedAgeGroup] = useState<string>("all");
+  const [ageGroups, setAgeGroups] = useState<any[]>([]);
 
   useEffect(() => {
     checkAuth();
+    fetchAgeGroups();
   }, []);
+
+  const fetchAgeGroups = async () => {
+    const { data, error } = await supabase
+      .from("age_groups")
+      .select("*")
+      .order("sort_order", { ascending: true });
+    
+    if (error) {
+      toast.error("Erro ao carregar faixas etárias");
+      return;
+    }
+    
+    setAgeGroups(data || []);
+  };
 
   const checkAuth = async () => {
     const { data: { session } } = await supabase.auth.getSession();
@@ -33,16 +57,23 @@ const Admin = () => {
     navigate("/");
   };
 
-  const handleExportToday = async () => {
+  const handleExport = async () => {
     try {
-      const today = format(new Date(), "yyyy-MM-dd");
+      const dateStr = format(selectedDate, "yyyy-MM-dd");
       
-      // Fetch all activities for today with age group info
-      const { data: activities, error } = await supabase
+      // Build query
+      let query = supabase
         .from("activities")
         .select("*, age_groups(name, color)")
-        .eq("activity_date", today)
+        .eq("activity_date", dateStr)
         .order("start_time", { ascending: true });
+      
+      // Filter by age group if not "all"
+      if (selectedAgeGroup !== "all") {
+        query = query.eq("age_group_id", selectedAgeGroup);
+      }
+      
+      const { data: activities, error } = await query;
 
       if (error) throw error;
 
@@ -80,7 +111,7 @@ const Admin = () => {
       yPosition += 10;
       pdf.setFontSize(12);
       pdf.setTextColor(100, 100, 100);
-      pdf.text(format(new Date(), "dd/MM/yyyy", { locale: ptBR }), pageWidth / 2, yPosition, { align: "center" });
+      pdf.text(format(selectedDate, "dd/MM/yyyy", { locale: ptBR }), pageWidth / 2, yPosition, { align: "center" });
       
       yPosition += 15;
 
@@ -148,8 +179,9 @@ const Admin = () => {
       });
 
       // Save PDF
-      pdf.save(`programacao_${format(new Date(), "yyyy-MM-dd")}.pdf`);
+      pdf.save(`programacao_${format(selectedDate, "yyyy-MM-dd")}.pdf`);
       toast.success("Programação exportada em PDF!");
+      setExportDialogOpen(false);
     } catch (error: any) {
       toast.error(error.message || "Erro ao exportar programação");
     }
@@ -174,14 +206,72 @@ const Admin = () => {
             <p className="text-muted-foreground">Gerencie a programação de recreação</p>
           </div>
           <div className="flex gap-2">
-            <Button
-              onClick={handleExportToday}
-              variant="outline"
-              className="hover:bg-primary/10 hover:text-primary transition-[var(--transition-smooth)]"
-            >
-              <Download className="mr-2 h-4 w-4" />
-              Exportar Hoje
-            </Button>
+            <Dialog open={exportDialogOpen} onOpenChange={setExportDialogOpen}>
+              <DialogTrigger asChild>
+                <Button
+                  variant="outline"
+                  className="hover:bg-primary/10 hover:text-primary transition-[var(--transition-smooth)]"
+                >
+                  <Download className="mr-2 h-4 w-4" />
+                  Exportar PDF
+                </Button>
+              </DialogTrigger>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>Exportar Programação</DialogTitle>
+                </DialogHeader>
+                <div className="space-y-4 py-4">
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">Data</label>
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <Button
+                          variant="outline"
+                          className={cn(
+                            "w-full justify-start text-left font-normal",
+                            !selectedDate && "text-muted-foreground"
+                          )}
+                        >
+                          <CalendarIcon className="mr-2 h-4 w-4" />
+                          {selectedDate ? format(selectedDate, "dd/MM/yyyy", { locale: ptBR }) : <span>Selecione a data</span>}
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-auto p-0" align="start">
+                        <Calendar
+                          mode="single"
+                          selected={selectedDate}
+                          onSelect={(date) => date && setSelectedDate(date)}
+                          initialFocus
+                          className="pointer-events-auto"
+                        />
+                      </PopoverContent>
+                    </Popover>
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">Faixa Etária</label>
+                    <Select value={selectedAgeGroup} onValueChange={setSelectedAgeGroup}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Selecione a faixa etária" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">Todas as faixas etárias</SelectItem>
+                        {ageGroups.map((group) => (
+                          <SelectItem key={group.id} value={group.id}>
+                            {group.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  
+                  <Button onClick={handleExport} className="w-full">
+                    <Download className="mr-2 h-4 w-4" />
+                    Exportar
+                  </Button>
+                </div>
+              </DialogContent>
+            </Dialog>
             <Button
               onClick={handleSignOut}
               variant="outline"
