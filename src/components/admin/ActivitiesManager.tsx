@@ -386,7 +386,6 @@ const ActivitiesManager = () => {
                 )}
                 <div className="flex flex-wrap gap-4 text-sm text-muted-foreground">
                   <div className="flex items-center gap-1">
-                    <Calendar className="h-4 w-4" />
                     {format(new Date(activity.activity_date), "dd/MM/yyyy", {
                       locale: ptBR,
                     })}
