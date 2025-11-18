@@ -56,6 +56,7 @@ const ActivitiesManager = () => {
   const [endTime, setEndTime] = useState("");
   const [ageGroupId, setAgeGroupId] = useState("");
   const [filterDate, setFilterDate] = useState<Date | undefined>(undefined);
+  const [filterAgeGroup, setFilterAgeGroup] = useState<string>("");
   const [importing, setImporting] = useState(false);
 
   useEffect(() => {
@@ -208,11 +209,15 @@ const ActivitiesManager = () => {
     }
   };
 
-  const filteredActivities = filterDate
-    ? activities.filter(
-        activity => activity.activity_date === format(filterDate, "yyyy-MM-dd")
-      )
-    : activities;
+  const filteredActivities = activities.filter(activity => {
+    const matchesDate = filterDate 
+      ? activity.activity_date === format(filterDate, "yyyy-MM-dd")
+      : true;
+    const matchesAgeGroup = filterAgeGroup 
+      ? activity.age_group_id === filterAgeGroup
+      : true;
+    return matchesDate && matchesAgeGroup;
+  });
 
   return (
     <div className="space-y-6">
@@ -242,6 +247,23 @@ const ActivitiesManager = () => {
               />
             </PopoverContent>
           </Popover>
+        </div>
+
+        <div className="flex-1">
+          <Label className="mb-2 block">Filtrar por faixa etária</Label>
+          <Select value={filterAgeGroup} onValueChange={setFilterAgeGroup}>
+            <SelectTrigger className="w-full sm:w-[280px]">
+              <SelectValue placeholder="Todas as faixas etárias" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="">Todas as faixas etárias</SelectItem>
+              {ageGroups.map((group) => (
+                <SelectItem key={group.id} value={group.id}>
+                  {group.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
         
         {filterDate && (
@@ -356,9 +378,9 @@ const ActivitiesManager = () => {
       </Dialog>
 
       <div className="space-y-4">
-        {filteredActivities.length === 0 && filterDate && (
+        {filteredActivities.length === 0 && (filterDate || filterAgeGroup) && (
           <Card className="p-6 text-center text-muted-foreground">
-            Nenhuma atividade cadastrada para esta data
+            Nenhuma atividade cadastrada para os filtros selecionados
           </Card>
         )}
         {filteredActivities.map((activity) => (
