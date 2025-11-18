@@ -101,7 +101,7 @@ const AgeGroupsManager = () => {
     <div className="space-y-4">
       <Dialog open={isOpen} onOpenChange={setIsOpen}>
         <DialogTrigger asChild>
-          <Button className="bg-[var(--gradient-tropical)] hover:opacity-90 transition-[var(--transition-smooth)]">
+          <Button className="bg-primary text-primary-foreground hover:bg-primary/90 transition-[var(--transition-smooth)]">
             <Plus className="mr-2 h-4 w-4" />
             Nova Faixa Etária
           </Button>

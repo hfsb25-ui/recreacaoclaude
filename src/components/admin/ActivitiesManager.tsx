@@ -137,7 +137,9 @@ const ActivitiesManager = () => {
     setEditingActivity(activity);
     setName(activity.name);
     setDescription(activity.description || "");
-    setActivityDate(activity.activity_date);
+    // Extract just the date part (YYYY-MM-DD) to avoid timezone issues
+    const dateOnly = activity.activity_date.split('T')[0];
+    setActivityDate(dateOnly);
     setStartTime(activity.start_time);
     setEndTime(activity.end_time);
     setAgeGroupId(activity.age_group_id);
@@ -159,7 +161,7 @@ const ActivitiesManager = () => {
     <div className="space-y-4">
       <Dialog open={isOpen} onOpenChange={setIsOpen}>
         <DialogTrigger asChild>
-          <Button className="bg-[var(--gradient-sunset)] hover:opacity-90 transition-[var(--transition-smooth)]">
+          <Button className="bg-secondary text-secondary-foreground hover:bg-secondary/90 transition-[var(--transition-smooth)]">
             <Plus className="mr-2 h-4 w-4" />
             Nova Atividade
           </Button>
