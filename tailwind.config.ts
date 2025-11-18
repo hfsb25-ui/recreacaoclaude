@@ -61,6 +61,7 @@ export default {
       backgroundImage: {
         "gradient-tropical": "var(--gradient-tropical)",
         "gradient-sunset": "var(--gradient-sunset)",
+        "gradient-vibrant": "var(--gradient-vibrant)",
         "gradient-bg": "var(--gradient-bg)",
       },
       boxShadow: {
