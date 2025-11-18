@@ -7,6 +7,7 @@ import { LogOut, Download } from "lucide-react";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import jsPDF from "jspdf";
 import AgeGroupsManager from "@/components/admin/AgeGroupsManager";
 import ActivitiesManager from "@/components/admin/ActivitiesManager";
 
@@ -54,40 +55,101 @@ const Admin = () => {
       const grouped = activities.reduce((acc: any, activity: any) => {
         const ageGroupName = activity.age_groups?.name || "Sem faixa etária";
         if (!acc[ageGroupName]) {
-          acc[ageGroupName] = [];
+          acc[ageGroupName] = {
+            name: ageGroupName,
+            color: activity.age_groups?.color || "#00BCD4",
+            activities: []
+          };
         }
-        acc[ageGroupName].push(activity);
+        acc[ageGroupName].activities.push(activity);
         return acc;
       }, {});
 
-      // Create CSV content
-      let csvContent = "data:text/csv;charset=utf-8,";
-      csvContent += `Programação de Recreação - ${format(new Date(), "dd/MM/yyyy", { locale: ptBR })}\n\n`;
+      // Create PDF
+      const pdf = new jsPDF();
+      const pageWidth = pdf.internal.pageSize.getWidth();
+      const pageHeight = pdf.internal.pageSize.getHeight();
+      const margin = 20;
+      let yPosition = margin;
+
+      // Title
+      pdf.setFontSize(20);
+      pdf.setTextColor(0, 150, 180);
+      pdf.text("Programação de Recreação", pageWidth / 2, yPosition, { align: "center" });
+      
+      yPosition += 10;
+      pdf.setFontSize(12);
+      pdf.setTextColor(100, 100, 100);
+      pdf.text(format(new Date(), "dd/MM/yyyy", { locale: ptBR }), pageWidth / 2, yPosition, { align: "center" });
+      
+      yPosition += 15;
 
       // Add activities grouped by age group
-      Object.keys(grouped).forEach((ageGroup) => {
-        csvContent += `\n${ageGroup}\n`;
-        csvContent += "Horário,Atividade,Descrição\n";
+      Object.values(grouped).forEach((group: any) => {
+        // Check if we need a new page
+        if (yPosition > pageHeight - 40) {
+          pdf.addPage();
+          yPosition = margin;
+        }
+
+        // Age group header with colored background
+        const hexColor = group.color.startsWith("#") ? group.color : "#00BCD4";
+        const r = parseInt(hexColor.slice(1, 3), 16);
+        const g = parseInt(hexColor.slice(3, 5), 16);
+        const b = parseInt(hexColor.slice(5, 7), 16);
         
-        grouped[ageGroup].forEach((activity: any) => {
+        pdf.setFillColor(r, g, b);
+        pdf.rect(margin, yPosition - 5, pageWidth - 2 * margin, 10, "F");
+        pdf.setTextColor(255, 255, 255);
+        pdf.setFontSize(14);
+        pdf.text(group.name, margin + 5, yPosition + 2);
+        
+        yPosition += 12;
+
+        // Activities table
+        pdf.setTextColor(50, 50, 50);
+        pdf.setFontSize(10);
+
+        group.activities.forEach((activity: any) => {
+          // Check if we need a new page
+          if (yPosition > pageHeight - 30) {
+            pdf.addPage();
+            yPosition = margin;
+          }
+
           const startTime = activity.start_time.substring(0, 5);
           const endTime = activity.end_time.substring(0, 5);
           const timeRange = `${startTime} - ${endTime}`;
-          const description = activity.description?.replace(/,/g, ";") || "";
-          csvContent += `"${timeRange}","${activity.name}","${description}"\n`;
+
+          // Time
+          pdf.setFont("helvetica", "bold");
+          pdf.text(timeRange, margin + 5, yPosition);
+          
+          // Activity name
+          pdf.setFont("helvetica", "normal");
+          pdf.text(activity.name, margin + 45, yPosition);
+
+          // Description (if exists)
+          if (activity.description) {
+            yPosition += 5;
+            pdf.setFontSize(9);
+            pdf.setTextColor(100, 100, 100);
+            const splitDescription = pdf.splitTextToSize(activity.description, pageWidth - 2 * margin - 50);
+            pdf.text(splitDescription, margin + 45, yPosition);
+            yPosition += splitDescription.length * 4;
+          }
+
+          yPosition += 8;
+          pdf.setFontSize(10);
+          pdf.setTextColor(50, 50, 50);
         });
+
+        yPosition += 5;
       });
 
-      // Create download link
-      const encodedUri = encodeURI(csvContent);
-      const link = document.createElement("a");
-      link.setAttribute("href", encodedUri);
-      link.setAttribute("download", `programacao_${format(new Date(), "yyyy-MM-dd")}.csv`);
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-
-      toast.success("Programação exportada com sucesso!");
+      // Save PDF
+      pdf.save(`programacao_${format(new Date(), "yyyy-MM-dd")}.pdf`);
+      toast.success("Programação exportada em PDF!");
     } catch (error: any) {
       toast.error(error.message || "Erro ao exportar programação");
     }
