@@ -58,6 +58,18 @@ export default {
           ring: "hsl(var(--sidebar-ring))",
         },
       },
+      backgroundImage: {
+        "gradient-tropical": "var(--gradient-tropical)",
+        "gradient-sunset": "var(--gradient-sunset)",
+        "gradient-bg": "var(--gradient-bg)",
+      },
+      boxShadow: {
+        soft: "var(--shadow-soft)",
+        hover: "var(--shadow-hover)",
+      },
+      transitionProperty: {
+        smooth: "var(--transition-smooth)",
+      },
       borderRadius: {
         lg: "var(--radius)",
         md: "calc(var(--radius) - 2px)",
