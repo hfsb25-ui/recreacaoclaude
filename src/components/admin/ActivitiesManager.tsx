@@ -6,7 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Card } from "@/components/ui/card";
 import { toast } from "sonner";
-import { Plus, Trash2, Edit, Clock, Calendar } from "lucide-react";
+import { Plus, Trash2, Edit, Clock, Calendar as CalendarIcon, Download } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -21,8 +21,11 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { format } from "date-fns";
+import { format, subDays } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { Calendar } from "@/components/ui/calendar";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { cn } from "@/lib/utils";
 
 interface Activity {
   id: string;
@@ -52,6 +55,8 @@ const ActivitiesManager = () => {
   const [startTime, setStartTime] = useState("");
   const [endTime, setEndTime] = useState("");
   const [ageGroupId, setAgeGroupId] = useState("");
+  const [filterDate, setFilterDate] = useState<Date | undefined>(undefined);
+  const [importing, setImporting] = useState(false);
 
   useEffect(() => {
     fetchAgeGroups();
@@ -157,8 +162,101 @@ const ActivitiesManager = () => {
     setAgeGroupId("");
   };
 
+  const handleImportPreviousWeek = async () => {
+    if (!filterDate) return;
+
+    setImporting(true);
+    try {
+      const previousWeekDate = subDays(filterDate, 7);
+      const previousWeekDateStr = format(previousWeekDate, "yyyy-MM-dd");
+
+      // Buscar atividades da semana anterior
+      const { data: previousActivities, error: fetchError } = await supabase
+        .from("activities")
+        .select("*")
+        .eq("activity_date", previousWeekDateStr);
+
+      if (fetchError) throw fetchError;
+
+      if (!previousActivities || previousActivities.length === 0) {
+        toast.error("Não há atividades cadastradas para este dia da semana anterior");
+        return;
+      }
+
+      // Copiar atividades para a data selecionada
+      const newActivities = previousActivities.map(activity => ({
+        name: activity.name,
+        description: activity.description,
+        activity_date: format(filterDate, "yyyy-MM-dd"),
+        start_time: activity.start_time,
+        end_time: activity.end_time,
+        age_group_id: activity.age_group_id,
+      }));
+
+      const { error: insertError } = await supabase
+        .from("activities")
+        .insert(newActivities);
+
+      if (insertError) throw insertError;
+
+      toast.success(`${newActivities.length} atividades importadas com sucesso!`);
+      fetchActivities();
+    } catch (error: any) {
+      toast.error(error.message || "Erro ao importar atividades");
+    } finally {
+      setImporting(false);
+    }
+  };
+
+  const filteredActivities = filterDate
+    ? activities.filter(
+        activity => activity.activity_date === format(filterDate, "yyyy-MM-dd")
+      )
+    : activities;
+
   return (
-    <div className="space-y-4">
+    <div className="space-y-6">
+      <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center">
+        <div className="flex-1">
+          <Label className="mb-2 block">Filtrar por data</Label>
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button
+                variant="outline"
+                className={cn(
+                  "w-full sm:w-[280px] justify-start text-left font-normal",
+                  !filterDate && "text-muted-foreground"
+                )}
+              >
+                <CalendarIcon className="mr-2 h-4 w-4" />
+                {filterDate ? format(filterDate, "dd/MM/yyyy", { locale: ptBR }) : <span>Selecione uma data</span>}
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-auto p-0" align="start">
+              <Calendar
+                mode="single"
+                selected={filterDate}
+                onSelect={setFilterDate}
+                initialFocus
+                className="pointer-events-auto"
+              />
+            </PopoverContent>
+          </Popover>
+        </div>
+        
+        {filterDate && (
+          <Button
+            variant="outline"
+            onClick={handleImportPreviousWeek}
+            disabled={importing}
+            className="hover:bg-primary/10 hover:text-primary transition-[var(--transition-smooth)] mt-8"
+          >
+            <Download className="mr-2 h-4 w-4" />
+            {importing ? "Importando..." : "Importar Semana Anterior"}
+          </Button>
+        )}
+      </div>
+
       <Dialog open={isOpen} onOpenChange={setIsOpen}>
         <DialogTrigger asChild>
           <Button className="bg-secondary text-secondary-foreground hover:bg-secondary/90 transition-[var(--transition-smooth)]">
@@ -258,7 +356,12 @@ const ActivitiesManager = () => {
       </Dialog>
 
       <div className="space-y-4">
-        {activities.map((activity) => (
+        {filteredActivities.length === 0 && filterDate && (
+          <Card className="p-6 text-center text-muted-foreground">
+            Nenhuma atividade cadastrada para esta data
+          </Card>
+        )}
+        {filteredActivities.map((activity) => (
           <Card
             key={activity.id}
             className="p-6 hover:shadow-[var(--shadow-hover)] transition-[var(--transition-smooth)]"
