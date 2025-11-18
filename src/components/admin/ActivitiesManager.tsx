@@ -256,7 +256,6 @@ const ActivitiesManager = () => {
               <SelectValue placeholder="Todas as faixas etárias" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="">Todas as faixas etárias</SelectItem>
               {ageGroups.map((group) => (
                 <SelectItem key={group.id} value={group.id}>
                   {group.name}
