@@ -144,18 +144,21 @@ export type Database = {
       }
       site_settings: {
         Row: {
+          footer_text: string | null
           id: string
           logo_url: string | null
           updated_at: string
           updated_by: string | null
         }
         Insert: {
+          footer_text?: string | null
           id?: string
           logo_url?: string | null
           updated_at?: string
           updated_by?: string | null
         }
         Update: {
+          footer_text?: string | null
           id?: string
           logo_url?: string | null
           updated_at?: string

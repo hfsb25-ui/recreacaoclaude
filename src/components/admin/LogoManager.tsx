@@ -3,12 +3,15 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
-import { Upload, X, Image as ImageIcon } from "lucide-react";
+import { Upload, X, Image as ImageIcon, Type } from "lucide-react";
 
 export const LogoManager = () => {
   const [logoUrl, setLogoUrl] = useState<string | null>(null);
+  const [footerText, setFooterText] = useState("");
   const [uploading, setUploading] = useState(false);
+  const [saving, setSaving] = useState(false);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -19,7 +22,7 @@ export const LogoManager = () => {
     try {
       const { data, error } = await supabase
         .from("site_settings")
-        .select("logo_url")
+        .select("logo_url, footer_text")
         .eq("id", "00000000-0000-0000-0000-000000000001")
         .single();
 
@@ -31,6 +34,8 @@ export const LogoManager = () => {
           .getPublicUrl(data.logo_url);
         setLogoUrl(publicUrlData.publicUrl);
       }
+      
+      setFooterText(data?.footer_text || "");
     } catch (error: any) {
       console.error("Error fetching logo:", error);
     } finally {
@@ -149,6 +154,32 @@ export const LogoManager = () => {
     }
   };
 
+  const handleSaveFooterText = async () => {
+    try {
+      setSaving(true);
+
+      const { data: { user } } = await supabase.auth.getUser();
+
+      const { error } = await supabase
+        .from("site_settings")
+        .update({
+          footer_text: footerText,
+          updated_at: new Date().toISOString(),
+          updated_by: user?.id,
+        })
+        .eq("id", "00000000-0000-0000-0000-000000000001");
+
+      if (error) throw error;
+
+      toast.success("Texto do footer atualizado com sucesso!");
+    } catch (error: any) {
+      console.error("Error saving footer text:", error);
+      toast.error("Erro ao salvar texto do footer");
+    } finally {
+      setSaving(false);
+    }
+  };
+
   if (loading) {
     return (
       <Card className="p-6">
@@ -159,6 +190,7 @@ export const LogoManager = () => {
 
   return (
     <div className="space-y-6">
+      {/* Logo Section */}
       <Card className="p-6">
         <div className="mb-6">
           <h3 className="text-lg font-semibold mb-2 flex items-center gap-2">
@@ -228,13 +260,52 @@ export const LogoManager = () => {
         />
       </Card>
 
+      {/* Footer Text Section */}
+      <Card className="p-6">
+        <div className="mb-6">
+          <h3 className="text-lg font-semibold mb-2 flex items-center gap-2">
+            <Type className="h-5 w-5" />
+            Texto do Footer
+          </h3>
+          <p className="text-sm text-muted-foreground">
+            Personalize o texto que aparece no rodapé da página inicial.
+          </p>
+        </div>
+
+        <div className="space-y-4">
+          <div className="space-y-2">
+            <Label htmlFor="footer-text">Texto do Rodapé</Label>
+            <Textarea
+              id="footer-text"
+              value={footerText}
+              onChange={(e) => setFooterText(e.target.value)}
+              placeholder="Ex: Recreação Hotel © 2024. Todos os direitos reservados."
+              rows={3}
+              className="resize-none"
+            />
+            <p className="text-xs text-muted-foreground">
+              Este texto será exibido no rodapé de todas as páginas públicas.
+            </p>
+          </div>
+
+          <Button
+            onClick={handleSaveFooterText}
+            disabled={saving}
+            className="w-full sm:w-auto"
+          >
+            {saving ? "Salvando..." : "Salvar Texto do Footer"}
+          </Button>
+        </div>
+      </Card>
+
+      {/* Tips Section */}
       <Card className="p-6 bg-blue-50 dark:bg-blue-950/20 border-blue-200 dark:border-blue-900">
-        <h4 className="font-semibold mb-2 text-blue-900 dark:text-blue-100">Dicas para o Logo</h4>
+        <h4 className="font-semibold mb-2 text-blue-900 dark:text-blue-100">Dicas</h4>
         <ul className="text-sm text-blue-800 dark:text-blue-200 space-y-1">
-          <li>• Use imagens PNG ou SVG com fundo transparente para melhor resultado</li>
-          <li>• Recomendamos dimensões de aproximadamente 200x60 pixels</li>
-          <li>• O logo será redimensionado automaticamente para caber no espaço disponível</li>
-          <li>• Certifique-se de que o logo tenha boa legibilidade em diferentes tamanhos</li>
+          <li>• <strong>Logo:</strong> Use imagens PNG ou SVG com fundo transparente para melhor resultado</li>
+          <li>• <strong>Logo:</strong> Recomendamos dimensões de aproximadamente 200x60 pixels</li>
+          <li>• <strong>Footer:</strong> Mantenha o texto curto e objetivo para melhor visualização em mobile</li>
+          <li>• <strong>Footer:</strong> Inclua informações de copyright e ano quando apropriado</li>
         </ul>
       </Card>
     </div>

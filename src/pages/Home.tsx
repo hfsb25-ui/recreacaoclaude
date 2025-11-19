@@ -31,6 +31,7 @@ const Home = () => {
   const [announcements, setAnnouncements] = useState<Announcement[]>([]);
   const [menuItems, setMenuItems] = useState<MenuItem[]>([]);
   const [logoUrl, setLogoUrl] = useState<string | null>(null);
+  const [footerText, setFooterText] = useState<string>("Recreação Hotel © 2024. Todos os direitos reservados.");
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -77,7 +78,7 @@ const Home = () => {
     try {
       const { data, error } = await supabase
         .from("site_settings")
-        .select("logo_url")
+        .select("logo_url, footer_text")
         .eq("id", "00000000-0000-0000-0000-000000000001")
         .maybeSingle();
 
@@ -91,6 +92,10 @@ const Home = () => {
           .from("logos")
           .getPublicUrl(data.logo_url);
         setLogoUrl(publicUrlData.publicUrl);
+      }
+      
+      if (data?.footer_text) {
+        setFooterText(data.footer_text);
       }
     } catch (error) {
       console.error("Error fetching logo:", error);
@@ -238,6 +243,13 @@ const Home = () => {
           )}
         </div>
       </section>
+
+      {/* Footer */}
+      <footer className="border-t border-border/50 bg-background/80 backdrop-blur-sm py-6 mt-auto">
+        <div className="max-w-7xl mx-auto px-6 text-center">
+          <p className="text-sm text-muted-foreground">{footerText}</p>
+        </div>
+      </footer>
     </div>
   );
 };
