@@ -156,30 +156,31 @@ const AgeGroupsManager = () => {
         {ageGroups.map((group) => (
           <Card
             key={group.id}
-            className="p-4 hover:shadow-[var(--shadow-hover)] transition-[var(--transition-smooth)]"
+            className="p-4 hover:shadow-[var(--shadow-hover)] transition-[var(--transition-smooth)] flex flex-col"
           >
-            <div className="flex items-start justify-between mb-3">
+            <div className="flex-1 mb-4">
               <div
-                className="px-4 py-2 rounded-lg"
+                className="px-4 py-3 rounded-lg min-h-[64px] flex items-center justify-center text-center"
                 style={{ backgroundColor: group.color }}
               >
-                <h3 className="font-semibold text-white">{group.name}</h3>
+                <h3 className="font-semibold text-white break-words w-full">{group.name}</h3>
               </div>
             </div>
-            <div className="flex gap-2">
+            <div className="flex gap-2 mt-auto">
               <Button
                 size="sm"
                 variant="outline"
                 onClick={() => handleEdit(group)}
-                className="flex-1"
+                className="flex-1 hover:bg-primary/10 hover:text-primary transition-[var(--transition-smooth)]"
               >
-                <Edit className="h-4 w-4" />
+                <Edit className="h-4 w-4 mr-2" />
+                Editar
               </Button>
               <Button
                 size="sm"
                 variant="outline"
                 onClick={() => handleDelete(group.id)}
-                className="hover:bg-destructive/10 hover:text-destructive"
+                className="hover:bg-destructive/10 hover:text-destructive transition-[var(--transition-smooth)]"
               >
                 <Trash2 className="h-4 w-4" />
               </Button>
