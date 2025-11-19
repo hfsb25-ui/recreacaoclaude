@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Settings, Sun, Waves } from "lucide-react";
+import { Settings, Sun, Waves, Users } from "lucide-react";
 
 interface AgeGroup {
   id: string;
@@ -117,10 +117,10 @@ const Index = () => {
                   }}
                 >
                   <div
-                    className="w-20 h-20 rounded-2xl mb-4 flex items-center justify-center text-white text-2xl font-bold shadow-lg"
+                    className="w-20 h-20 rounded-2xl mb-4 flex items-center justify-center text-white shadow-lg"
                     style={{ backgroundColor: group.color }}
                   >
-                    {group.name.charAt(0)}
+                    <Users className="w-10 h-10" />
                   </div>
                   <h3 className="text-2xl font-bold mb-2 group-hover:text-primary transition-colors">
                     {group.name}
