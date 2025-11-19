@@ -24,11 +24,15 @@ const Home = () => {
 
   const fetchAnnouncements = async () => {
     try {
-      const { data } = await supabase
+      console.log("Fetching announcements...");
+      const { data, error } = await supabase
         .from("announcements")
         .select("*")
         .eq("is_active", true)
         .order("sort_order", { ascending: true });
+
+      console.log("Announcements data:", data);
+      console.log("Announcements error:", error);
 
       if (data) setAnnouncements(data);
     } catch (error) {
