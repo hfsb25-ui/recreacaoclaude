@@ -13,6 +13,7 @@ import ActivitiesManager from "@/components/admin/ActivitiesManager";
 import ThemeManager from "@/components/admin/ThemeManager";
 import AnnouncementsManager from "@/components/admin/AnnouncementsManager";
 import { MenuItemsManager } from "@/components/admin/MenuItemsManager";
+import { UsersManager } from "@/components/admin/UsersManager";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -296,11 +297,12 @@ const Admin = () => {
 
         <Tabs defaultValue="age-groups" className="w-full">
           <div className="w-full overflow-x-auto mb-6">
-            <TabsList className="inline-flex w-full min-w-max md:grid md:grid-cols-5">
+            <TabsList className="inline-flex w-full min-w-max md:grid md:grid-cols-6">
               <TabsTrigger value="age-groups" className="flex-shrink-0">Faixas Etárias</TabsTrigger>
               <TabsTrigger value="activities" className="flex-shrink-0">Atividades</TabsTrigger>
               <TabsTrigger value="announcements" className="flex-shrink-0">Anúncios</TabsTrigger>
               <TabsTrigger value="menu" className="flex-shrink-0">Menu</TabsTrigger>
+              <TabsTrigger value="users" className="flex-shrink-0">Usuários</TabsTrigger>
               <TabsTrigger value="theme" className="flex-shrink-0">Cores do Site</TabsTrigger>
             </TabsList>
           </div>
@@ -319,6 +321,10 @@ const Admin = () => {
 
           <TabsContent value="menu" className="space-y-4">
             <MenuItemsManager />
+          </TabsContent>
+
+          <TabsContent value="users" className="space-y-4">
+            <UsersManager />
           </TabsContent>
 
           <TabsContent value="theme" className="space-y-4">
