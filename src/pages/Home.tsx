@@ -91,7 +91,7 @@ const Home = () => {
             <Button
               size="lg"
               onClick={() => navigate("/programacao")}
-              className="bg-[var(--gradient-tropical)] hover:opacity-90 text-white text-xl px-12 py-8 h-auto shadow-[var(--shadow-hover)]"
+              className="bg-orange-500 hover:bg-orange-600 text-white text-xl px-12 py-8 h-auto shadow-[var(--shadow-hover)]"
             >
               <Calendar className="mr-3 h-6 w-6" />
               ACESSAR PROGRAMAÇÃO
