@@ -150,9 +150,9 @@ const Home = () => {
             <Button
               size="lg"
               onClick={() => navigate("/programacao")}
-              className="bg-orange-500 hover:bg-orange-600 text-white text-xl px-12 py-8 h-auto shadow-[var(--shadow-hover)]"
+              className="bg-orange-500 hover:bg-orange-600 text-white text-sm sm:text-xl px-6 sm:px-12 py-6 sm:py-8 h-auto shadow-[var(--shadow-hover)] w-full sm:w-auto"
             >
-              <Calendar className="mr-3 h-6 w-6" />
+              <Calendar className="mr-2 sm:mr-3 h-5 w-5 sm:h-6 sm:w-6" />
               ACESSAR PROGRAMAÇÃO
             </Button>
           </div>
@@ -166,7 +166,7 @@ const Home = () => {
                   className="overflow-hidden shadow-[var(--shadow-soft)] hover:shadow-[var(--shadow-hover)] transition-[var(--transition-smooth)]"
                 >
                   {announcement.image_url && (
-                    <div className="w-full h-[200px] overflow-hidden bg-muted">
+                    <div className="w-full h-[120px] sm:h-[160px] md:h-[200px] overflow-hidden bg-muted">
                       <img
                         src={getImageUrl(announcement.image_url) || ""}
                         alt={announcement.title}
