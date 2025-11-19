@@ -287,13 +287,15 @@ const Admin = () => {
         </div>
 
         <Tabs defaultValue="age-groups" className="w-full">
-          <TabsList className="grid w-full grid-cols-5 mb-6">
-            <TabsTrigger value="age-groups">Faixas Etárias</TabsTrigger>
-            <TabsTrigger value="activities">Atividades</TabsTrigger>
-            <TabsTrigger value="announcements">Anúncios</TabsTrigger>
-            <TabsTrigger value="menu">Menu</TabsTrigger>
-            <TabsTrigger value="theme">Cores do Site</TabsTrigger>
-          </TabsList>
+          <div className="w-full overflow-x-auto mb-6">
+            <TabsList className="inline-flex w-full min-w-max md:grid md:grid-cols-5">
+              <TabsTrigger value="age-groups" className="flex-shrink-0">Faixas Etárias</TabsTrigger>
+              <TabsTrigger value="activities" className="flex-shrink-0">Atividades</TabsTrigger>
+              <TabsTrigger value="announcements" className="flex-shrink-0">Anúncios</TabsTrigger>
+              <TabsTrigger value="menu" className="flex-shrink-0">Menu</TabsTrigger>
+              <TabsTrigger value="theme" className="flex-shrink-0">Cores do Site</TabsTrigger>
+            </TabsList>
+          </div>
 
           <TabsContent value="age-groups" className="space-y-4">
             <AgeGroupsManager />
