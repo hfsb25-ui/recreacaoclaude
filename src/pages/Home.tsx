@@ -30,11 +30,13 @@ const Home = () => {
   const navigate = useNavigate();
   const [announcements, setAnnouncements] = useState<Announcement[]>([]);
   const [menuItems, setMenuItems] = useState<MenuItem[]>([]);
+  const [logoUrl, setLogoUrl] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     fetchAnnouncements();
     fetchMenuItems();
+    fetchLogo();
   }, []);
 
   const fetchAnnouncements = async () => {
@@ -68,6 +70,30 @@ const Home = () => {
       if (data) setMenuItems(data);
     } catch (error) {
       console.error("Error fetching menu items:", error);
+    }
+  };
+
+  const fetchLogo = async () => {
+    try {
+      const { data, error } = await supabase
+        .from("site_settings")
+        .select("logo_url")
+        .eq("id", "00000000-0000-0000-0000-000000000001")
+        .maybeSingle();
+
+      if (error) {
+        console.error("Error fetching logo:", error);
+        return;
+      }
+
+      if (data?.logo_url) {
+        const { data: publicUrlData } = supabase.storage
+          .from("logos")
+          .getPublicUrl(data.logo_url);
+        setLogoUrl(publicUrlData.publicUrl);
+      }
+    } catch (error) {
+      console.error("Error fetching logo:", error);
     }
   };
 
@@ -121,15 +147,25 @@ const Home = () => {
               </DropdownMenuContent>
             </DropdownMenu>
 
-            <div className="p-2 bg-[var(--gradient-tropical)] rounded-xl">
-              <Waves className="h-8 w-8 text-white" />
-            </div>
-            <div>
-              <h1 className="text-3xl font-bold bg-[var(--gradient-tropical)] bg-clip-text text-transparent">
-                Recreação Hotel
-              </h1>
-              <p className="text-muted-foreground text-sm">Bem-vindo!</p>
-            </div>
+            {logoUrl ? (
+              <img 
+                src={logoUrl} 
+                alt="Logo" 
+                className="h-12 max-w-[200px] object-contain"
+              />
+            ) : (
+              <>
+                <div className="p-2 bg-[var(--gradient-tropical)] rounded-xl">
+                  <Waves className="h-8 w-8 text-white" />
+                </div>
+                <div>
+                  <h1 className="text-3xl font-bold bg-[var(--gradient-tropical)] bg-clip-text text-transparent">
+                    Recreação Hotel
+                  </h1>
+                  <p className="text-muted-foreground text-sm">Bem-vindo!</p>
+                </div>
+              </>
+            )}
           </div>
           <Button
             variant="ghost"
