@@ -14,7 +14,9 @@ import ThemeManager from "@/components/admin/ThemeManager";
 import AnnouncementsManager from "@/components/admin/AnnouncementsManager";
 import { MenuItemsManager } from "@/components/admin/MenuItemsManager";
 import { UsersManager } from "@/components/admin/UsersManager";
+import { useUserRole } from "@/hooks/useUserRole";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Card } from "@/components/ui/card";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -22,6 +24,7 @@ import { cn } from "@/lib/utils";
 
 const Admin = () => {
   const navigate = useNavigate();
+  const { role, loading: roleLoading, isGestor } = useUserRole();
   const [loading, setLoading] = useState(true);
   const [exportDialogOpen, setExportDialogOpen] = useState(false);
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
@@ -59,6 +62,7 @@ const Admin = () => {
     const { data: { session } } = await supabase.auth.getSession();
     if (!session) {
       navigate("/auth");
+      return;
     }
     setLoading(false);
   };
@@ -199,10 +203,22 @@ const Admin = () => {
     }
   };
 
-  if (loading) {
+  if (loading || roleLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-[var(--gradient-bg)]">
         <p className="text-foreground text-lg">Carregando...</p>
+      </div>
+    );
+  }
+
+  if (!role) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-[var(--gradient-bg)]">
+        <Card className="p-8 text-center">
+          <p className="text-foreground text-lg mb-4">Acesso não autorizado</p>
+          <p className="text-muted-foreground mb-4">Seu usuário ainda não possui um nível de acesso atribuído.</p>
+          <Button onClick={() => navigate("/")}>Voltar para início</Button>
+        </Card>
       </div>
     );
   }
@@ -297,13 +313,17 @@ const Admin = () => {
 
         <Tabs defaultValue="age-groups" className="w-full">
           <div className="w-full overflow-x-auto mb-6">
-            <TabsList className="inline-flex w-full min-w-max md:grid md:grid-cols-6">
+            <TabsList className={`inline-flex w-full min-w-max ${isGestor ? 'md:grid md:grid-cols-6' : 'md:grid md:grid-cols-2'}`}>
               <TabsTrigger value="age-groups" className="flex-shrink-0">Faixas Etárias</TabsTrigger>
               <TabsTrigger value="activities" className="flex-shrink-0">Atividades</TabsTrigger>
-              <TabsTrigger value="announcements" className="flex-shrink-0">Anúncios</TabsTrigger>
-              <TabsTrigger value="menu" className="flex-shrink-0">Menu</TabsTrigger>
-              <TabsTrigger value="users" className="flex-shrink-0">Usuários</TabsTrigger>
-              <TabsTrigger value="theme" className="flex-shrink-0">Cores do Site</TabsTrigger>
+              {isGestor && (
+                <>
+                  <TabsTrigger value="announcements" className="flex-shrink-0">Anúncios</TabsTrigger>
+                  <TabsTrigger value="menu" className="flex-shrink-0">Menu</TabsTrigger>
+                  <TabsTrigger value="users" className="flex-shrink-0">Usuários</TabsTrigger>
+                  <TabsTrigger value="theme" className="flex-shrink-0">Cores do Site</TabsTrigger>
+                </>
+              )}
             </TabsList>
           </div>
 
@@ -315,21 +335,25 @@ const Admin = () => {
             <ActivitiesManager />
           </TabsContent>
 
-          <TabsContent value="announcements" className="space-y-4">
-            <AnnouncementsManager />
-          </TabsContent>
+          {isGestor && (
+            <>
+              <TabsContent value="announcements" className="space-y-4">
+                <AnnouncementsManager />
+              </TabsContent>
 
-          <TabsContent value="menu" className="space-y-4">
-            <MenuItemsManager />
-          </TabsContent>
+              <TabsContent value="menu" className="space-y-4">
+                <MenuItemsManager />
+              </TabsContent>
 
-          <TabsContent value="users" className="space-y-4">
-            <UsersManager />
-          </TabsContent>
+              <TabsContent value="users" className="space-y-4">
+                <UsersManager />
+              </TabsContent>
 
-          <TabsContent value="theme" className="space-y-4">
-            <ThemeManager />
-          </TabsContent>
+              <TabsContent value="theme" className="space-y-4">
+                <ThemeManager />
+              </TabsContent>
+            </>
+          )}
         </Tabs>
       </div>
     </div>

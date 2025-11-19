@@ -100,7 +100,7 @@ const Auth = () => {
           </div>
           <Button
             type="submit"
-            className="w-full bg-[var(--gradient-tropical)] hover:opacity-90 transition-[var(--transition-smooth)] shadow-[var(--shadow-hover)]"
+            className="w-full bg-primary hover:bg-primary/90 transition-[var(--transition-smooth)]"
             disabled={loading}
           >
             {loading ? "Entrando..." : "Entrar"}
