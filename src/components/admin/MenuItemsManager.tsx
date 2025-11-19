@@ -158,12 +158,12 @@ export const MenuItemsManager = () => {
         ) : (
           menuItems.map((item) => (
             <Card key={item.id} className="p-4">
-              <div className="flex items-center justify-between">
-                <div className="flex-1">
-                  <h4 className="font-medium">{item.title}</h4>
-                  <p className="text-sm text-muted-foreground">{item.url}</p>
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <div className="flex-1 min-w-0">
+                  <h4 className="font-medium truncate">{item.title}</h4>
+                  <p className="text-sm text-muted-foreground break-all">{item.url}</p>
                 </div>
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 shrink-0">
                   <Button
                     variant={item.is_active ? "default" : "outline"}
                     size="sm"
