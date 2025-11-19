@@ -15,11 +15,28 @@ interface AgeGroup {
 const Index = () => {
   const navigate = useNavigate();
   const [ageGroups, setAgeGroups] = useState<AgeGroup[]>([]);
+  const [siteName, setSiteName] = useState("Recreação Hotel");
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     fetchAgeGroups();
+    fetchSiteName();
   }, []);
+
+  const fetchSiteName = async () => {
+    try {
+      const { data } = await supabase
+        .from("site_settings")
+        .select("site_name")
+        .single();
+
+      if (data?.site_name) {
+        setSiteName(data.site_name);
+      }
+    } catch (error) {
+      console.error("Error fetching site name:", error);
+    }
+  };
 
   const fetchAgeGroups = async () => {
     try {
@@ -59,7 +76,7 @@ const Index = () => {
               </div>
               <div>
                 <h1 className="text-2xl sm:text-3xl font-bold text-foreground tracking-tight">
-                  Recreação Hotel
+                  {siteName}
                 </h1>
                 <p className="text-sm text-muted-foreground">Programação do dia</p>
               </div>
