@@ -124,20 +124,20 @@ const Activities = () => {
               return (
                 <Card
                   key={activity.id}
-                  className={`p-6 transition-[var(--transition-smooth)] hover:shadow-[var(--shadow-hover)] ${
+                  className={`p-4 sm:p-6 transition-[var(--transition-smooth)] hover:shadow-[var(--shadow-hover)] ${
                     isHappening
-                      ? "bg-gradient-to-r from-primary to-primary/90 text-primary-foreground ring-4 ring-primary/30 scale-105"
+                      ? "bg-gradient-to-r from-primary to-primary/90 text-primary-foreground ring-4 ring-primary/30 sm:scale-105"
                       : "bg-card hover:scale-[1.02]"
                   }`}
                 >
-                  <div className="flex items-start justify-between">
-                    <div className="flex-1">
-                      <h3 className="text-xl font-semibold mb-2">
+                  <div className="flex flex-col sm:flex-row items-start sm:justify-between gap-3">
+                    <div className="flex-1 min-w-0 w-full">
+                      <h3 className="text-lg sm:text-xl font-semibold mb-2 break-words">
                         {activity.name}
                       </h3>
                       {activity.description && (
                         <p
-                          className={`mb-3 ${
+                          className={`mb-3 break-words ${
                             isHappening ? "text-primary-foreground/90" : "text-muted-foreground"
                           }`}
                         >
@@ -146,14 +146,14 @@ const Activities = () => {
                       )}
                       <div className="flex items-center gap-2">
                         <Clock className="h-4 w-4" />
-                        <span className="font-medium">
+                        <span className="font-medium text-sm sm:text-base">
                           {activity.start_time.slice(0, 5)} - {activity.end_time.slice(0, 5)}
                         </span>
                       </div>
                     </div>
                     {isHappening && (
-                      <div className="ml-4">
-                        <span className="px-4 py-2 bg-white/20 backdrop-blur-sm rounded-full text-sm font-bold uppercase tracking-wide">
+                      <div className="w-full sm:w-auto sm:ml-4 flex-shrink-0">
+                        <span className="inline-block w-full sm:w-auto text-center px-3 py-1.5 sm:px-4 sm:py-2 bg-white/20 backdrop-blur-sm rounded-full text-xs sm:text-sm font-bold uppercase tracking-wide">
                           Acontecendo agora!
                         </span>
                       </div>
