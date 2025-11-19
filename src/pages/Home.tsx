@@ -3,7 +3,13 @@ import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { Calendar, Settings, Waves } from "lucide-react";
+import { Calendar, Settings, Waves, Menu } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 interface Announcement {
   id: string;
@@ -13,13 +19,22 @@ interface Announcement {
   sort_order: number;
 }
 
+interface MenuItem {
+  id: string;
+  title: string;
+  url: string;
+  is_active: boolean;
+}
+
 const Home = () => {
   const navigate = useNavigate();
   const [announcements, setAnnouncements] = useState<Announcement[]>([]);
+  const [menuItems, setMenuItems] = useState<MenuItem[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     fetchAnnouncements();
+    fetchMenuItems();
   }, []);
 
   const fetchAnnouncements = async () => {
@@ -39,6 +54,28 @@ const Home = () => {
       console.error("Error fetching announcements:", error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchMenuItems = async () => {
+    try {
+      const { data } = await supabase
+        .from("menu_items")
+        .select("*")
+        .eq("is_active", true)
+        .order("sort_order", { ascending: true });
+
+      if (data) setMenuItems(data);
+    } catch (error) {
+      console.error("Error fetching menu items:", error);
+    }
+  };
+
+  const handleMenuClick = (url: string) => {
+    if (url.startsWith("http://") || url.startsWith("https://")) {
+      window.open(url, "_blank");
+    } else {
+      navigate(url);
     }
   };
 
@@ -62,6 +99,28 @@ const Home = () => {
       <header className="border-b border-border/50 backdrop-blur-sm bg-background/80">
         <div className="max-w-7xl mx-auto px-6 py-6 flex justify-between items-center">
           <div className="flex items-center gap-3">
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="icon">
+                  <Menu className="h-6 w-6" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="start" className="w-48 bg-background">
+                {menuItems.map((item) => (
+                  <DropdownMenuItem
+                    key={item.id}
+                    onClick={() => handleMenuClick(item.url)}
+                    className="cursor-pointer"
+                  >
+                    {item.title}
+                  </DropdownMenuItem>
+                ))}
+                {menuItems.length === 0 && (
+                  <DropdownMenuItem disabled>Nenhum item no menu</DropdownMenuItem>
+                )}
+              </DropdownMenuContent>
+            </DropdownMenu>
+
             <div className="p-2 bg-[var(--gradient-tropical)] rounded-xl">
               <Waves className="h-8 w-8 text-white" />
             </div>
