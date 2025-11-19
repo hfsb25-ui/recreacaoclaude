@@ -128,13 +128,13 @@ const Home = () => {
     <div className="min-h-screen bg-[var(--gradient-bg)]">
       {/* Header */}
       <header className="border-b border-border/50 backdrop-blur-sm bg-background/80">
-        <div className="max-w-7xl mx-auto px-6 py-6">
-          <div className="flex items-center justify-between">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 py-4 sm:py-6">
+          <div className="flex items-center justify-between relative">
             {/* Menu button - left */}
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="icon">
-                  <Menu className="h-6 w-6" />
+                <Button variant="ghost" size="icon" className="shrink-0">
+                  <Menu className="h-5 w-5 sm:h-6 sm:w-6" />
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="start" className="w-48 bg-background">
@@ -154,20 +154,20 @@ const Home = () => {
             </DropdownMenu>
 
             {/* Logo - center */}
-            <div className="absolute left-1/2 transform -translate-x-1/2 flex items-center gap-3">
+            <div className="absolute left-1/2 -translate-x-1/2 flex items-center gap-2 sm:gap-3 max-w-[60%] sm:max-w-none">
               {logoUrl ? (
                 <img 
                   src={logoUrl} 
                   alt="Logo" 
-                  className="h-12 max-w-[250px] object-contain"
+                  className="h-10 sm:h-12 max-w-full object-contain"
                 />
               ) : (
                 <>
-                  <div className="p-2 bg-[var(--gradient-tropical)] rounded-xl">
-                    <Waves className="h-8 w-8 text-white" />
+                  <div className="p-1.5 sm:p-2 bg-[var(--gradient-tropical)] rounded-xl shrink-0">
+                    <Waves className="h-6 w-6 sm:h-8 sm:w-8 text-white" />
                   </div>
-                  <div>
-                    <h1 className="text-3xl font-bold bg-[var(--gradient-tropical)] bg-clip-text text-transparent">
+                  <div className="hidden sm:block">
+                    <h1 className="text-2xl sm:text-3xl font-bold bg-[var(--gradient-tropical)] bg-clip-text text-transparent whitespace-nowrap">
                       Recreação Hotel
                     </h1>
                     <p className="text-muted-foreground text-sm">Bem-vindo!</p>
@@ -181,7 +181,7 @@ const Home = () => {
               variant="ghost"
               size="icon"
               onClick={() => navigate("/auth")}
-              className="hover:bg-primary/10 transition-[var(--transition-smooth)]"
+              className="hover:bg-primary/10 transition-[var(--transition-smooth)] shrink-0"
             >
               <Settings className="h-5 w-5" />
             </Button>
@@ -190,7 +190,7 @@ const Home = () => {
       </header>
 
       {/* Main Content */}
-      <section className="py-16 px-6">
+      <section className="py-8 sm:py-16 px-4 sm:px-6">
         <div className="max-w-7xl mx-auto">
           {/* CTA Button */}
           <div className="text-center mb-12">
@@ -246,7 +246,7 @@ const Home = () => {
 
       {/* Footer */}
       <footer className="border-t border-border/50 bg-background/80 backdrop-blur-sm py-6 mt-auto">
-        <div className="max-w-7xl mx-auto px-6 text-center">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 text-center">
           <p className="text-sm text-muted-foreground">{footerText}</p>
         </div>
       </footer>
