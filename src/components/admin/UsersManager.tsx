@@ -54,30 +54,19 @@ export const UsersManager = () => {
 
   const fetchUsers = async () => {
     try {
-      // Fetch all user roles
-      const { data: rolesData, error: rolesError } = await supabase
-        .from("user_roles")
-        .select("user_id, role");
+      // Call edge function to list users
+      const { data, error } = await supabase.functions.invoke('list-users');
 
-      if (rolesError) throw rolesError;
+      if (error) {
+        console.error("Edge function error:", error);
+        throw new Error(error.message);
+      }
 
-      // Fetch all auth users
-      const { data: { users: authUsers }, error: authError } = await supabase.auth.admin.listUsers();
-      
-      if (authError) throw authError;
+      if (data?.error) {
+        throw new Error(data.error);
+      }
 
-      // Combine data
-      const usersWithRoles: UserWithRole[] = authUsers.map(user => {
-        const userRole = rolesData?.find(r => r.user_id === user.id);
-        return {
-          id: user.id,
-          email: user.email || "",
-          role: userRole?.role as "gestor" | "recreador" | null,
-          created_at: user.created_at
-        };
-      });
-
-      setUsers(usersWithRoles);
+      setUsers(data.users || []);
     } catch (error: any) {
       console.error("Error fetching users:", error);
       toast.error("Erro ao carregar usuários");
@@ -99,37 +88,29 @@ export const UsersManager = () => {
     try {
       setLoading(true);
       
-      // Create user using admin API
-      const { data: signUpData, error: signUpError } = await supabase.auth.admin.createUser({
-        email: validation.data.email,
-        password: validation.data.password,
-        email_confirm: true,
+      // Get auth token
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        toast.error("Sessão expirada. Faça login novamente.");
+        return;
+      }
+
+      // Call edge function to create user
+      const { data, error } = await supabase.functions.invoke('create-user', {
+        body: {
+          email: validation.data.email,
+          password: validation.data.password,
+          role: validation.data.role,
+        },
       });
 
-      if (signUpError) {
-        console.error("SignUp Error:", signUpError);
-        throw signUpError;
-      }
-      
-      if (!signUpData.user) {
-        throw new Error("Erro ao criar usuário - usuário não retornado");
+      if (error) {
+        console.error("Edge function error:", error);
+        throw new Error(error.message);
       }
 
-      console.log("User created with ID:", signUpData.user.id);
-
-      // Assign role to user
-      const { error: roleError } = await supabase
-        .from("user_roles")
-        .insert({
-          user_id: signUpData.user.id,
-          role: validation.data.role,
-        });
-
-      if (roleError) {
-        console.error("Role Error:", roleError);
-        // Try to delete the user if role assignment fails
-        await supabase.auth.admin.deleteUser(signUpData.user.id);
-        throw new Error(`Erro ao atribuir nível de acesso: ${roleError.message}`);
+      if (data?.error) {
+        throw new Error(data.error);
       }
 
       const roleText = validation.data.role === "gestor" ? "Gestor" : "Recreador";
@@ -178,17 +159,33 @@ export const UsersManager = () => {
     try {
       setLoading(true);
 
-      // Delete user (this will cascade delete the role)
-      const { error } = await supabase.auth.admin.deleteUser(deleteUserId);
+      // Get auth token
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        toast.error("Sessão expirada. Faça login novamente.");
+        return;
+      }
 
-      if (error) throw error;
+      // Call edge function to delete user
+      const { data, error } = await supabase.functions.invoke('delete-user', {
+        body: { userId: deleteUserId },
+      });
+
+      if (error) {
+        console.error("Edge function error:", error);
+        throw new Error(error.message);
+      }
+
+      if (data?.error) {
+        throw new Error(data.error);
+      }
 
       toast.success("Usuário removido com sucesso!");
       setDeleteUserId(null);
       fetchUsers();
     } catch (error: any) {
-      toast.error("Erro ao remover usuário");
-      console.error(error);
+      console.error("Delete user error:", error);
+      toast.error(error.message || "Erro ao remover usuário");
     } finally {
       setLoading(false);
     }
