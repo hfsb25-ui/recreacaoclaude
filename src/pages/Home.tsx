@@ -132,12 +132,12 @@ const Home = () => {
             </div>
           </div>
           <Button
-            variant="outline"
+            variant="ghost"
+            size="icon"
             onClick={() => navigate("/auth")}
             className="hover:bg-primary/10 transition-[var(--transition-smooth)]"
           >
-            <Settings className="mr-2 h-4 w-4" />
-            Admin
+            <Settings className="h-5 w-5" />
           </Button>
         </div>
       </header>
