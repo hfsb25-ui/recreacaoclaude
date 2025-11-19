@@ -88,7 +88,7 @@ const Activities = () => {
       <div className="max-w-4xl mx-auto">
         <Button
           variant="ghost"
-          onClick={() => navigate("/")}
+          onClick={() => navigate("/programacao")}
           className="mb-6 hover:bg-primary/10 transition-[var(--transition-smooth)]"
         >
           <ArrowLeft className="mr-2 h-4 w-4" />
