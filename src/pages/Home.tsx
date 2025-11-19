@@ -154,7 +154,7 @@ const Home = () => {
             </DropdownMenu>
 
             {/* Logo - center */}
-            <div className="absolute left-1/2 -translate-x-1/2 flex items-center gap-2 sm:gap-3 max-w-[60%] sm:max-w-none">
+            <div className="flex-1 flex items-center justify-center gap-2 sm:gap-3 mx-2 overflow-hidden">
               {logoUrl ? (
                 <img 
                   src={logoUrl} 
@@ -166,8 +166,8 @@ const Home = () => {
                   <div className="p-1.5 sm:p-2 bg-[var(--gradient-tropical)] rounded-xl shrink-0">
                     <Waves className="h-6 w-6 sm:h-8 sm:w-8 text-white" />
                   </div>
-                  <div className="hidden sm:block">
-                    <h1 className="text-2xl sm:text-3xl font-bold bg-[var(--gradient-tropical)] bg-clip-text text-transparent whitespace-nowrap">
+                  <div className="hidden sm:block overflow-hidden">
+                    <h1 className="text-2xl sm:text-3xl font-bold bg-[var(--gradient-tropical)] bg-clip-text text-transparent truncate">
                       Recreação Hotel
                     </h1>
                     <p className="text-muted-foreground text-sm">Bem-vindo!</p>

@@ -45,7 +45,7 @@ const Index = () => {
   }
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background overflow-x-hidden w-full">
       {/* Header */}
       <header className="sticky top-0 z-50 border-b border-border/40 backdrop-blur-md bg-background/95 shadow-sm">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">

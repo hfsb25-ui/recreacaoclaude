@@ -84,7 +84,7 @@ const Activities = () => {
   }
 
   return (
-    <div className="min-h-screen bg-[var(--gradient-bg)] p-6">
+    <div className="min-h-screen bg-[var(--gradient-bg)] p-4 sm:p-6 overflow-x-hidden w-full">
       <div className="max-w-4xl mx-auto">
         <Button
           variant="ghost"
