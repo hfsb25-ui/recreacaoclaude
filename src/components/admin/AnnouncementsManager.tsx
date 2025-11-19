@@ -229,9 +229,9 @@ const AnnouncementsManager = () => {
           <div className="space-y-4">
             {announcements.map((announcement) => (
               <Card key={announcement.id} className="p-4">
-                <div className="flex gap-4">
+                <div className="flex flex-col sm:flex-row gap-4">
                   {announcement.image_url && (
-                    <div className="flex-shrink-0 w-[180px] h-[50px] bg-muted rounded overflow-hidden">
+                    <div className="flex-shrink-0 w-full sm:w-[180px] h-[80px] sm:h-[50px] bg-muted rounded overflow-hidden">
                       <img
                         src={getImageUrl(announcement.image_url) || ""}
                         alt={announcement.title}
@@ -240,16 +240,16 @@ const AnnouncementsManager = () => {
                     </div>
                   )}
                   {!announcement.image_url && (
-                    <div className="flex-shrink-0 w-[180px] h-[50px] bg-muted rounded flex items-center justify-center">
+                    <div className="flex-shrink-0 w-full sm:w-[180px] h-[80px] sm:h-[50px] bg-muted rounded flex items-center justify-center">
                       <ImageIcon className="h-6 w-6 text-muted-foreground" />
                     </div>
                   )}
-                  <div className="flex-1">
-                    <div className="flex items-start justify-between">
-                      <div>
-                        <h3 className="font-bold">{announcement.title}</h3>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex flex-col sm:flex-row items-start justify-between gap-2">
+                      <div className="flex-1 min-w-0">
+                        <h3 className="font-bold break-words">{announcement.title}</h3>
                         {announcement.description && (
-                          <p className="text-sm text-muted-foreground mt-1">
+                          <p className="text-sm text-muted-foreground mt-1 break-words">
                             {announcement.description}
                           </p>
                         )}
@@ -260,6 +260,7 @@ const AnnouncementsManager = () => {
                       <Button
                         variant="destructive"
                         size="icon"
+                        className="flex-shrink-0"
                         onClick={() =>
                           handleDelete(announcement.id, announcement.image_url)
                         }
