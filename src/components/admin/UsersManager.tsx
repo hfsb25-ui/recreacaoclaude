@@ -99,17 +99,23 @@ export const UsersManager = () => {
     try {
       setLoading(true);
       
-      // Create user
-      const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
+      // Create user using admin API
+      const { data: signUpData, error: signUpError } = await supabase.auth.admin.createUser({
         email: validation.data.email,
         password: validation.data.password,
-        options: {
-          emailRedirectTo: `${window.location.origin}/admin`,
-        },
+        email_confirm: true,
       });
 
-      if (signUpError) throw signUpError;
-      if (!signUpData.user) throw new Error("Erro ao criar usuário");
+      if (signUpError) {
+        console.error("SignUp Error:", signUpError);
+        throw signUpError;
+      }
+      
+      if (!signUpData.user) {
+        throw new Error("Erro ao criar usuário - usuário não retornado");
+      }
+
+      console.log("User created with ID:", signUpData.user.id);
 
       // Assign role to user
       const { error: roleError } = await supabase
@@ -119,7 +125,12 @@ export const UsersManager = () => {
           role: validation.data.role,
         });
 
-      if (roleError) throw roleError;
+      if (roleError) {
+        console.error("Role Error:", roleError);
+        // Try to delete the user if role assignment fails
+        await supabase.auth.admin.deleteUser(signUpData.user.id);
+        throw new Error(`Erro ao atribuir nível de acesso: ${roleError.message}`);
+      }
 
       const roleText = validation.data.role === "gestor" ? "Gestor" : "Recreador";
       toast.success(`Novo usuário ${roleText} cadastrado com sucesso!`);
@@ -128,6 +139,7 @@ export const UsersManager = () => {
       setRole("recreador");
       fetchUsers();
     } catch (error: any) {
+      console.error("Create user error:", error);
       toast.error(error.message || "Erro ao cadastrar usuário");
     } finally {
       setLoading(false);
