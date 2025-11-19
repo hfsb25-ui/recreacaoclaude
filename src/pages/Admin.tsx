@@ -12,6 +12,7 @@ import AgeGroupsManager from "@/components/admin/AgeGroupsManager";
 import ActivitiesManager from "@/components/admin/ActivitiesManager";
 import ThemeManager from "@/components/admin/ThemeManager";
 import AnnouncementsManager from "@/components/admin/AnnouncementsManager";
+import { MenuItemsManager } from "@/components/admin/MenuItemsManager";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -286,10 +287,11 @@ const Admin = () => {
         </div>
 
         <Tabs defaultValue="age-groups" className="w-full">
-          <TabsList className="grid w-full grid-cols-4 mb-6">
+          <TabsList className="grid w-full grid-cols-5 mb-6">
             <TabsTrigger value="age-groups">Faixas Etárias</TabsTrigger>
             <TabsTrigger value="activities">Atividades</TabsTrigger>
             <TabsTrigger value="announcements">Anúncios</TabsTrigger>
+            <TabsTrigger value="menu">Menu</TabsTrigger>
             <TabsTrigger value="theme">Cores do Site</TabsTrigger>
           </TabsList>
 
@@ -303,6 +305,10 @@ const Admin = () => {
 
           <TabsContent value="announcements" className="space-y-4">
             <AnnouncementsManager />
+          </TabsContent>
+
+          <TabsContent value="menu" className="space-y-4">
+            <MenuItemsManager />
           </TabsContent>
 
           <TabsContent value="theme" className="space-y-4">
