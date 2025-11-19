@@ -11,6 +11,7 @@ import jsPDF from "jspdf";
 import AgeGroupsManager from "@/components/admin/AgeGroupsManager";
 import ActivitiesManager from "@/components/admin/ActivitiesManager";
 import ThemeManager from "@/components/admin/ThemeManager";
+import AnnouncementsManager from "@/components/admin/AnnouncementsManager";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -285,9 +286,10 @@ const Admin = () => {
         </div>
 
         <Tabs defaultValue="age-groups" className="w-full">
-          <TabsList className="grid w-full grid-cols-3 mb-6">
+          <TabsList className="grid w-full grid-cols-4 mb-6">
             <TabsTrigger value="age-groups">Faixas Etárias</TabsTrigger>
             <TabsTrigger value="activities">Atividades</TabsTrigger>
+            <TabsTrigger value="announcements">Anúncios</TabsTrigger>
             <TabsTrigger value="theme">Cores do Site</TabsTrigger>
           </TabsList>
 
@@ -297,6 +299,10 @@ const Admin = () => {
 
           <TabsContent value="activities" className="space-y-4">
             <ActivitiesManager />
+          </TabsContent>
+
+          <TabsContent value="announcements" className="space-y-4">
+            <AnnouncementsManager />
           </TabsContent>
 
           <TabsContent value="theme" className="space-y-4">
