@@ -123,8 +123,9 @@ const Home = () => {
     <div className="min-h-screen bg-[var(--gradient-bg)]">
       {/* Header */}
       <header className="border-b border-border/50 backdrop-blur-sm bg-background/80">
-        <div className="max-w-7xl mx-auto px-6 py-6 flex justify-between items-center">
-          <div className="flex items-center gap-3">
+        <div className="max-w-7xl mx-auto px-6 py-6">
+          <div className="flex items-center justify-between">
+            {/* Menu button - left */}
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="ghost" size="icon">
@@ -147,34 +148,39 @@ const Home = () => {
               </DropdownMenuContent>
             </DropdownMenu>
 
-            {logoUrl ? (
-              <img 
-                src={logoUrl} 
-                alt="Logo" 
-                className="h-12 max-w-[200px] object-contain"
-              />
-            ) : (
-              <>
-                <div className="p-2 bg-[var(--gradient-tropical)] rounded-xl">
-                  <Waves className="h-8 w-8 text-white" />
-                </div>
-                <div>
-                  <h1 className="text-3xl font-bold bg-[var(--gradient-tropical)] bg-clip-text text-transparent">
-                    Recreação Hotel
-                  </h1>
-                  <p className="text-muted-foreground text-sm">Bem-vindo!</p>
-                </div>
-              </>
-            )}
+            {/* Logo - center */}
+            <div className="absolute left-1/2 transform -translate-x-1/2 flex items-center gap-3">
+              {logoUrl ? (
+                <img 
+                  src={logoUrl} 
+                  alt="Logo" 
+                  className="h-12 max-w-[250px] object-contain"
+                />
+              ) : (
+                <>
+                  <div className="p-2 bg-[var(--gradient-tropical)] rounded-xl">
+                    <Waves className="h-8 w-8 text-white" />
+                  </div>
+                  <div>
+                    <h1 className="text-3xl font-bold bg-[var(--gradient-tropical)] bg-clip-text text-transparent">
+                      Recreação Hotel
+                    </h1>
+                    <p className="text-muted-foreground text-sm">Bem-vindo!</p>
+                  </div>
+                </>
+              )}
+            </div>
+
+            {/* Settings button - right */}
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => navigate("/auth")}
+              className="hover:bg-primary/10 transition-[var(--transition-smooth)]"
+            >
+              <Settings className="h-5 w-5" />
+            </Button>
           </div>
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => navigate("/auth")}
-            className="hover:bg-primary/10 transition-[var(--transition-smooth)]"
-          >
-            <Settings className="h-5 w-5" />
-          </Button>
         </div>
       </header>
 
