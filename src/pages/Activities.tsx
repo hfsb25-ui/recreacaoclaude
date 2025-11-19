@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Card } from "@/components/ui/card";
@@ -28,10 +28,22 @@ const Activities = () => {
   const [activities, setActivities] = useState<Activity[]>([]);
   const [ageGroup, setAgeGroup] = useState<AgeGroup | null>(null);
   const [loading, setLoading] = useState(true);
+  const currentActivityRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     fetchData();
   }, [ageGroupId]);
+
+  useEffect(() => {
+    if (!loading && currentActivityRef.current) {
+      setTimeout(() => {
+        currentActivityRef.current?.scrollIntoView({
+          behavior: "smooth",
+          block: "center",
+        });
+      }, 100);
+    }
+  }, [loading, activities]);
 
   const fetchData = async () => {
     try {
@@ -124,6 +136,7 @@ const Activities = () => {
               return (
                 <Card
                   key={activity.id}
+                  ref={isHappening ? currentActivityRef : null}
                   className={`p-4 sm:p-6 transition-[var(--transition-smooth)] hover:shadow-[var(--shadow-hover)] ${
                     isHappening
                       ? "bg-gradient-to-r from-primary to-primary/90 text-primary-foreground ring-4 ring-primary/30 sm:scale-105"
