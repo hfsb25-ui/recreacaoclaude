@@ -59,6 +59,14 @@ const ActivitiesManager = () => {
   const [filterAgeGroup, setFilterAgeGroup] = useState<string>("");
   const [importing, setImporting] = useState(false);
 
+  // Helper function to format date without timezone issues
+  const formatDateLocal = (date: Date): string => {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
+
   useEffect(() => {
     fetchAgeGroups();
     fetchActivities();
@@ -169,7 +177,7 @@ const ActivitiesManager = () => {
     setImporting(true);
     try {
       const previousWeekDate = subDays(filterDate, 7);
-      const previousWeekDateStr = format(previousWeekDate, "yyyy-MM-dd");
+      const previousWeekDateStr = formatDateLocal(previousWeekDate);
 
       // Buscar atividades da semana anterior
       const { data: previousActivities, error: fetchError } = await supabase
@@ -185,10 +193,12 @@ const ActivitiesManager = () => {
       }
 
       // Copiar atividades para a data selecionada
+      const targetDateStr = formatDateLocal(filterDate);
+      
       const newActivities = previousActivities.map(activity => ({
         name: activity.name,
         description: activity.description,
-        activity_date: format(filterDate, "yyyy-MM-dd"),
+        activity_date: targetDateStr,
         start_time: activity.start_time,
         end_time: activity.end_time,
         age_group_id: activity.age_group_id,
@@ -211,7 +221,7 @@ const ActivitiesManager = () => {
 
   const filteredActivities = activities.filter(activity => {
     const matchesDate = filterDate 
-      ? activity.activity_date === format(filterDate, "yyyy-MM-dd")
+      ? activity.activity_date.split('T')[0] === formatDateLocal(filterDate)
       : true;
     const matchesAgeGroup = filterAgeGroup 
       ? activity.age_group_id === filterAgeGroup
@@ -332,13 +342,33 @@ const ActivitiesManager = () => {
 
             <div className="space-y-2">
               <Label htmlFor="date">Data</Label>
-              <Input
-                id="date"
-                type="date"
-                value={activityDate}
-                onChange={(e) => setActivityDate(e.target.value)}
-                required
-              />
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    className={cn(
+                      "w-full justify-start text-left font-normal",
+                      !activityDate && "text-muted-foreground"
+                    )}
+                  >
+                    <CalendarIcon className="mr-2 h-4 w-4" />
+                    {activityDate ? format(new Date(activityDate + 'T12:00:00'), "dd/MM/yyyy", { locale: ptBR }) : <span>Selecione uma data</span>}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <Calendar
+                    mode="single"
+                    selected={activityDate ? new Date(activityDate + 'T12:00:00') : undefined}
+                    onSelect={(date) => {
+                      if (date) {
+                        setActivityDate(formatDateLocal(date));
+                      }
+                    }}
+                    initialFocus
+                    className="pointer-events-auto"
+                  />
+                </PopoverContent>
+              </Popover>
             </div>
 
             <div className="grid grid-cols-2 gap-4">

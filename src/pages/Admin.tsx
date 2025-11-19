@@ -27,6 +27,14 @@ const Admin = () => {
   const [selectedAgeGroup, setSelectedAgeGroup] = useState<string>("all");
   const [ageGroups, setAgeGroups] = useState<any[]>([]);
 
+  // Helper function to format date without timezone issues
+  const formatDateLocal = (date: Date): string => {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
+
   useEffect(() => {
     checkAuth();
     fetchAgeGroups();
@@ -62,7 +70,7 @@ const Admin = () => {
 
   const handleExport = async () => {
     try {
-      const dateStr = format(selectedDate, "yyyy-MM-dd");
+      const dateStr = formatDateLocal(selectedDate);
       
       // Build query
       let query = supabase
