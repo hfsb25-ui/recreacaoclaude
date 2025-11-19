@@ -147,6 +147,7 @@ export type Database = {
           footer_text: string | null
           id: string
           logo_url: string | null
+          site_name: string | null
           updated_at: string
           updated_by: string | null
         }
@@ -154,6 +155,7 @@ export type Database = {
           footer_text?: string | null
           id?: string
           logo_url?: string | null
+          site_name?: string | null
           updated_at?: string
           updated_by?: string | null
         }
@@ -161,6 +163,7 @@ export type Database = {
           footer_text?: string | null
           id?: string
           logo_url?: string | null
+          site_name?: string | null
           updated_at?: string
           updated_by?: string | null
         }
