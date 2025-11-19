@@ -125,11 +125,11 @@ const Home = () => {
   }
 
   return (
-    <div className="min-h-screen bg-[var(--gradient-bg)]">
+    <div className="min-h-screen bg-[var(--gradient-bg)] overflow-x-hidden w-full">
       {/* Header */}
-      <header className="border-b border-border/50 backdrop-blur-sm bg-background/80">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 py-4 sm:py-6">
-          <div className="flex items-center justify-between relative">
+      <header className="border-b border-border/50 backdrop-blur-sm bg-background/80 w-full">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 py-4 sm:py-6 w-full">
+          <div className="flex items-center justify-between relative w-full">
             {/* Menu button - left */}
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
