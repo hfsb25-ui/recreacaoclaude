@@ -66,7 +66,7 @@ const Index = () => {
       {/* Header */}
       <header className="sticky top-0 z-50 border-b border-border/40 backdrop-blur-md bg-background/95 shadow-sm">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center h-20">
+          <div className="flex justify-center items-center h-20">
             <div className="flex items-center gap-4">
               <div className="relative">
                 <div className="absolute inset-0 bg-primary/20 blur-xl rounded-full"></div>
@@ -81,15 +81,6 @@ const Index = () => {
                 <p className="text-sm text-muted-foreground">Programação do dia</p>
               </div>
             </div>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => navigate("/auth")}
-              className="hover:bg-primary/10 hover:text-primary transition-[var(--transition-smooth)]"
-            >
-              <Settings className="mr-2 h-4 w-4" />
-              <span className="hidden sm:inline">Admin</span>
-            </Button>
           </div>
         </div>
       </header>
