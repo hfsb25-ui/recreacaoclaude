@@ -18,6 +18,7 @@ import { LogoManager } from "@/components/admin/LogoManager";
 import { SiteNameManager } from "@/components/admin/SiteNameManager";
 import { RatingsManager } from "@/components/admin/RatingsManager";
 import { ActivityTemplatesManager } from "@/components/admin/ActivityTemplatesManager";
+import { WeatherLocationManager } from "@/components/admin/WeatherLocationManager";
 import { useUserRole } from "@/hooks/useUserRole";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Card } from "@/components/ui/card";
@@ -317,7 +318,7 @@ const Admin = () => {
 
         <Tabs defaultValue="age-groups" className="w-full">
           <div className="w-full overflow-x-auto mb-6">
-            <TabsList className={`inline-flex w-full min-w-max ${isGestor ? 'md:grid md:grid-cols-10' : 'md:grid md:grid-cols-4'}`}>
+            <TabsList className={`inline-flex w-full min-w-max ${isGestor ? 'md:grid md:grid-cols-11' : 'md:grid md:grid-cols-4'}`}>
               <TabsTrigger value="age-groups" className="flex-shrink-0">Faixas Etárias</TabsTrigger>
               <TabsTrigger value="activity-templates" className="flex-shrink-0">Catálogo de Atividades</TabsTrigger>
               <TabsTrigger value="activities" className="flex-shrink-0">Atividades</TabsTrigger>
@@ -328,6 +329,7 @@ const Admin = () => {
                   <TabsTrigger value="menu" className="flex-shrink-0">Menu</TabsTrigger>
                   <TabsTrigger value="logo" className="flex-shrink-0">Logo</TabsTrigger>
                   <TabsTrigger value="site-name" className="flex-shrink-0">Nome do Site</TabsTrigger>
+                  <TabsTrigger value="weather" className="flex-shrink-0">Clima</TabsTrigger>
                   <TabsTrigger value="users" className="flex-shrink-0">Usuários</TabsTrigger>
                   <TabsTrigger value="theme" className="flex-shrink-0">Cores do Site</TabsTrigger>
                 </>
@@ -367,6 +369,10 @@ const Admin = () => {
 
               <TabsContent value="site-name" className="space-y-4">
                 <SiteNameManager />
+              </TabsContent>
+
+              <TabsContent value="weather" className="space-y-4">
+                <WeatherLocationManager />
               </TabsContent>
 
               <TabsContent value="users" className="space-y-4">

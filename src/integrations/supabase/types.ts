@@ -209,6 +209,9 @@ export type Database = {
           site_name: string | null
           updated_at: string
           updated_by: string | null
+          weather_city_name: string | null
+          weather_latitude: number | null
+          weather_longitude: number | null
         }
         Insert: {
           footer_text?: string | null
@@ -217,6 +220,9 @@ export type Database = {
           site_name?: string | null
           updated_at?: string
           updated_by?: string | null
+          weather_city_name?: string | null
+          weather_latitude?: number | null
+          weather_longitude?: number | null
         }
         Update: {
           footer_text?: string | null
@@ -225,6 +231,9 @@ export type Database = {
           site_name?: string | null
           updated_at?: string
           updated_by?: string | null
+          weather_city_name?: string | null
+          weather_latitude?: number | null
+          weather_longitude?: number | null
         }
         Relationships: []
       }
