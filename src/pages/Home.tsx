@@ -10,6 +10,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { WeatherWidget } from "@/components/WeatherWidget";
 
 interface Announcement {
   id: string;
@@ -32,6 +33,9 @@ const Home = () => {
   const [menuItems, setMenuItems] = useState<MenuItem[]>([]);
   const [logoUrl, setLogoUrl] = useState<string | null>(null);
   const [footerText, setFooterText] = useState<string>("Recreação Hotel © 2024. Todos os direitos reservados.");
+  const [weatherLat, setWeatherLat] = useState<number | null>(null);
+  const [weatherLng, setWeatherLng] = useState<number | null>(null);
+  const [weatherCity, setWeatherCity] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -78,7 +82,7 @@ const Home = () => {
     try {
       const { data, error } = await supabase
         .from("site_settings")
-        .select("logo_url, footer_text")
+        .select("logo_url, footer_text, weather_latitude, weather_longitude, weather_city_name")
         .eq("id", "00000000-0000-0000-0000-000000000001")
         .maybeSingle();
 
@@ -96,6 +100,12 @@ const Home = () => {
       
       if (data?.footer_text) {
         setFooterText(data.footer_text);
+      }
+
+      if (data?.weather_latitude && data?.weather_longitude) {
+        setWeatherLat(data.weather_latitude);
+        setWeatherLng(data.weather_longitude);
+        setWeatherCity(data.weather_city_name);
       }
     } catch (error) {
       console.error("Error fetching logo:", error);
@@ -192,6 +202,17 @@ const Home = () => {
       {/* Main Content */}
       <section className="py-8 sm:py-16 px-4 sm:px-6">
         <div className="max-w-7xl mx-auto">
+          {/* Weather Widget */}
+          {weatherLat && weatherLng && (
+            <div className="mb-8 max-w-md mx-auto">
+              <WeatherWidget 
+                latitude={weatherLat} 
+                longitude={weatherLng} 
+                cityName={weatherCity || undefined}
+              />
+            </div>
+          )}
+
           {/* CTA Button */}
           <div className="text-center mb-12">
             <Button
