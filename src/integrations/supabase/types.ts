@@ -63,6 +63,7 @@ export type Database = {
           guest_name: string
           id: string
           rating: number
+          room_number: string | null
         }
         Insert: {
           activity_id: string
@@ -71,6 +72,7 @@ export type Database = {
           guest_name: string
           id?: string
           rating: number
+          room_number?: string | null
         }
         Update: {
           activity_id?: string
@@ -79,6 +81,7 @@ export type Database = {
           guest_name?: string
           id?: string
           rating?: number
+          room_number?: string | null
         }
         Relationships: [
           {

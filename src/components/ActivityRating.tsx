@@ -17,6 +17,7 @@ export const ActivityRating = ({ activityId, activityName }: ActivityRatingProps
   const [hoverRating, setHoverRating] = useState(0);
   const [comment, setComment] = useState("");
   const [guestName, setGuestName] = useState("");
+  const [roomNumber, setRoomNumber] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handleSubmit = async () => {
@@ -36,6 +37,14 @@ export const ActivityRating = ({ activityId, activityName }: ActivityRatingProps
       return;
     }
 
+    if (!roomNumber.trim()) {
+      toast({
+        title: "Por favor, insira o número do apartamento",
+        variant: "destructive",
+      });
+      return;
+    }
+
     setIsSubmitting(true);
 
     const { error } = await supabase.from("activity_ratings").insert({
@@ -43,6 +52,7 @@ export const ActivityRating = ({ activityId, activityName }: ActivityRatingProps
       rating,
       comment: comment.trim() || null,
       guest_name: guestName.trim(),
+      room_number: roomNumber.trim(),
     });
 
     if (error) {
@@ -58,6 +68,7 @@ export const ActivityRating = ({ activityId, activityName }: ActivityRatingProps
       setRating(0);
       setComment("");
       setGuestName("");
+      setRoomNumber("");
     }
 
     setIsSubmitting(false);
@@ -93,6 +104,13 @@ export const ActivityRating = ({ activityId, activityName }: ActivityRatingProps
           placeholder="Seu nome"
           value={guestName}
           onChange={(e) => setGuestName(e.target.value)}
+        />
+
+        <Input
+          placeholder="Número do apartamento"
+          value={roomNumber}
+          onChange={(e) => setRoomNumber(e.target.value)}
+          type="text"
         />
 
         <Textarea
