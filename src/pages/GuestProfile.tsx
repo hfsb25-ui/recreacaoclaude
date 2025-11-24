@@ -19,18 +19,21 @@ interface CheckIn {
 
 const GuestProfile = () => {
   const navigate = useNavigate();
-  const { guest, currentLevel, nextLevel, logout, refreshGuest } = useGuestAuth();
+  const { guest, currentLevel, nextLevel, logout, refreshGuest, loading: guestLoading } = useGuestAuth();
   const [checkins, setCheckins] = useState<CheckIn[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    // Wait for guest data to load before checking
+    if (guestLoading) return;
+    
     if (!guest) {
       navigate("/guest-auth");
       return;
     }
 
     fetchCheckins();
-  }, [guest, navigate]);
+  }, [guest, guestLoading, navigate]);
 
   const fetchCheckins = async () => {
     if (!guest) return;
@@ -53,6 +56,14 @@ const GuestProfile = () => {
     toast.success("Logout realizado com sucesso!");
     navigate("/");
   };
+
+  if (guestLoading || loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-[var(--gradient-bg)]">
+        <p className="text-foreground text-lg">Carregando perfil...</p>
+      </div>
+    );
+  }
 
   if (!guest || !currentLevel) {
     return null;
