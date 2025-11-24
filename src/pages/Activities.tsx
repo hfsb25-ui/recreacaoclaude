@@ -249,7 +249,7 @@ const Activities = () => {
                           size="sm"
                           onClick={() => setSelectedActivityForRating(activity)}
                           className={isHappening 
-                            ? "bg-white text-primary hover:bg-white/90" 
+                            ? "bg-white text-primary hover:bg-white/90 border-white" 
                             : "bg-primary text-primary-foreground hover:bg-primary/90"
                           }
                         >
