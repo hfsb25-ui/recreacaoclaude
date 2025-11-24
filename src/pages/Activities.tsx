@@ -245,10 +245,13 @@ const Activities = () => {
                     <Dialog open={selectedActivityForRating?.id === activity.id} onOpenChange={(open) => !open && setSelectedActivityForRating(null)}>
                       <DialogTrigger asChild>
                         <Button
-                          variant="default"
+                          variant={isHappening ? "secondary" : "default"}
                           size="sm"
                           onClick={() => setSelectedActivityForRating(activity)}
-                          className="bg-primary text-primary-foreground hover:bg-primary/90"
+                          className={isHappening 
+                            ? "bg-white text-primary hover:bg-white/90" 
+                            : "bg-primary text-primary-foreground hover:bg-primary/90"
+                          }
                         >
                           <Star className="h-4 w-4 mr-2" />
                           Avaliar Atividade
