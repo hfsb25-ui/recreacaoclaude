@@ -14,9 +14,13 @@ export default defineConfig(({ mode }) => ({
     alias: {
       "@": path.resolve(__dirname, "./src"),
     },
-    dedupe: ["react", "react-dom"],
+    dedupe: ["react", "react-dom", "next-themes"],
   },
   optimizeDeps: {
-    include: ["recharts"],
+    include: ["recharts", "next-themes"],
+    exclude: [],
+    esbuildOptions: {
+      target: "esnext",
+    },
   },
 }));
