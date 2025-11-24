@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
 import {
   AlertDialog,
@@ -29,6 +30,7 @@ interface ResetConfig {
   id: string;
   reset_day_1: number;
   reset_day_2: number;
+  reset_time: string;
 }
 
 const GamificationManager = () => {
@@ -36,6 +38,7 @@ const GamificationManager = () => {
   const [resetConfig, setResetConfig] = useState<ResetConfig | null>(null);
   const [resetDay1, setResetDay1] = useState("3");
   const [resetDay2, setResetDay2] = useState("0");
+  const [resetTime, setResetTime] = useState("00:00");
   const [loading, setLoading] = useState(false);
 
   const weekDays = [
@@ -74,6 +77,7 @@ const GamificationManager = () => {
       setResetConfig(configData);
       setResetDay1(configData.reset_day_1.toString());
       setResetDay2(configData.reset_day_2.toString());
+      setResetTime(configData.reset_time || "00:00");
     }
   };
 
@@ -85,6 +89,7 @@ const GamificationManager = () => {
         .update({
           reset_day_1: parseInt(resetDay1),
           reset_day_2: parseInt(resetDay2),
+          reset_time: resetTime,
           updated_at: new Date().toISOString(),
         })
         .eq("id", resetConfig?.id);
@@ -157,6 +162,18 @@ const GamificationManager = () => {
         .update({ is_active: false })
         .eq("id", activePeriod.id);
 
+      // Delete all check-ins
+      await supabase
+        .from("activity_checkins")
+        .delete()
+        .neq("id", "00000000-0000-0000-0000-000000000000");
+
+      // Delete all guests
+      await supabase
+        .from("guests")
+        .delete()
+        .neq("id", "00000000-0000-0000-0000-000000000000");
+
       // Create new period
       const newPeriodNumber = activePeriod.period_number + 1;
       await supabase.from("ranking_periods").insert({
@@ -168,13 +185,7 @@ const GamificationManager = () => {
         is_active: true,
       });
 
-      // Reset all guests points and levels
-      await supabase
-        .from("guests")
-        .update({ total_points: 0, current_level: 1 })
-        .neq("id", "00000000-0000-0000-0000-000000000000");
-
-      toast.success("Período finalizado e pontos resetados com sucesso!");
+      toast.success("Período finalizado! Todos os hóspedes foram removidos.");
       fetchData();
     } catch (error: any) {
       toast.error(error.message || "Erro ao finalizar período");
@@ -187,6 +198,9 @@ const GamificationManager = () => {
     <div className="space-y-6">
       <Card className="p-6">
         <h3 className="text-lg font-semibold mb-4">Configuração de Reset</h3>
+        <p className="text-sm text-muted-foreground mb-4">
+          Reset configurado para {weekDays.find(d => d.value === resetDay1)?.label} e {weekDays.find(d => d.value === resetDay2)?.label} às {resetTime}
+        </p>
         <div className="grid grid-cols-2 gap-4 mb-4">
           <div className="space-y-2">
             <Label>Primeiro Dia de Reset</Label>
@@ -218,6 +232,14 @@ const GamificationManager = () => {
               </SelectContent>
             </Select>
           </div>
+        </div>
+        <div className="space-y-2 mb-4">
+          <Label>Horário do Reset</Label>
+          <Input 
+            type="time" 
+            value={resetTime} 
+            onChange={(e) => setResetTime(e.target.value)}
+          />
         </div>
         <Button onClick={handleSaveConfig} disabled={loading}>
           Salvar Configuração
@@ -261,11 +283,14 @@ const GamificationManager = () => {
                 Esta ação irá:
                 <ul className="list-disc list-inside mt-2">
                   <li>Salvar os Top 3 no Hall da Fama</li>
-                  <li>Resetar todos os pontos e níveis para 0</li>
+                  <li><strong>EXCLUIR TODOS os hóspedes cadastrados</strong></li>
+                  <li><strong>EXCLUIR TODOS os check-ins</strong></li>
                   <li>Criar um novo período de ranking</li>
                 </ul>
                 <br />
-                Esta ação não pode ser desfeita.
+                Os novos hóspedes poderão se cadastrar nos mesmos quartos.
+                <br />
+                <strong>Esta ação não pode ser desfeita.</strong>
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
