@@ -7,7 +7,6 @@ import { ArrowLeft, Clock, Star, WifiOff } from "lucide-react";
 import { format, isToday } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { ActivityRating } from "@/components/ActivityRating";
-import { AddToCalendar } from "@/components/AddToCalendar";
 import { useOfflineSync } from "@/hooks/useOfflineSync";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 
@@ -243,36 +242,28 @@ const Activities = () => {
                       )}
                     </div>
                     
-                    <div className="flex gap-2 flex-wrap">
-                      <AddToCalendar
-                        activityName={activity.name}
-                        description={activity.description}
-                        startTime={activity.start_time}
-                        endTime={activity.end_time}
-                        date={new Date(activity.activity_date)}
-                      />
-                      <Dialog open={selectedActivityForRating?.id === activity.id} onOpenChange={(open) => !open && setSelectedActivityForRating(null)}>
-                        <DialogTrigger asChild>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => setSelectedActivityForRating(activity)}
-                          >
-                            <Star className="h-4 w-4 mr-2" />
-                            Avaliar Atividade
-                          </Button>
-                        </DialogTrigger>
-                        <DialogContent>
-                          <DialogHeader>
-                            <DialogTitle>Avaliar Atividade</DialogTitle>
-                          </DialogHeader>
-                          <ActivityRating
-                            activityId={activity.id}
-                            activityName={activity.name}
-                          />
-                        </DialogContent>
-                      </Dialog>
-                    </div>
+                    <Dialog open={selectedActivityForRating?.id === activity.id} onOpenChange={(open) => !open && setSelectedActivityForRating(null)}>
+                      <DialogTrigger asChild>
+                        <Button
+                          variant="default"
+                          size="sm"
+                          onClick={() => setSelectedActivityForRating(activity)}
+                          className="bg-primary text-primary-foreground hover:bg-primary/90"
+                        >
+                          <Star className="h-4 w-4 mr-2" />
+                          Avaliar Atividade
+                        </Button>
+                      </DialogTrigger>
+                      <DialogContent>
+                        <DialogHeader>
+                          <DialogTitle>Avaliar Atividade</DialogTitle>
+                        </DialogHeader>
+                        <ActivityRating
+                          activityId={activity.id}
+                          activityName={activity.name}
+                        />
+                      </DialogContent>
+                    </Dialog>
                   </div>
                 </Card>
               );
