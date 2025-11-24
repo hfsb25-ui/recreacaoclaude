@@ -213,15 +213,23 @@ const Home = () => {
             </div>
           )}
 
-          {/* CTA Button */}
-          <div className="text-center mb-12">
+          {/* CTA Buttons */}
+          <div className="text-center mb-12 flex flex-col sm:flex-row gap-4 justify-center items-center max-w-2xl mx-auto">
             <Button
               size="lg"
               onClick={() => navigate("/programacao")}
-              className="bg-orange-500 hover:bg-orange-600 text-white text-sm sm:text-xl px-6 sm:px-12 py-6 sm:py-8 h-auto shadow-[var(--shadow-hover)] w-full sm:w-auto"
+              className="bg-orange-500 hover:bg-orange-600 text-white text-sm sm:text-xl px-6 sm:px-12 py-6 sm:py-8 h-auto shadow-[var(--shadow-hover)] w-full sm:flex-1"
             >
               <Calendar className="mr-2 sm:mr-3 h-5 w-5 sm:h-6 sm:w-6" />
               ACESSAR PROGRAMAÇÃO
+            </Button>
+            <Button
+              size="lg"
+              variant="outline"
+              onClick={() => navigate("/guest-auth")}
+              className="text-sm sm:text-xl px-6 sm:px-12 py-6 sm:py-8 h-auto shadow-[var(--shadow-hover)] w-full sm:flex-1"
+            >
+              🎮 Área do Hóspede
             </Button>
           </div>
 
