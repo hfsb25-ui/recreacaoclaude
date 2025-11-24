@@ -55,6 +55,41 @@ export type Database = {
           },
         ]
       }
+      activity_ratings: {
+        Row: {
+          activity_id: string
+          comment: string | null
+          created_at: string
+          guest_name: string
+          id: string
+          rating: number
+        }
+        Insert: {
+          activity_id: string
+          comment?: string | null
+          created_at?: string
+          guest_name: string
+          id?: string
+          rating: number
+        }
+        Update: {
+          activity_id?: string
+          comment?: string | null
+          created_at?: string
+          guest_name?: string
+          id?: string
+          rating?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "activity_ratings_activity_id_fkey"
+            columns: ["activity_id"]
+            isOneToOne: false
+            referencedRelation: "activities"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       age_groups: {
         Row: {
           color: string
