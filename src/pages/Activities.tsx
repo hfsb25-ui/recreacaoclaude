@@ -8,8 +8,6 @@ import { format, isToday } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { ActivityRating } from "@/components/ActivityRating";
 import { AddToCalendar } from "@/components/AddToCalendar";
-import { LanguageSelector } from "@/components/LanguageSelector";
-import { useTranslation } from "@/hooks/useTranslation";
 import { useOfflineSync } from "@/hooks/useOfflineSync";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 
@@ -31,7 +29,6 @@ interface AgeGroup {
 const Activities = () => {
   const { ageGroupId } = useParams();
   const navigate = useNavigate();
-  const { t } = useTranslation();
   const { isOnline, saveToCache, getFromCache } = useOfflineSync();
   const [activities, setActivities] = useState<Activity[]>([]);
   const [ageGroup, setAgeGroup] = useState<AgeGroup | null>(null);
@@ -155,22 +152,19 @@ const Activities = () => {
           <Card className="mb-4 p-4 bg-yellow-50 dark:bg-yellow-900/20 border-yellow-200 dark:border-yellow-800">
             <div className="flex items-center gap-2 text-yellow-800 dark:text-yellow-200">
               <WifiOff className="h-5 w-5" />
-              <span className="font-medium">{t("offline.message")}</span>
+              <span className="font-medium">Você está offline. Mostrando dados salvos.</span>
             </div>
           </Card>
         )}
         
-        <div className="flex justify-between items-center mb-6">
-          <Button
-            variant="ghost"
-            onClick={() => navigate("/programacao")}
-            className="hover:bg-primary/10 transition-[var(--transition-smooth)]"
-          >
-            <ArrowLeft className="mr-2 h-4 w-4" />
-            {t("schedule.back")}
-          </Button>
-          <LanguageSelector />
-        </div>
+        <Button
+          variant="ghost"
+          onClick={() => navigate("/programacao")}
+          className="mb-6 hover:bg-primary/10 transition-[var(--transition-smooth)]"
+        >
+          <ArrowLeft className="mr-2 h-4 w-4" />
+          Voltar
+        </Button>
 
         <div className="mb-8">
           <div
@@ -265,12 +259,12 @@ const Activities = () => {
                             onClick={() => setSelectedActivityForRating(activity)}
                           >
                             <Star className="h-4 w-4 mr-2" />
-                            {t("rating.rateActivity")}
+                            Avaliar Atividade
                           </Button>
                         </DialogTrigger>
                         <DialogContent>
                           <DialogHeader>
-                            <DialogTitle>{t("rating.rateActivity")}</DialogTitle>
+                            <DialogTitle>Avaliar Atividade</DialogTitle>
                           </DialogHeader>
                           <ActivityRating
                             activityId={activity.id}

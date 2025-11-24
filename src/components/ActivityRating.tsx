@@ -6,7 +6,6 @@ import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
-import { useTranslation } from "@/hooks/useTranslation";
 
 interface ActivityRatingProps {
   activityId: string;
@@ -14,7 +13,6 @@ interface ActivityRatingProps {
 }
 
 export const ActivityRating = ({ activityId, activityName }: ActivityRatingProps) => {
-  const { t } = useTranslation();
   const [rating, setRating] = useState(0);
   const [hoverRating, setHoverRating] = useState(0);
   const [comment, setComment] = useState("");
@@ -24,7 +22,7 @@ export const ActivityRating = ({ activityId, activityName }: ActivityRatingProps
   const handleSubmit = async () => {
     if (rating === 0) {
       toast({
-        title: t("rating.selectRating"),
+        title: "Por favor, selecione uma avaliação",
         variant: "destructive",
       });
       return;
@@ -32,7 +30,7 @@ export const ActivityRating = ({ activityId, activityName }: ActivityRatingProps
 
     if (!guestName.trim()) {
       toast({
-        title: t("rating.enterName"),
+        title: "Por favor, insira seu nome",
         variant: "destructive",
       });
       return;
@@ -50,12 +48,12 @@ export const ActivityRating = ({ activityId, activityName }: ActivityRatingProps
     if (error) {
       console.error("Error submitting rating:", error);
       toast({
-        title: t("rating.error"),
+        title: "Erro ao enviar avaliação",
         variant: "destructive",
       });
     } else {
       toast({
-        title: t("rating.success"),
+        title: "Avaliação enviada com sucesso!",
       });
       setRating(0);
       setComment("");
@@ -67,7 +65,7 @@ export const ActivityRating = ({ activityId, activityName }: ActivityRatingProps
 
   return (
     <Card className="p-6 space-y-4">
-      <h3 className="text-lg font-semibold">{t("rating.rateActivity")}</h3>
+      <h3 className="text-lg font-semibold">Avaliar Atividade</h3>
       <p className="text-sm text-muted-foreground">{activityName}</p>
 
       <div className="space-y-4">
@@ -92,20 +90,20 @@ export const ActivityRating = ({ activityId, activityName }: ActivityRatingProps
         </div>
 
         <Input
-          placeholder={t("rating.yourName")}
+          placeholder="Seu nome"
           value={guestName}
           onChange={(e) => setGuestName(e.target.value)}
         />
 
         <Textarea
-          placeholder={t("rating.commentOptional")}
+          placeholder="Comentário (opcional)"
           value={comment}
           onChange={(e) => setComment(e.target.value)}
           rows={3}
         />
 
         <Button onClick={handleSubmit} disabled={isSubmitting} className="w-full">
-          {isSubmitting ? t("rating.submitting") : t("rating.submit")}
+          {isSubmitting ? "Enviando..." : "Enviar Avaliação"}
         </Button>
       </div>
     </Card>

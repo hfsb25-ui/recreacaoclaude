@@ -10,7 +10,6 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { LanguageSelector } from "@/components/LanguageSelector";
 
 interface Announcement {
   id: string;
@@ -178,17 +177,14 @@ const Home = () => {
             </div>
 
             {/* Settings button - right */}
-            <div className="flex items-center gap-2">
-              <LanguageSelector />
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => navigate("/auth")}
-                className="hover:bg-primary/10 transition-[var(--transition-smooth)] shrink-0"
-              >
-                <Settings className="h-5 w-5" />
-              </Button>
-            </div>
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => navigate("/auth")}
+              className="hover:bg-primary/10 transition-[var(--transition-smooth)] shrink-0"
+            >
+              <Settings className="h-5 w-5" />
+            </Button>
           </div>
         </div>
       </header>
