@@ -4,7 +4,6 @@ import { supabase } from "@/integrations/supabase/client";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Settings, Sun, Waves, Users, ArrowLeft } from "lucide-react";
-import { LanguageSelector } from "@/components/LanguageSelector";
 
 interface AgeGroup {
   id: string;
@@ -91,9 +90,7 @@ const Index = () => {
                 <p className="text-sm text-muted-foreground">Programação do dia</p>
               </div>
             </div>
-            <div className="w-24 flex justify-end">
-              <LanguageSelector />
-            </div>
+            <div className="w-24"></div>
           </div>
         </div>
       </header>

@@ -6,7 +6,6 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { useTranslation } from "@/hooks/useTranslation";
 import { format } from "date-fns";
 
 interface AddToCalendarProps {
@@ -24,7 +23,6 @@ export const AddToCalendar = ({
   endTime,
   date,
 }: AddToCalendarProps) => {
-  const { t } = useTranslation();
 
   const formatDateForICS = (date: Date, time: string) => {
     const [hours, minutes] = time.split(":");
@@ -79,17 +77,17 @@ export const AddToCalendar = ({
       <DropdownMenuTrigger asChild>
         <Button variant="outline" size="sm" className="gap-2">
           <Calendar className="h-4 w-4" />
-          <span className="hidden sm:inline">{t("calendar.addToCalendar")}</span>
+          <span className="hidden sm:inline">Adicionar ao Calendário</span>
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end">
         <DropdownMenuItem onClick={addToGoogleCalendar} className="gap-2">
           <Calendar className="h-4 w-4" />
-          {t("calendar.googleCalendar")}
+          Google Calendar
         </DropdownMenuItem>
         <DropdownMenuItem onClick={generateICS} className="gap-2">
           <Download className="h-4 w-4" />
-          {t("calendar.downloadICS")}
+          Baixar .ics
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
