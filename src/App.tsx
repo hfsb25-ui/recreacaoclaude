@@ -8,6 +8,10 @@ import Schedule from "./pages/Schedule";
 import Activities from "./pages/Activities";
 import Auth from "./pages/Auth";
 import Admin from "./pages/Admin";
+import GuestAuth from "./pages/GuestAuth";
+import GuestProfile from "./pages/GuestProfile";
+import Ranking from "./pages/Ranking";
+import HallOfFame from "./pages/HallOfFame";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient({
@@ -30,6 +34,10 @@ const AppContent = () => {
           <Route path="/activities/:ageGroupId" element={<Activities />} />
           <Route path="/auth" element={<Auth />} />
           <Route path="/admin" element={<Admin />} />
+          <Route path="/guest-auth" element={<GuestAuth />} />
+          <Route path="/guest-profile" element={<GuestProfile />} />
+          <Route path="/ranking" element={<Ranking />} />
+          <Route path="/hall-of-fame" element={<HallOfFame />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>

@@ -19,6 +19,7 @@ import { SiteNameManager } from "@/components/admin/SiteNameManager";
 import { RatingsManager } from "@/components/admin/RatingsManager";
 import { ActivityTemplatesManager } from "@/components/admin/ActivityTemplatesManager";
 import { WeatherLocationManager } from "@/components/admin/WeatherLocationManager";
+import GamificationManager from "@/components/admin/GamificationManager";
 import { useUserRole } from "@/hooks/useUserRole";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Card } from "@/components/ui/card";
@@ -318,11 +319,12 @@ const Admin = () => {
 
         <Tabs defaultValue="age-groups" className="w-full">
           <div className="w-full overflow-x-auto mb-6">
-            <TabsList className={`inline-flex w-full min-w-max ${isGestor ? 'md:grid md:grid-cols-11' : 'md:grid md:grid-cols-4'}`}>
+            <TabsList className={`inline-flex w-full min-w-max ${isGestor ? 'md:grid md:grid-cols-12' : 'md:grid md:grid-cols-5'}`}>
               <TabsTrigger value="age-groups" className="flex-shrink-0">Faixas Etárias</TabsTrigger>
               <TabsTrigger value="activity-templates" className="flex-shrink-0">Catálogo de Atividades</TabsTrigger>
               <TabsTrigger value="activities" className="flex-shrink-0">Atividades</TabsTrigger>
               <TabsTrigger value="ratings" className="flex-shrink-0">Avaliações</TabsTrigger>
+              <TabsTrigger value="gamification" className="flex-shrink-0">Gamificação</TabsTrigger>
               {isGestor && (
                 <>
                   <TabsTrigger value="announcements" className="flex-shrink-0">Anúncios</TabsTrigger>
@@ -351,6 +353,10 @@ const Admin = () => {
 
           <TabsContent value="ratings" className="space-y-4">
             <RatingsManager />
+          </TabsContent>
+
+          <TabsContent value="gamification" className="space-y-4">
+            <GamificationManager />
           </TabsContent>
 
           {isGestor && (

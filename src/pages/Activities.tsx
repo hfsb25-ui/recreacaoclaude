@@ -9,6 +9,7 @@ import { ptBR } from "date-fns/locale";
 import { ActivityRating } from "@/components/ActivityRating";
 import { useOfflineSync } from "@/hooks/useOfflineSync";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import CheckInButton from "@/components/CheckInButton";
 
 interface Activity {
   id: string;
@@ -242,31 +243,36 @@ const Activities = () => {
                       )}
                     </div>
                     
-                    <Dialog open={selectedActivityForRating?.id === activity.id} onOpenChange={(open) => !open && setSelectedActivityForRating(null)}>
-                      <DialogTrigger asChild>
-                        <Button
-                          variant={isHappening ? "secondary" : "default"}
-                          size="sm"
-                          onClick={() => setSelectedActivityForRating(activity)}
-                          className={isHappening 
-                            ? "bg-white text-primary hover:bg-white/90 border-white" 
-                            : "bg-primary text-primary-foreground hover:bg-primary/90"
-                          }
-                        >
-                          <Star className="h-4 w-4 mr-2" />
-                          Avaliar Atividade
-                        </Button>
-                      </DialogTrigger>
-                      <DialogContent>
-                        <DialogHeader>
-                          <DialogTitle>Avaliar Atividade</DialogTitle>
-                        </DialogHeader>
-                        <ActivityRating
-                          activityId={activity.id}
-                          activityName={activity.name}
-                        />
-                      </DialogContent>
-                    </Dialog>
+                    <div className="space-y-2">
+                      <CheckInButton
+                        activityId={activity.id}
+                        activityStartTime={activity.start_time}
+                        activityEndTime={activity.end_time}
+                        activityDate={activity.activity_date}
+                      />
+                      <Dialog open={selectedActivityForRating?.id === activity.id} onOpenChange={(open) => !open && setSelectedActivityForRating(null)}>
+                        <DialogTrigger asChild>
+                          <Button
+                            variant={isHappening ? "secondary" : "outline"}
+                            size="sm"
+                            className="w-full"
+                            onClick={() => setSelectedActivityForRating(activity)}
+                          >
+                            <Star className="h-4 w-4 mr-2" />
+                            Avaliar Atividade
+                          </Button>
+                        </DialogTrigger>
+                        <DialogContent>
+                          <DialogHeader>
+                            <DialogTitle>Avaliar Atividade</DialogTitle>
+                          </DialogHeader>
+                          <ActivityRating
+                            activityId={activity.id}
+                            activityName={activity.name}
+                          />
+                        </DialogContent>
+                      </Dialog>
+                    </div>
                   </div>
                 </Card>
               );

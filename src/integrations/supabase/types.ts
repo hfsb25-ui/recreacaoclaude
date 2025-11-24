@@ -55,6 +55,45 @@ export type Database = {
           },
         ]
       }
+      activity_checkins: {
+        Row: {
+          activity_id: string
+          checked_in_at: string | null
+          guest_id: string
+          id: string
+          points_earned: number | null
+        }
+        Insert: {
+          activity_id: string
+          checked_in_at?: string | null
+          guest_id: string
+          id?: string
+          points_earned?: number | null
+        }
+        Update: {
+          activity_id?: string
+          checked_in_at?: string | null
+          guest_id?: string
+          id?: string
+          points_earned?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "activity_checkins_activity_id_fkey"
+            columns: ["activity_id"]
+            isOneToOne: false
+            referencedRelation: "activities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "activity_checkins_guest_id_fkey"
+            columns: ["guest_id"]
+            isOneToOne: false
+            referencedRelation: "guests"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       activity_ratings: {
         Row: {
           activity_id: string
@@ -171,6 +210,66 @@ export type Database = {
         }
         Relationships: []
       }
+      guests: {
+        Row: {
+          created_at: string | null
+          current_level: number | null
+          id: string
+          name: string
+          pin_code: string
+          room_number: string
+          total_points: number | null
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          current_level?: number | null
+          id?: string
+          name: string
+          pin_code: string
+          room_number: string
+          total_points?: number | null
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          current_level?: number | null
+          id?: string
+          name?: string
+          pin_code?: string
+          room_number?: string
+          total_points?: number | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      levels: {
+        Row: {
+          badge_emoji: string
+          created_at: string | null
+          id: string
+          level_number: number
+          min_points: number
+          name: string
+        }
+        Insert: {
+          badge_emoji: string
+          created_at?: string | null
+          id?: string
+          level_number: number
+          min_points: number
+          name: string
+        }
+        Update: {
+          badge_emoji?: string
+          created_at?: string | null
+          id?: string
+          level_number?: number
+          min_points?: number
+          name?: string
+        }
+        Relationships: []
+      }
       menu_items: {
         Row: {
           created_at: string
@@ -198,6 +297,111 @@ export type Database = {
           title?: string
           updated_at?: string
           url?: string
+        }
+        Relationships: []
+      }
+      ranking_periods: {
+        Row: {
+          created_at: string | null
+          end_date: string
+          id: string
+          is_active: boolean | null
+          period_number: number
+          start_date: string
+        }
+        Insert: {
+          created_at?: string | null
+          end_date: string
+          id?: string
+          is_active?: boolean | null
+          period_number: number
+          start_date: string
+        }
+        Update: {
+          created_at?: string | null
+          end_date?: string
+          id?: string
+          is_active?: boolean | null
+          period_number?: number
+          start_date?: string
+        }
+        Relationships: []
+      }
+      ranking_winners: {
+        Row: {
+          created_at: string | null
+          final_position: number
+          guest_id: string | null
+          guest_name: string
+          id: string
+          prize_name: string
+          ranking_period_id: string
+          room_number: string
+          total_checkins: number
+          total_points: number
+        }
+        Insert: {
+          created_at?: string | null
+          final_position: number
+          guest_id?: string | null
+          guest_name: string
+          id?: string
+          prize_name: string
+          ranking_period_id: string
+          room_number: string
+          total_checkins: number
+          total_points: number
+        }
+        Update: {
+          created_at?: string | null
+          final_position?: number
+          guest_id?: string | null
+          guest_name?: string
+          id?: string
+          prize_name?: string
+          ranking_period_id?: string
+          room_number?: string
+          total_checkins?: number
+          total_points?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ranking_winners_guest_id_fkey"
+            columns: ["guest_id"]
+            isOneToOne: false
+            referencedRelation: "guests"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ranking_winners_ranking_period_id_fkey"
+            columns: ["ranking_period_id"]
+            isOneToOne: false
+            referencedRelation: "ranking_periods"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      reset_config: {
+        Row: {
+          created_at: string | null
+          id: string
+          reset_day_1: number
+          reset_day_2: number
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          reset_day_1: number
+          reset_day_2: number
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          reset_day_1?: number
+          reset_day_2?: number
+          updated_at?: string | null
         }
         Relationships: []
       }
