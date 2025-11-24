@@ -44,11 +44,19 @@ interface AgeGroup {
   color: string;
 }
 
+interface ActivityTemplate {
+  id: string;
+  name: string;
+  description: string | null;
+}
+
 const ActivitiesManager = () => {
   const [activities, setActivities] = useState<Activity[]>([]);
   const [ageGroups, setAgeGroups] = useState<AgeGroup[]>([]);
+  const [activityTemplates, setActivityTemplates] = useState<ActivityTemplate[]>([]);
   const [isOpen, setIsOpen] = useState(false);
   const [editingActivity, setEditingActivity] = useState<Activity | null>(null);
+  const [selectedTemplateId, setSelectedTemplateId] = useState("");
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [activityDate, setActivityDate] = useState("");
@@ -69,6 +77,7 @@ const ActivitiesManager = () => {
 
   useEffect(() => {
     fetchAgeGroups();
+    fetchActivityTemplates();
     fetchActivities();
   }, []);
 
@@ -79,6 +88,15 @@ const ActivitiesManager = () => {
       .order("sort_order", { ascending: true });
 
     if (data) setAgeGroups(data);
+  };
+
+  const fetchActivityTemplates = async () => {
+    const { data } = await supabase
+      .from("activity_templates")
+      .select("*")
+      .order("name");
+
+    if (data) setActivityTemplates(data);
   };
 
   const fetchActivities = async () => {
@@ -149,6 +167,7 @@ const ActivitiesManager = () => {
 
   const handleEdit = (activity: Activity) => {
     setEditingActivity(activity);
+    setSelectedTemplateId(""); // Clear template selection when editing
     setName(activity.name);
     setDescription(activity.description || "");
     // Extract just the date part (YYYY-MM-DD) to avoid timezone issues
@@ -163,12 +182,24 @@ const ActivitiesManager = () => {
   const handleClose = () => {
     setIsOpen(false);
     setEditingActivity(null);
+    setSelectedTemplateId("");
     setName("");
     setDescription("");
     setActivityDate("");
     setStartTime("");
     setEndTime("");
     setAgeGroupId("");
+  };
+
+  const handleTemplateSelect = (templateId: string) => {
+    setSelectedTemplateId(templateId);
+    const template = activityTemplates.find(t => t.id === templateId);
+    if (template) {
+      setName(template.name);
+      if (template.description) {
+        setDescription(template.description);
+      }
+    }
   };
 
   const handleImportPreviousWeek = async () => {
@@ -319,14 +350,32 @@ const ActivitiesManager = () => {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="name">Nome da Atividade</Label>
-              <Input
-                id="name"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                placeholder="Ex: Futebol na praia"
-                required
-              />
+              <Label htmlFor="template">Nome da Atividade</Label>
+              <Select 
+                value={selectedTemplateId} 
+                onValueChange={handleTemplateSelect}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecione uma atividade" />
+                </SelectTrigger>
+                <SelectContent>
+                  {activityTemplates.map((template) => (
+                    <SelectItem key={template.id} value={template.id}>
+                      {template.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {name && (
+                <Input
+                  id="name"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  placeholder="Ex: Futebol na praia"
+                  required
+                  className="mt-2"
+                />
+              )}
             </div>
 
             <div className="space-y-2">
