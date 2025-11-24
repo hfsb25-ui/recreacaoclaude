@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Settings, Sun, Waves, Users } from "lucide-react";
+import { Settings, Sun, Waves, Users, ArrowLeft } from "lucide-react";
 
 interface AgeGroup {
   id: string;
@@ -66,7 +66,16 @@ const Index = () => {
       {/* Header */}
       <header className="sticky top-0 z-50 border-b border-border/40 backdrop-blur-md bg-background/95 shadow-sm">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-center items-center h-20">
+          <div className="flex justify-between items-center h-20">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => navigate("/")}
+              className="hover:bg-accent/50"
+            >
+              <ArrowLeft className="h-5 w-5 mr-2" />
+              Voltar
+            </Button>
             <div className="flex items-center gap-4">
               <div className="relative">
                 <div className="absolute inset-0 bg-primary/20 blur-xl rounded-full"></div>
@@ -81,6 +90,7 @@ const Index = () => {
                 <p className="text-sm text-muted-foreground">Programação do dia</p>
               </div>
             </div>
+            <div className="w-24"></div>
           </div>
         </div>
       </header>
