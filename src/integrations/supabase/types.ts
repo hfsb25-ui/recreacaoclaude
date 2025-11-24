@@ -387,6 +387,7 @@ export type Database = {
           id: string
           reset_day_1: number
           reset_day_2: number
+          reset_time: string | null
           updated_at: string | null
         }
         Insert: {
@@ -394,6 +395,7 @@ export type Database = {
           id?: string
           reset_day_1: number
           reset_day_2: number
+          reset_time?: string | null
           updated_at?: string | null
         }
         Update: {
@@ -401,6 +403,7 @@ export type Database = {
           id?: string
           reset_day_1?: number
           reset_day_2?: number
+          reset_time?: string | null
           updated_at?: string | null
         }
         Relationships: []
