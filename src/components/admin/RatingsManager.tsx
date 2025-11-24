@@ -11,6 +11,7 @@ interface Rating {
   id: string;
   activity_id: string;
   guest_name: string;
+  room_number: string | null;
   rating: number;
   comment: string | null;
   created_at: string;
@@ -108,7 +109,8 @@ export const RatingsManager = () => {
                     </div>
                   </div>
                   <p className="text-sm text-muted-foreground">
-                    Por: {rating.guest_name} •{" "}
+                    Por: {rating.guest_name}
+                    {rating.room_number && ` • Apto ${rating.room_number}`} •{" "}
                     {format(new Date(rating.created_at), "dd/MM/yyyy 'às' HH:mm", {
                       locale: ptBR,
                     })}
