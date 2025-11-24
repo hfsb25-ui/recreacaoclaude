@@ -3,9 +3,15 @@ import { useParams, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, Clock } from "lucide-react";
+import { ArrowLeft, Clock, Star, WifiOff } from "lucide-react";
 import { format, isToday } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { ActivityRating } from "@/components/ActivityRating";
+import { AddToCalendar } from "@/components/AddToCalendar";
+import { LanguageSelector } from "@/components/LanguageSelector";
+import { useTranslation } from "@/hooks/useTranslation";
+import { useOfflineSync } from "@/hooks/useOfflineSync";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 
 interface Activity {
   id: string;
@@ -25,9 +31,13 @@ interface AgeGroup {
 const Activities = () => {
   const { ageGroupId } = useParams();
   const navigate = useNavigate();
+  const { t } = useTranslation();
+  const { isOnline, saveToCache, getFromCache } = useOfflineSync();
   const [activities, setActivities] = useState<Activity[]>([]);
   const [ageGroup, setAgeGroup] = useState<AgeGroup | null>(null);
   const [loading, setLoading] = useState(true);
+  const [selectedActivityForRating, setSelectedActivityForRating] = useState<Activity | null>(null);
+  const [ratings, setRatings] = useState<Record<string, { average: number; count: number }>>({});
   const currentActivityRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -47,6 +57,16 @@ const Activities = () => {
 
   const fetchData = async () => {
     try {
+      if (!isOnline) {
+        // Load from cache if offline
+        const cachedGroup = getFromCache(`ageGroup_${ageGroupId}`);
+        const cachedActivities = getFromCache(`activities_${ageGroupId}`);
+        if (cachedGroup) setAgeGroup(cachedGroup);
+        if (cachedActivities) setActivities(cachedActivities);
+        setLoading(false);
+        return;
+      }
+
       // Fetch age group
       const { data: groupData } = await supabase
         .from("age_groups")
@@ -54,7 +74,10 @@ const Activities = () => {
         .eq("id", ageGroupId)
         .single();
 
-      if (groupData) setAgeGroup(groupData);
+      if (groupData) {
+        setAgeGroup(groupData);
+        saveToCache(`ageGroup_${ageGroupId}`, groupData);
+      }
 
       // Fetch today's activities
       const today = new Date().toISOString().split("T")[0];
@@ -65,7 +88,37 @@ const Activities = () => {
         .eq("activity_date", today)
         .order("start_time", { ascending: true });
 
-      if (activitiesData) setActivities(activitiesData);
+      if (activitiesData) {
+        setActivities(activitiesData);
+        saveToCache(`activities_${ageGroupId}`, activitiesData);
+        
+        // Fetch ratings for all activities
+        const activityIds = activitiesData.map(a => a.id);
+        if (activityIds.length > 0) {
+          const { data: ratingsData } = await supabase
+            .from("activity_ratings")
+            .select("activity_id, rating")
+            .in("activity_id", activityIds);
+
+          if (ratingsData) {
+            const ratingsMap: Record<string, { average: number; count: number }> = {};
+            ratingsData.forEach(r => {
+              if (!ratingsMap[r.activity_id]) {
+                ratingsMap[r.activity_id] = { average: 0, count: 0 };
+              }
+              ratingsMap[r.activity_id].average += r.rating;
+              ratingsMap[r.activity_id].count++;
+            });
+            
+            Object.keys(ratingsMap).forEach(activityId => {
+              ratingsMap[activityId].average = 
+                ratingsMap[activityId].average / ratingsMap[activityId].count;
+            });
+            
+            setRatings(ratingsMap);
+          }
+        }
+      }
     } catch (error) {
       console.error("Error fetching data:", error);
     } finally {
@@ -98,14 +151,26 @@ const Activities = () => {
   return (
     <div className="min-h-screen bg-[var(--gradient-bg)] p-4 sm:p-6 overflow-x-hidden w-full">
       <div className="max-w-4xl mx-auto">
-        <Button
-          variant="ghost"
-          onClick={() => navigate("/programacao")}
-          className="mb-6 hover:bg-primary/10 transition-[var(--transition-smooth)]"
-        >
-          <ArrowLeft className="mr-2 h-4 w-4" />
-          Voltar
-        </Button>
+        {!isOnline && (
+          <Card className="mb-4 p-4 bg-yellow-50 dark:bg-yellow-900/20 border-yellow-200 dark:border-yellow-800">
+            <div className="flex items-center gap-2 text-yellow-800 dark:text-yellow-200">
+              <WifiOff className="h-5 w-5" />
+              <span className="font-medium">{t("offline.message")}</span>
+            </div>
+          </Card>
+        )}
+        
+        <div className="flex justify-between items-center mb-6">
+          <Button
+            variant="ghost"
+            onClick={() => navigate("/programacao")}
+            className="hover:bg-primary/10 transition-[var(--transition-smooth)]"
+          >
+            <ArrowLeft className="mr-2 h-4 w-4" />
+            {t("schedule.back")}
+          </Button>
+          <LanguageSelector />
+        </div>
 
         <div className="mb-8">
           <div
@@ -143,34 +208,77 @@ const Activities = () => {
                       : "bg-card hover:scale-[1.02]"
                   }`}
                 >
-                  <div className="flex flex-col sm:flex-row items-start sm:justify-between gap-3">
-                    <div className="flex-1 min-w-0 w-full">
-                      <h3 className="text-lg sm:text-xl font-semibold mb-2 break-words">
-                        {activity.name}
-                      </h3>
-                      {activity.description && (
-                        <p
-                          className={`mb-3 break-words ${
-                            isHappening ? "text-primary-foreground/90" : "text-muted-foreground"
-                          }`}
-                        >
-                          {activity.description}
-                        </p>
+                  <div className="space-y-4">
+                    <div className="flex flex-col sm:flex-row items-start sm:justify-between gap-3">
+                      <div className="flex-1 min-w-0 w-full">
+                        <h3 className="text-lg sm:text-xl font-semibold mb-2 break-words">
+                          {activity.name}
+                        </h3>
+                        {activity.description && (
+                          <p
+                            className={`mb-3 break-words ${
+                              isHappening ? "text-primary-foreground/90" : "text-muted-foreground"
+                            }`}
+                          >
+                            {activity.description}
+                          </p>
+                        )}
+                        <div className="flex items-center gap-4 flex-wrap">
+                          <div className="flex items-center gap-2">
+                            <Clock className="h-4 w-4" />
+                            <span className="font-medium text-sm sm:text-base">
+                              {activity.start_time.slice(0, 5)} - {activity.end_time.slice(0, 5)}
+                            </span>
+                          </div>
+                          {ratings[activity.id] && (
+                            <div className="flex items-center gap-1">
+                              <Star className="h-4 w-4 fill-yellow-400 text-yellow-400" />
+                              <span className="font-medium text-sm">
+                                {ratings[activity.id].average.toFixed(1)} ({ratings[activity.id].count})
+                              </span>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                      {isHappening && (
+                        <div className="w-full sm:w-auto sm:ml-4 flex-shrink-0">
+                          <span className="inline-block w-full sm:w-auto text-center px-3 py-1.5 sm:px-4 sm:py-2 bg-white/20 backdrop-blur-sm rounded-full text-xs sm:text-sm font-bold uppercase tracking-wide">
+                            Acontecendo agora!
+                          </span>
+                        </div>
                       )}
-                      <div className="flex items-center gap-2">
-                        <Clock className="h-4 w-4" />
-                        <span className="font-medium text-sm sm:text-base">
-                          {activity.start_time.slice(0, 5)} - {activity.end_time.slice(0, 5)}
-                        </span>
-                      </div>
                     </div>
-                    {isHappening && (
-                      <div className="w-full sm:w-auto sm:ml-4 flex-shrink-0">
-                        <span className="inline-block w-full sm:w-auto text-center px-3 py-1.5 sm:px-4 sm:py-2 bg-white/20 backdrop-blur-sm rounded-full text-xs sm:text-sm font-bold uppercase tracking-wide">
-                          Acontecendo agora!
-                        </span>
-                      </div>
-                    )}
+                    
+                    <div className="flex gap-2 flex-wrap">
+                      <AddToCalendar
+                        activityName={activity.name}
+                        description={activity.description}
+                        startTime={activity.start_time}
+                        endTime={activity.end_time}
+                        date={new Date(activity.activity_date)}
+                      />
+                      <Dialog open={selectedActivityForRating?.id === activity.id} onOpenChange={(open) => !open && setSelectedActivityForRating(null)}>
+                        <DialogTrigger asChild>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => setSelectedActivityForRating(activity)}
+                          >
+                            <Star className="h-4 w-4 mr-2" />
+                            {t("rating.rateActivity")}
+                          </Button>
+                        </DialogTrigger>
+                        <DialogContent>
+                          <DialogHeader>
+                            <DialogTitle>{t("rating.rateActivity")}</DialogTitle>
+                          </DialogHeader>
+                          <ActivityRating
+                            activityId={activity.id}
+                            activityName={activity.name}
+                          />
+                        </DialogContent>
+                      </Dialog>
+                    </div>
                   </div>
                 </Card>
               );

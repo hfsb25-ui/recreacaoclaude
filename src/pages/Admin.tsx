@@ -16,6 +16,7 @@ import { MenuItemsManager } from "@/components/admin/MenuItemsManager";
 import { UsersManager } from "@/components/admin/UsersManager";
 import { LogoManager } from "@/components/admin/LogoManager";
 import { SiteNameManager } from "@/components/admin/SiteNameManager";
+import { RatingsManager } from "@/components/admin/RatingsManager";
 import { useUserRole } from "@/hooks/useUserRole";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Card } from "@/components/ui/card";
@@ -315,9 +316,10 @@ const Admin = () => {
 
         <Tabs defaultValue="age-groups" className="w-full">
           <div className="w-full overflow-x-auto mb-6">
-            <TabsList className={`inline-flex w-full min-w-max ${isGestor ? 'md:grid md:grid-cols-8' : 'md:grid md:grid-cols-2'}`}>
+            <TabsList className={`inline-flex w-full min-w-max ${isGestor ? 'md:grid md:grid-cols-9' : 'md:grid md:grid-cols-3'}`}>
               <TabsTrigger value="age-groups" className="flex-shrink-0">Faixas Etárias</TabsTrigger>
               <TabsTrigger value="activities" className="flex-shrink-0">Atividades</TabsTrigger>
+              <TabsTrigger value="ratings" className="flex-shrink-0">Avaliações</TabsTrigger>
               {isGestor && (
                 <>
                   <TabsTrigger value="announcements" className="flex-shrink-0">Anúncios</TabsTrigger>
@@ -337,6 +339,10 @@ const Admin = () => {
 
           <TabsContent value="activities" className="space-y-4">
             <ActivitiesManager />
+          </TabsContent>
+
+          <TabsContent value="ratings" className="space-y-4">
+            <RatingsManager />
           </TabsContent>
 
           {isGestor && (
