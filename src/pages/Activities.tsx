@@ -3,13 +3,14 @@ import { useParams, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, Clock, Star, WifiOff } from "lucide-react";
+import { ArrowLeft, Clock, Star, WifiOff, User } from "lucide-react";
 import { format, isToday } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { ActivityRating } from "@/components/ActivityRating";
 import { useOfflineSync } from "@/hooks/useOfflineSync";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import CheckInButton from "@/components/CheckInButton";
+import { useGuestAuth } from "@/hooks/useGuestAuth";
 
 interface Activity {
   id: string;
@@ -29,6 +30,7 @@ interface AgeGroup {
 const Activities = () => {
   const { ageGroupId } = useParams();
   const navigate = useNavigate();
+  const { guest } = useGuestAuth();
   const { isOnline, saveToCache, getFromCache } = useOfflineSync();
   const [activities, setActivities] = useState<Activity[]>([]);
   const [ageGroup, setAgeGroup] = useState<AgeGroup | null>(null);
@@ -148,6 +150,16 @@ const Activities = () => {
   return (
     <div className="min-h-screen bg-[var(--gradient-bg)] p-4 sm:p-6 overflow-x-hidden w-full">
       <div className="max-w-4xl mx-auto">
+        {guest && (
+          <Card className="mb-4 p-3 bg-primary/10 border-primary/20">
+            <div className="flex items-center justify-center gap-2">
+              <User className="h-4 w-4 text-primary" />
+              <span className="text-sm font-medium text-foreground">
+                Olá, {guest.name}!
+              </span>
+            </div>
+          </Card>
+        )}
         {!isOnline && (
           <Card className="mb-4 p-4 bg-yellow-50 dark:bg-yellow-900/20 border-yellow-200 dark:border-yellow-800">
             <div className="flex items-center gap-2 text-yellow-800 dark:text-yellow-200">

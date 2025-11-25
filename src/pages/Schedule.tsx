@@ -3,7 +3,8 @@ import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Settings, Sun, Waves, Users, ArrowLeft } from "lucide-react";
+import { Settings, Sun, Waves, Users, ArrowLeft, User } from "lucide-react";
+import { useGuestAuth } from "@/hooks/useGuestAuth";
 
 interface AgeGroup {
   id: string;
@@ -14,6 +15,7 @@ interface AgeGroup {
 
 const Index = () => {
   const navigate = useNavigate();
+  const { guest } = useGuestAuth();
   const [ageGroups, setAgeGroups] = useState<AgeGroup[]>([]);
   const [siteName, setSiteName] = useState("Recreação Hotel");
   const [loading, setLoading] = useState(true);
@@ -66,6 +68,14 @@ const Index = () => {
       {/* Header */}
       <header className="sticky top-0 z-50 border-b border-border/40 backdrop-blur-md bg-background/95 shadow-sm">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          {guest && (
+            <div className="flex items-center justify-center gap-2 py-2 px-3 bg-primary/10">
+              <User className="h-4 w-4 text-primary" />
+              <span className="text-sm font-medium text-foreground">
+                Olá, {guest.name}!
+              </span>
+            </div>
+          )}
           <div className="flex justify-between items-center h-20">
             <Button
               variant="ghost"
