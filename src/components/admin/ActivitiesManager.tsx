@@ -354,6 +354,7 @@ const ActivitiesManager = () => {
               <Select 
                 value={selectedTemplateId} 
                 onValueChange={handleTemplateSelect}
+                required
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Selecione uma atividade" />
@@ -366,16 +367,6 @@ const ActivitiesManager = () => {
                   ))}
                 </SelectContent>
               </Select>
-              {name && (
-                <Input
-                  id="name"
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  placeholder="Ex: Futebol na praia"
-                  required
-                  className="mt-2"
-                />
-              )}
             </div>
 
             <div className="space-y-2">
