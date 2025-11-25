@@ -3,6 +3,8 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { useTheme } from "@/hooks/useTheme";
+import { SplashScreen } from "@/components/SplashScreen";
+import { useState, useEffect } from "react";
 import Home from "./pages/Home";
 import Schedule from "./pages/Schedule";
 import Activities from "./pages/Activities";
@@ -25,6 +27,27 @@ const queryClient = new QueryClient({
 
 const AppContent = () => {
   useTheme();
+  const [showSplash, setShowSplash] = useState(true);
+  const [isFirstLoad, setIsFirstLoad] = useState(true);
+
+  useEffect(() => {
+    // Check if this is truly the first load of the session
+    const hasLoadedBefore = sessionStorage.getItem('app-loaded');
+    if (hasLoadedBefore) {
+      setShowSplash(false);
+      setIsFirstLoad(false);
+    } else {
+      sessionStorage.setItem('app-loaded', 'true');
+    }
+  }, []);
+
+  const handleSplashFinish = () => {
+    setShowSplash(false);
+  };
+
+  if (showSplash && isFirstLoad) {
+    return <SplashScreen onFinish={handleSplashFinish} />;
+  }
   
   return (
     <div className="overflow-x-hidden w-full">
