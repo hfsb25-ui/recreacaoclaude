@@ -13,6 +13,7 @@ import {
 import { WeatherWidget } from "@/components/WeatherWidget";
 import { useGuestAuth } from "@/hooks/useGuestAuth";
 import { InstallPrompt } from "@/components/InstallPrompt";
+import { NotificationPrompt } from "@/components/NotificationPrompt";
 
 interface Announcement {
   id: string;
@@ -335,6 +336,9 @@ const Home = () => {
 
       {/* Install Prompt */}
       <InstallPrompt />
+      
+      {/* Notification Prompt */}
+      <NotificationPrompt />
     </div>
   );
 };
