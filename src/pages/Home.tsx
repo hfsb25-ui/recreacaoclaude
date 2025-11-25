@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { Calendar, Settings, Waves, Menu } from "lucide-react";
+import { Calendar, Settings, Waves, Menu, User } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -11,6 +11,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { WeatherWidget } from "@/components/WeatherWidget";
+import { useGuestAuth } from "@/hooks/useGuestAuth";
 
 interface Announcement {
   id: string;
@@ -29,6 +30,7 @@ interface MenuItem {
 
 const Home = () => {
   const navigate = useNavigate();
+  const { guest } = useGuestAuth();
   const [announcements, setAnnouncements] = useState<Announcement[]>([]);
   const [menuItems, setMenuItems] = useState<MenuItem[]>([]);
   const [logoUrl, setLogoUrl] = useState<string | null>(null);
@@ -139,6 +141,14 @@ const Home = () => {
       {/* Header */}
       <header className="border-b border-border/50 backdrop-blur-sm bg-background/80 w-full">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 py-4 sm:py-6 w-full">
+          {guest && (
+            <div className="flex items-center justify-center gap-2 mb-3 px-3 py-2 bg-primary/10 rounded-lg">
+              <User className="h-4 w-4 text-primary" />
+              <span className="text-sm font-medium text-foreground">
+                Olá, {guest.name}!
+              </span>
+            </div>
+          )}
           <div className="flex items-center justify-between relative w-full">
             {/* Menu button - left */}
             <DropdownMenu>
