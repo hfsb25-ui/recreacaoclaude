@@ -30,7 +30,7 @@ interface MenuItem {
 
 const Home = () => {
   const navigate = useNavigate();
-  const { guest } = useGuestAuth();
+  const { guest, currentLevel, logout } = useGuestAuth();
   const [announcements, setAnnouncements] = useState<Announcement[]>([]);
   const [menuItems, setMenuItems] = useState<MenuItem[]>([]);
   const [logoUrl, setLogoUrl] = useState<string | null>(null);
@@ -142,11 +142,53 @@ const Home = () => {
       <header className="border-b border-border/50 backdrop-blur-sm bg-background/80 w-full">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 py-4 sm:py-6 w-full">
           {guest && (
-            <div className="flex items-center justify-center gap-2 mb-3 px-3 py-2 bg-primary/10 rounded-lg">
-              <User className="h-4 w-4 text-primary" />
-              <span className="text-sm font-medium text-foreground">
-                Olá, {guest.name}!
-              </span>
+            <div className="flex items-center justify-center mb-3">
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" className="gap-2 hover:bg-primary/10">
+                    <User className="h-4 w-4 text-primary" />
+                    <span className="text-sm font-medium text-foreground">
+                      Olá, {guest.name}!
+                    </span>
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="center" className="w-56 bg-background z-50">
+                  <div className="px-2 py-3 space-y-2">
+                    <div className="flex items-center gap-2 px-2">
+                      <User className="h-5 w-5 text-primary" />
+                      <div>
+                        <p className="font-semibold text-foreground">{guest.name}</p>
+                        <p className="text-xs text-muted-foreground">Quarto {guest.room_number}</p>
+                      </div>
+                    </div>
+                    <div className="border-t border-border my-2"></div>
+                    <div className="px-2 space-y-1">
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm text-muted-foreground">Pontos:</span>
+                        <span className="font-bold text-primary">{guest.total_points}</span>
+                      </div>
+                      {currentLevel && (
+                        <div className="flex items-center justify-between">
+                          <span className="text-sm text-muted-foreground">Nível:</span>
+                          <span className="font-bold text-foreground">
+                            {currentLevel.badge_emoji} {currentLevel.name}
+                          </span>
+                        </div>
+                      )}
+                    </div>
+                    <div className="border-t border-border my-2"></div>
+                    <DropdownMenuItem 
+                      onClick={() => {
+                        logout();
+                        navigate("/");
+                      }}
+                      className="cursor-pointer text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-950"
+                    >
+                      Sair
+                    </DropdownMenuItem>
+                  </div>
+                </DropdownMenuContent>
+              </DropdownMenu>
             </div>
           )}
           <div className="flex items-center justify-between relative w-full">

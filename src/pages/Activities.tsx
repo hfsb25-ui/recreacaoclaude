@@ -11,6 +11,12 @@ import { useOfflineSync } from "@/hooks/useOfflineSync";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import CheckInButton from "@/components/CheckInButton";
 import { useGuestAuth } from "@/hooks/useGuestAuth";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 interface Activity {
   id: string;
@@ -30,7 +36,7 @@ interface AgeGroup {
 const Activities = () => {
   const { ageGroupId } = useParams();
   const navigate = useNavigate();
-  const { guest } = useGuestAuth();
+  const { guest, currentLevel, logout } = useGuestAuth();
   const { isOnline, saveToCache, getFromCache } = useOfflineSync();
   const [activities, setActivities] = useState<Activity[]>([]);
   const [ageGroup, setAgeGroup] = useState<AgeGroup | null>(null);
@@ -152,11 +158,53 @@ const Activities = () => {
       <div className="max-w-4xl mx-auto">
         {guest && (
           <Card className="mb-4 p-3 bg-primary/10 border-primary/20">
-            <div className="flex items-center justify-center gap-2">
-              <User className="h-4 w-4 text-primary" />
-              <span className="text-sm font-medium text-foreground">
-                Olá, {guest.name}!
-              </span>
+            <div className="flex items-center justify-center">
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" className="gap-2 hover:bg-primary/20">
+                    <User className="h-4 w-4 text-primary" />
+                    <span className="text-sm font-medium text-foreground">
+                      Olá, {guest.name}!
+                    </span>
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="center" className="w-56 bg-background z-50">
+                  <div className="px-2 py-3 space-y-2">
+                    <div className="flex items-center gap-2 px-2">
+                      <User className="h-5 w-5 text-primary" />
+                      <div>
+                        <p className="font-semibold text-foreground">{guest.name}</p>
+                        <p className="text-xs text-muted-foreground">Quarto {guest.room_number}</p>
+                      </div>
+                    </div>
+                    <div className="border-t border-border my-2"></div>
+                    <div className="px-2 space-y-1">
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm text-muted-foreground">Pontos:</span>
+                        <span className="font-bold text-primary">{guest.total_points}</span>
+                      </div>
+                      {currentLevel && (
+                        <div className="flex items-center justify-between">
+                          <span className="text-sm text-muted-foreground">Nível:</span>
+                          <span className="font-bold text-foreground">
+                            {currentLevel.badge_emoji} {currentLevel.name}
+                          </span>
+                        </div>
+                      )}
+                    </div>
+                    <div className="border-t border-border my-2"></div>
+                    <DropdownMenuItem 
+                      onClick={() => {
+                        logout();
+                        navigate("/");
+                      }}
+                      className="cursor-pointer text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-950"
+                    >
+                      Sair
+                    </DropdownMenuItem>
+                  </div>
+                </DropdownMenuContent>
+              </DropdownMenu>
             </div>
           </Card>
         )}

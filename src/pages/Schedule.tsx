@@ -5,6 +5,12 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Settings, Sun, Waves, Users, ArrowLeft, User } from "lucide-react";
 import { useGuestAuth } from "@/hooks/useGuestAuth";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 interface AgeGroup {
   id: string;
@@ -15,7 +21,7 @@ interface AgeGroup {
 
 const Index = () => {
   const navigate = useNavigate();
-  const { guest } = useGuestAuth();
+  const { guest, currentLevel, logout } = useGuestAuth();
   const [ageGroups, setAgeGroups] = useState<AgeGroup[]>([]);
   const [siteName, setSiteName] = useState("Recreação Hotel");
   const [loading, setLoading] = useState(true);
@@ -69,11 +75,53 @@ const Index = () => {
       <header className="sticky top-0 z-50 border-b border-border/40 backdrop-blur-md bg-background/95 shadow-sm">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           {guest && (
-            <div className="flex items-center justify-center gap-2 py-2 px-3 bg-primary/10">
-              <User className="h-4 w-4 text-primary" />
-              <span className="text-sm font-medium text-foreground">
-                Olá, {guest.name}!
-              </span>
+            <div className="flex items-center justify-center py-2">
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" className="gap-2 hover:bg-primary/10">
+                    <User className="h-4 w-4 text-primary" />
+                    <span className="text-sm font-medium text-foreground">
+                      Olá, {guest.name}!
+                    </span>
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="center" className="w-56 bg-background z-50">
+                  <div className="px-2 py-3 space-y-2">
+                    <div className="flex items-center gap-2 px-2">
+                      <User className="h-5 w-5 text-primary" />
+                      <div>
+                        <p className="font-semibold text-foreground">{guest.name}</p>
+                        <p className="text-xs text-muted-foreground">Quarto {guest.room_number}</p>
+                      </div>
+                    </div>
+                    <div className="border-t border-border my-2"></div>
+                    <div className="px-2 space-y-1">
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm text-muted-foreground">Pontos:</span>
+                        <span className="font-bold text-primary">{guest.total_points}</span>
+                      </div>
+                      {currentLevel && (
+                        <div className="flex items-center justify-between">
+                          <span className="text-sm text-muted-foreground">Nível:</span>
+                          <span className="font-bold text-foreground">
+                            {currentLevel.badge_emoji} {currentLevel.name}
+                          </span>
+                        </div>
+                      )}
+                    </div>
+                    <div className="border-t border-border my-2"></div>
+                    <DropdownMenuItem 
+                      onClick={() => {
+                        logout();
+                        navigate("/");
+                      }}
+                      className="cursor-pointer text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-950"
+                    >
+                      Sair
+                    </DropdownMenuItem>
+                  </div>
+                </DropdownMenuContent>
+              </DropdownMenu>
             </div>
           )}
           <div className="flex justify-between items-center h-20">
