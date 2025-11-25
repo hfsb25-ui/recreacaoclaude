@@ -12,6 +12,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { WeatherWidget } from "@/components/WeatherWidget";
 import { useGuestAuth } from "@/hooks/useGuestAuth";
+import { InstallPrompt } from "@/components/InstallPrompt";
 
 interface Announcement {
   id: string;
@@ -331,6 +332,9 @@ const Home = () => {
           <p className="text-sm text-muted-foreground">{footerText}</p>
         </div>
       </footer>
+
+      {/* Install Prompt */}
+      <InstallPrompt />
     </div>
   );
 };

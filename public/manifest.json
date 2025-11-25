@@ -8,16 +8,38 @@
   "theme_color": "#00BCD4",
   "icons": [
     {
-      "src": "/placeholder.svg",
+      "src": "/icon-192x192.png",
       "sizes": "192x192",
-      "type": "image/svg+xml",
+      "type": "image/png",
       "purpose": "any maskable"
     },
     {
-      "src": "/placeholder.svg",
+      "src": "/icon-512x512.png",
       "sizes": "512x512",
-      "type": "image/svg+xml",
+      "type": "image/png",
       "purpose": "any maskable"
+    },
+    {
+      "src": "/apple-touch-icon.png",
+      "sizes": "180x180",
+      "type": "image/png"
     }
-  ]
+  ],
+  "shortcuts": [
+    {
+      "name": "Ver Programação",
+      "short_name": "Programação",
+      "description": "Ver programação de atividades",
+      "url": "/programacao",
+      "icons": [{ "src": "/icon-192x192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Ranking",
+      "short_name": "Ranking",
+      "description": "Ver ranking de pontos",
+      "url": "/ranking",
+      "icons": [{ "src": "/icon-192x192.png", "sizes": "192x192" }]
+    }
+  ],
+  "categories": ["lifestyle", "entertainment"]
 }

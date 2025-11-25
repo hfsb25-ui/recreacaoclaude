@@ -12,6 +12,7 @@ import GuestAuth from "./pages/GuestAuth";
 import GuestProfile from "./pages/GuestProfile";
 import Ranking from "./pages/Ranking";
 import HallOfFame from "./pages/HallOfFame";
+import Install from "./pages/Install";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient({
@@ -38,6 +39,7 @@ const AppContent = () => {
           <Route path="/guest-profile" element={<GuestProfile />} />
           <Route path="/ranking" element={<Ranking />} />
           <Route path="/hall-of-fame" element={<HallOfFame />} />
+          <Route path="/instalar" element={<Install />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>
