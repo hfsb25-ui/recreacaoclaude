@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { ArrowLeft, Trophy } from "lucide-react";
+import { ArrowLeft, Trophy, Calendar } from "lucide-react";
 
 interface RankingGuest {
   id: string;
@@ -132,7 +132,14 @@ const Ranking = () => {
             </div>
           )}
 
-          <div className="mt-8 text-center">
+          <div className="mt-8 flex flex-col sm:flex-row gap-3 justify-center">
+            <Button
+              onClick={() => navigate("/programacao")}
+              className="bg-orange-500 hover:bg-orange-600"
+            >
+              <Calendar className="h-4 w-4 mr-2" />
+              Acessar Programação
+            </Button>
             <Button
               onClick={() => navigate("/hall-of-fame")}
               variant="outline"
