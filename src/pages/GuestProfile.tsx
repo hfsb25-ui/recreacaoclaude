@@ -5,7 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
-import { ArrowLeft, Trophy, LogOut } from "lucide-react";
+import { ArrowLeft, Trophy, LogOut, Calendar } from "lucide-react";
 import { toast } from "sonner";
 
 interface CheckIn {
@@ -123,7 +123,14 @@ const GuestProfile = () => {
               </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-4 pt-4">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-4">
+              <Button
+                onClick={() => navigate("/programacao")}
+                className="w-full bg-orange-500 hover:bg-orange-600"
+              >
+                <Calendar className="h-4 w-4 mr-2" />
+                Acessar Programação
+              </Button>
               <Button
                 onClick={() => navigate("/ranking")}
                 className="w-full"
