@@ -486,7 +486,7 @@ const ActivitiesManager = () => {
                 )}
                 <div className="flex flex-wrap gap-4 text-sm text-muted-foreground">
                   <div className="flex items-center gap-1">
-                    {format(new Date(activity.activity_date), "dd/MM/yyyy", {
+                    {format(new Date(activity.activity_date + 'T12:00:00'), "dd/MM/yyyy", {
                       locale: ptBR,
                     })}
                   </div>
