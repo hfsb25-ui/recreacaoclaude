@@ -7,7 +7,6 @@ import { ArrowLeft, Clock, Star, WifiOff, User } from "lucide-react";
 import { format, isToday } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { ActivityRating } from "@/components/ActivityRating";
-import { useOfflineSync } from "@/hooks/useOfflineSync";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import CheckInButton from "@/components/CheckInButton";
 import { useGuestAuth } from "@/hooks/useGuestAuth";
@@ -37,13 +36,26 @@ const Activities = () => {
   const { ageGroupId } = useParams();
   const navigate = useNavigate();
   const { guest, currentLevel, logout } = useGuestAuth();
-  const { isOnline, saveToCache, getFromCache } = useOfflineSync();
+  const [isOnline, setIsOnline] = useState(navigator.onLine);
   const [activities, setActivities] = useState<Activity[]>([]);
   const [ageGroup, setAgeGroup] = useState<AgeGroup | null>(null);
   const [loading, setLoading] = useState(true);
   const [selectedActivityForRating, setSelectedActivityForRating] = useState<Activity | null>(null);
   const [ratings, setRatings] = useState<Record<string, { average: number; count: number }>>({});
   const currentActivityRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleOnline = () => setIsOnline(true);
+    const handleOffline = () => setIsOnline(false);
+
+    window.addEventListener("online", handleOnline);
+    window.addEventListener("offline", handleOffline);
+
+    return () => {
+      window.removeEventListener("online", handleOnline);
+      window.removeEventListener("offline", handleOffline);
+    };
+  }, []);
 
   useEffect(() => {
     fetchData();
@@ -63,11 +75,6 @@ const Activities = () => {
   const fetchData = async () => {
     try {
       if (!isOnline) {
-        // Load from cache if offline
-        const cachedGroup = getFromCache(`ageGroup_${ageGroupId}`);
-        const cachedActivities = getFromCache(`activities_${ageGroupId}`);
-        if (cachedGroup) setAgeGroup(cachedGroup);
-        if (cachedActivities) setActivities(cachedActivities);
         setLoading(false);
         return;
       }
@@ -81,7 +88,6 @@ const Activities = () => {
 
       if (groupData) {
         setAgeGroup(groupData);
-        saveToCache(`ageGroup_${ageGroupId}`, groupData);
       }
 
       // Fetch today's activities
@@ -95,7 +101,6 @@ const Activities = () => {
 
       if (activitiesData) {
         setActivities(activitiesData);
-        saveToCache(`activities_${ageGroupId}`, activitiesData);
         
         // Fetch ratings for all activities
         const activityIds = activitiesData.map(a => a.id);
