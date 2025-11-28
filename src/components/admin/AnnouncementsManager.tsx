@@ -7,7 +7,7 @@ import { Card } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
-import { Trash2, Upload, Image as ImageIcon } from "lucide-react";
+import { Trash2, Upload, Image as ImageIcon, ArrowUp, ArrowDown } from "lucide-react";
 
 interface Announcement {
   id: string;
@@ -153,6 +153,72 @@ const AnnouncementsManager = () => {
     }
   };
 
+  const handleMoveUp = async (index: number) => {
+    if (index === 0) return;
+    
+    const currentItem = announcements[index];
+    const previousItem = announcements[index - 1];
+    
+    try {
+      await supabase
+        .from("announcements")
+        .update({ sort_order: previousItem.sort_order })
+        .eq("id", currentItem.id);
+      
+      await supabase
+        .from("announcements")
+        .update({ sort_order: currentItem.sort_order })
+        .eq("id", previousItem.id);
+      
+      toast({
+        title: "Sucesso",
+        description: "Ordem alterada com sucesso!",
+      });
+      
+      fetchAnnouncements();
+    } catch (error) {
+      console.error("Error:", error);
+      toast({
+        title: "Erro",
+        description: "Erro ao alterar ordem",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleMoveDown = async (index: number) => {
+    if (index === announcements.length - 1) return;
+    
+    const currentItem = announcements[index];
+    const nextItem = announcements[index + 1];
+    
+    try {
+      await supabase
+        .from("announcements")
+        .update({ sort_order: nextItem.sort_order })
+        .eq("id", currentItem.id);
+      
+      await supabase
+        .from("announcements")
+        .update({ sort_order: currentItem.sort_order })
+        .eq("id", nextItem.id);
+      
+      toast({
+        title: "Sucesso",
+        description: "Ordem alterada com sucesso!",
+      });
+      
+      fetchAnnouncements();
+    } catch (error) {
+      console.error("Error:", error);
+      toast({
+        title: "Erro",
+        description: "Erro ao alterar ordem",
+        variant: "destructive",
+      });
+    }
+  };
+
   const getImageUrl = (path: string | null) => {
     if (!path) return null;
     const { data } = supabase.storage.from("announcements").getPublicUrl(path);
@@ -227,7 +293,7 @@ const AnnouncementsManager = () => {
           <p className="text-muted-foreground">Nenhum anúncio cadastrado ainda.</p>
         ) : (
           <div className="space-y-4">
-            {announcements.map((announcement) => (
+            {announcements.map((announcement, index) => (
               <Card key={announcement.id} className="p-4">
                 <div className="flex flex-col sm:flex-row gap-4">
                   {announcement.image_url && (
@@ -257,16 +323,33 @@ const AnnouncementsManager = () => {
                           Status: {announcement.is_active ? "Ativo" : "Inativo"}
                         </p>
                       </div>
-                      <Button
-                        variant="destructive"
-                        size="icon"
-                        className="flex-shrink-0"
-                        onClick={() =>
-                          handleDelete(announcement.id, announcement.image_url)
-                        }
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
+                      <div className="flex gap-2 flex-shrink-0">
+                        <Button
+                          variant="outline"
+                          size="icon"
+                          onClick={() => handleMoveUp(index)}
+                          disabled={index === 0}
+                        >
+                          <ArrowUp className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="icon"
+                          onClick={() => handleMoveDown(index)}
+                          disabled={index === announcements.length - 1}
+                        >
+                          <ArrowDown className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="destructive"
+                          size="icon"
+                          onClick={() =>
+                            handleDelete(announcement.id, announcement.image_url)
+                          }
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
                     </div>
                   </div>
                 </div>
