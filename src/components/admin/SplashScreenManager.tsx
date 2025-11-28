@@ -5,6 +5,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Waves, Sun, Sparkles, Star, Zap, Heart, Music, Trophy } from "lucide-react";
 
 export const SplashScreenManager = () => {
   const [loading, setLoading] = useState(true);
@@ -16,7 +18,28 @@ export const SplashScreenManager = () => {
     splash_gradient_from: "192 92% 60%",
     splash_gradient_via: "280 80% 65%",
     splash_gradient_to: "340 85% 70%",
+    splash_icon: "Waves",
+    splash_animation_type: "scale",
   });
+
+  const iconOptions = [
+    { value: "Waves", label: "Ondas", Icon: Waves },
+    { value: "Sun", label: "Sol", Icon: Sun },
+    { value: "Sparkles", label: "Brilhos", Icon: Sparkles },
+    { value: "Star", label: "Estrela", Icon: Star },
+    { value: "Zap", label: "Raio", Icon: Zap },
+    { value: "Heart", label: "Coração", Icon: Heart },
+    { value: "Music", label: "Música", Icon: Music },
+    { value: "Trophy", label: "Troféu", Icon: Trophy },
+  ];
+
+  const animationOptions = [
+    { value: "scale", label: "Escalar (padrão)" },
+    { value: "fade", label: "Fade In" },
+    { value: "slide", label: "Deslizar" },
+    { value: "zoom", label: "Zoom" },
+    { value: "pulse", label: "Pulsar" },
+  ];
 
   useEffect(() => {
     loadSettings();
@@ -26,7 +49,7 @@ export const SplashScreenManager = () => {
     try {
       const { data, error } = await supabase
         .from("site_settings")
-        .select("splash_title, splash_subtitle, splash_duration, splash_gradient_from, splash_gradient_via, splash_gradient_to")
+        .select("splash_title, splash_subtitle, splash_duration, splash_gradient_from, splash_gradient_via, splash_gradient_to, splash_icon, splash_animation_type")
         .single();
 
       if (error) throw error;
@@ -38,6 +61,8 @@ export const SplashScreenManager = () => {
           splash_gradient_from: data.splash_gradient_from || "192 92% 60%",
           splash_gradient_via: data.splash_gradient_via || "280 80% 65%",
           splash_gradient_to: data.splash_gradient_to || "340 85% 70%",
+          splash_icon: data.splash_icon || "Waves",
+          splash_animation_type: data.splash_animation_type || "scale",
         });
       }
     } catch (error: any) {
@@ -60,6 +85,8 @@ export const SplashScreenManager = () => {
           splash_gradient_from: settings.splash_gradient_from,
           splash_gradient_via: settings.splash_gradient_via,
           splash_gradient_to: settings.splash_gradient_to,
+          splash_icon: settings.splash_icon,
+          splash_animation_type: settings.splash_animation_type,
         })
         .eq("id", (await supabase.from("site_settings").select("id").single()).data?.id);
 
@@ -121,6 +148,47 @@ export const SplashScreenManager = () => {
             <p className="text-xs text-muted-foreground">
               Tempo que a tela de abertura fica visível (recomendado: 2000ms)
             </p>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="splash_icon">Ícone</Label>
+            <Select
+              value={settings.splash_icon}
+              onValueChange={(value) => setSettings({ ...settings, splash_icon: value })}
+            >
+              <SelectTrigger id="splash_icon">
+                <SelectValue placeholder="Selecione um ícone" />
+              </SelectTrigger>
+              <SelectContent>
+                {iconOptions.map((icon) => (
+                  <SelectItem key={icon.value} value={icon.value}>
+                    <div className="flex items-center gap-2">
+                      <icon.Icon className="h-4 w-4" />
+                      {icon.label}
+                    </div>
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="splash_animation">Tipo de Animação</Label>
+            <Select
+              value={settings.splash_animation_type}
+              onValueChange={(value) => setSettings({ ...settings, splash_animation_type: value })}
+            >
+              <SelectTrigger id="splash_animation">
+                <SelectValue placeholder="Selecione uma animação" />
+              </SelectTrigger>
+              <SelectContent>
+                {animationOptions.map((animation) => (
+                  <SelectItem key={animation.value} value={animation.value}>
+                    {animation.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
 
           <div className="space-y-4">

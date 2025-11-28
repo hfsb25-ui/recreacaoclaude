@@ -490,10 +490,12 @@ export type Database = {
           id: string
           logo_url: string | null
           site_name: string | null
+          splash_animation_type: string | null
           splash_duration: number | null
           splash_gradient_from: string | null
           splash_gradient_to: string | null
           splash_gradient_via: string | null
+          splash_icon: string | null
           splash_subtitle: string | null
           splash_title: string | null
           updated_at: string
@@ -507,10 +509,12 @@ export type Database = {
           id?: string
           logo_url?: string | null
           site_name?: string | null
+          splash_animation_type?: string | null
           splash_duration?: number | null
           splash_gradient_from?: string | null
           splash_gradient_to?: string | null
           splash_gradient_via?: string | null
+          splash_icon?: string | null
           splash_subtitle?: string | null
           splash_title?: string | null
           updated_at?: string
@@ -524,10 +528,12 @@ export type Database = {
           id?: string
           logo_url?: string | null
           site_name?: string | null
+          splash_animation_type?: string | null
           splash_duration?: number | null
           splash_gradient_from?: string | null
           splash_gradient_to?: string | null
           splash_gradient_via?: string | null
+          splash_icon?: string | null
           splash_subtitle?: string | null
           splash_title?: string | null
           updated_at?: string
