@@ -280,7 +280,7 @@ const Home = () => {
             <Button
               size="lg"
               variant="outline"
-              onClick={() => navigate("/guest-auth")}
+              onClick={() => navigate(guest ? "/guest-profile" : "/guest-auth")}
               className="text-sm sm:text-xl px-6 sm:px-12 py-6 sm:py-8 h-auto shadow-[var(--shadow-hover)] w-full sm:flex-1"
             >
               🎮 Área do Hóspede
