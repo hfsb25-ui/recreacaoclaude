@@ -18,6 +18,7 @@ import { LogoManager } from "@/components/admin/LogoManager";
 import { SiteNameManager } from "@/components/admin/SiteNameManager";
 import { RatingsManager } from "@/components/admin/RatingsManager";
 import { ActivityTemplatesManager } from "@/components/admin/ActivityTemplatesManager";
+import { SplashScreenManager } from "@/components/admin/SplashScreenManager";
 import { WeatherLocationManager } from "@/components/admin/WeatherLocationManager";
 import GamificationManager from "@/components/admin/GamificationManager";
 import { useUserRole } from "@/hooks/useUserRole";
@@ -385,9 +386,10 @@ const Admin = () => {
                 <UsersManager />
               </TabsContent>
 
-              <TabsContent value="theme" className="space-y-4">
-                <ThemeManager />
-              </TabsContent>
+          <TabsContent value="theme" className="space-y-4">
+            <ThemeManager />
+            <SplashScreenManager />
+          </TabsContent>
             </>
           )}
         </Tabs>

@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { Waves } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
 
 interface SplashScreenProps {
   onFinish: () => void;
@@ -7,23 +8,58 @@ interface SplashScreenProps {
 
 export const SplashScreen = ({ onFinish }: SplashScreenProps) => {
   const [isVisible, setIsVisible] = useState(true);
+  const [settings, setSettings] = useState({
+    splash_title: "Recreação Hotel",
+    splash_subtitle: "Sua programação de atividades",
+    splash_duration: 2000,
+    splash_gradient_from: "192 92% 60%",
+    splash_gradient_via: "280 80% 65%",
+    splash_gradient_to: "340 85% 70%",
+  });
 
   useEffect(() => {
-    // Show splash for 2 seconds, then fade out
+    const loadSettings = async () => {
+      try {
+        const { data } = await supabase
+          .from("site_settings")
+          .select("splash_title, splash_subtitle, splash_duration, splash_gradient_from, splash_gradient_via, splash_gradient_to")
+          .single();
+
+        if (data) {
+          setSettings({
+            splash_title: data.splash_title || "Recreação Hotel",
+            splash_subtitle: data.splash_subtitle || "Sua programação de atividades",
+            splash_duration: data.splash_duration || 2000,
+            splash_gradient_from: data.splash_gradient_from || "192 92% 60%",
+            splash_gradient_via: data.splash_gradient_via || "280 80% 65%",
+            splash_gradient_to: data.splash_gradient_to || "340 85% 70%",
+          });
+        }
+      } catch (error) {
+        console.error("Erro ao carregar configurações do splash:", error);
+      }
+    };
+
+    loadSettings();
+  }, []);
+
+  useEffect(() => {
     const timer = setTimeout(() => {
       setIsVisible(false);
-      // Wait for fade out animation to complete before removing
       setTimeout(onFinish, 500);
-    }, 2000);
+    }, settings.splash_duration);
 
     return () => clearTimeout(timer);
-  }, [onFinish]);
+  }, [onFinish, settings.splash_duration]);
 
   return (
     <div
-      className={`fixed inset-0 z-[9999] flex items-center justify-center bg-gradient-to-br from-primary via-secondary to-accent transition-opacity duration-500 ${
+      className={`fixed inset-0 z-[9999] flex items-center justify-center transition-opacity duration-500 ${
         isVisible ? "opacity-100" : "opacity-0"
       }`}
+      style={{
+        background: `linear-gradient(135deg, hsl(${settings.splash_gradient_from}), hsl(${settings.splash_gradient_via}), hsl(${settings.splash_gradient_to}))`
+      }}
     >
       <div className="text-center space-y-8 animate-scale-in">
         {/* Logo/Icon Container */}
@@ -45,10 +81,10 @@ export const SplashScreen = ({ onFinish }: SplashScreenProps) => {
         {/* App Name */}
         <div className="space-y-2 animate-fade-in" style={{ animationDelay: '0.3s', animationFillMode: 'both' }}>
           <h1 className="text-4xl font-bold text-white drop-shadow-lg">
-            Recreação Hotel
+            {settings.splash_title}
           </h1>
           <p className="text-white/90 text-lg font-light">
-            Sua programação de atividades
+            {settings.splash_subtitle}
           </p>
         </div>
 
