@@ -12,7 +12,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { WeatherWidget } from "@/components/WeatherWidget";
 import { useGuestAuth } from "@/hooks/useGuestAuth";
-import { InstallPrompt } from "@/components/InstallPrompt";
+import { InstallBanner } from "@/components/InstallBanner";
 import { NotificationPrompt } from "@/components/NotificationPrompt";
 
 interface Announcement {
@@ -335,7 +335,7 @@ const Home = () => {
       </footer>
 
       {/* Install Prompt */}
-      <InstallPrompt />
+      <InstallBanner />
       
       {/* Notification Prompt */}
       <NotificationPrompt />
