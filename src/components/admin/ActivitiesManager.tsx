@@ -6,7 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Card } from "@/components/ui/card";
 import { toast } from "sonner";
-import { Plus, Trash2, Edit, Clock, Calendar as CalendarIcon, Download } from "lucide-react";
+import { Plus, Trash2, Edit, Clock, Calendar as CalendarIcon, Download, Check, ChevronsUpDown } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -26,6 +26,14 @@ import { ptBR } from "date-fns/locale";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "@/components/ui/command";
 
 interface Activity {
   id: string;
@@ -66,6 +74,7 @@ const ActivitiesManager = () => {
   const [filterDate, setFilterDate] = useState<Date | undefined>(undefined);
   const [filterAgeGroup, setFilterAgeGroup] = useState<string>("");
   const [importing, setImporting] = useState(false);
+  const [searchOpen, setSearchOpen] = useState(false);
 
   // Helper function to format date without timezone issues
   const formatDateLocal = (date: Date): string => {
@@ -189,6 +198,30 @@ const ActivitiesManager = () => {
     setStartTime("");
     setEndTime("");
     setAgeGroupId("");
+  };
+
+  const handleOpenNew = () => {
+    setEditingActivity(null);
+    setSelectedTemplateId("");
+    setName("");
+    setDescription("");
+    
+    // Pre-fill from filters
+    if (filterDate) {
+      setActivityDate(formatDateLocal(filterDate));
+    } else {
+      setActivityDate("");
+    }
+    
+    if (filterAgeGroup) {
+      setAgeGroupId(filterAgeGroup);
+    } else {
+      setAgeGroupId("");
+    }
+    
+    setStartTime("");
+    setEndTime("");
+    setIsOpen(true);
   };
 
   const handleTemplateSelect = (templateId: string) => {
@@ -320,12 +353,13 @@ const ActivitiesManager = () => {
       </div>
 
       <Dialog open={isOpen} onOpenChange={setIsOpen}>
-        <DialogTrigger asChild>
-          <Button className="bg-secondary text-secondary-foreground hover:bg-secondary/90 transition-[var(--transition-smooth)]">
-            <Plus className="mr-2 h-4 w-4" />
-            Nova Atividade
-          </Button>
-        </DialogTrigger>
+        <Button 
+          onClick={handleOpenNew}
+          className="bg-secondary text-secondary-foreground hover:bg-secondary/90 transition-[var(--transition-smooth)]"
+        >
+          <Plus className="mr-2 h-4 w-4" />
+          Nova Atividade
+        </Button>
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>
@@ -351,22 +385,55 @@ const ActivitiesManager = () => {
 
             <div className="space-y-2">
               <Label htmlFor="template">Nome da Atividade</Label>
-              <Select 
-                value={selectedTemplateId} 
-                onValueChange={handleTemplateSelect}
-                required
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Selecione uma atividade" />
-                </SelectTrigger>
-                <SelectContent>
-                  {activityTemplates.map((template) => (
-                    <SelectItem key={template.id} value={template.id}>
-                      {template.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <Popover open={searchOpen} onOpenChange={setSearchOpen}>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    role="combobox"
+                    aria-expanded={searchOpen}
+                    className="w-full justify-between"
+                  >
+                    {name || "Selecione ou digite uma atividade..."}
+                    <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-full p-0" align="start">
+                  <Command>
+                    <CommandInput 
+                      placeholder="Digite o nome da atividade..." 
+                      value={name}
+                      onValueChange={setName}
+                    />
+                    <CommandList>
+                      <CommandEmpty>Nenhuma atividade encontrada.</CommandEmpty>
+                      <CommandGroup>
+                        {activityTemplates
+                          .filter(template => 
+                            template.name.toLowerCase().includes(name.toLowerCase())
+                          )
+                          .map((template) => (
+                            <CommandItem
+                              key={template.id}
+                              value={template.name}
+                              onSelect={() => {
+                                handleTemplateSelect(template.id);
+                                setSearchOpen(false);
+                              }}
+                            >
+                              <Check
+                                className={cn(
+                                  "mr-2 h-4 w-4",
+                                  name === template.name ? "opacity-100" : "opacity-0"
+                                )}
+                              />
+                              {template.name}
+                            </CommandItem>
+                          ))}
+                      </CommandGroup>
+                    </CommandList>
+                  </Command>
+                </PopoverContent>
+              </Popover>
             </div>
 
             <div className="space-y-2">
