@@ -80,6 +80,87 @@ const Admin = () => {
     navigate("/");
   };
 
+  const generatePdfForAgeGroup = (group: any, dateStr: string) => {
+    const pdf = new jsPDF();
+    const pageWidth = pdf.internal.pageSize.getWidth();
+    const pageHeight = pdf.internal.pageSize.getHeight();
+    const margin = 20;
+    let yPosition = margin;
+
+    // Title
+    pdf.setFontSize(20);
+    pdf.setTextColor(0, 150, 180);
+    pdf.text("Programação de Recreação", pageWidth / 2, yPosition, { align: "center" });
+    
+    yPosition += 10;
+    pdf.setFontSize(12);
+    pdf.setTextColor(100, 100, 100);
+    pdf.text(format(selectedDate, "dd/MM/yyyy", { locale: ptBR }), pageWidth / 2, yPosition, { align: "center" });
+    
+    yPosition += 15;
+
+    // Age group header with colored background
+    const hexColor = group.color.startsWith("#") ? group.color : "#00BCD4";
+    const r = parseInt(hexColor.slice(1, 3), 16);
+    const g = parseInt(hexColor.slice(3, 5), 16);
+    const b = parseInt(hexColor.slice(5, 7), 16);
+    
+    pdf.setFillColor(r, g, b);
+    pdf.rect(margin, yPosition - 5, pageWidth - 2 * margin, 10, "F");
+    pdf.setTextColor(255, 255, 255);
+    pdf.setFontSize(14);
+    pdf.text(group.name, margin + 5, yPosition + 2);
+    
+    yPosition += 12;
+
+    // Activities table
+    pdf.setTextColor(50, 50, 50);
+    pdf.setFontSize(10);
+
+    group.activities.forEach((activity: any) => {
+      // Check if we need a new page
+      if (yPosition > pageHeight - 30) {
+        pdf.addPage();
+        yPosition = margin;
+      }
+
+      const startTime = activity.start_time.substring(0, 5);
+      const endTime = activity.end_time.substring(0, 5);
+      const timeRange = `${startTime} - ${endTime}`;
+
+      // Time
+      pdf.setFont("helvetica", "bold");
+      pdf.text(timeRange, margin + 5, yPosition);
+      
+      // Activity name
+      pdf.setFont("helvetica", "normal");
+      pdf.text(activity.name, margin + 45, yPosition);
+
+      // Description (if exists)
+      if (activity.description) {
+        yPosition += 5;
+        pdf.setFontSize(9);
+        pdf.setTextColor(100, 100, 100);
+        const splitDescription = pdf.splitTextToSize(activity.description, pageWidth - 2 * margin - 50);
+        pdf.text(splitDescription, margin + 45, yPosition);
+        yPosition += splitDescription.length * 4;
+      }
+
+      yPosition += 8;
+      pdf.setFontSize(10);
+      pdf.setTextColor(50, 50, 50);
+    });
+
+    // Sanitize filename - remove special characters
+    const sanitizedName = group.name
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .replace(/[^a-zA-Z0-9]/g, "_")
+      .toLowerCase();
+
+    pdf.save(`programacao_${dateStr}_${sanitizedName}.pdf`);
+  };
+
   const handleExport = async () => {
     try {
       const dateStr = formatDateLocal(selectedDate);
@@ -101,7 +182,7 @@ const Admin = () => {
       if (error) throw error;
 
       if (!activities || activities.length === 0) {
-        toast.error("Não há atividades cadastradas para hoje");
+        toast.error("Não há atividades cadastradas para esta data");
         return;
       }
 
@@ -119,91 +200,14 @@ const Admin = () => {
         return acc;
       }, {});
 
-      // Create PDF
-      const pdf = new jsPDF();
-      const pageWidth = pdf.internal.pageSize.getWidth();
-      const pageHeight = pdf.internal.pageSize.getHeight();
-      const margin = 20;
-      let yPosition = margin;
-
-      // Title
-      pdf.setFontSize(20);
-      pdf.setTextColor(0, 150, 180);
-      pdf.text("Programação de Recreação", pageWidth / 2, yPosition, { align: "center" });
+      const groups = Object.values(grouped);
       
-      yPosition += 10;
-      pdf.setFontSize(12);
-      pdf.setTextColor(100, 100, 100);
-      pdf.text(format(selectedDate, "dd/MM/yyyy", { locale: ptBR }), pageWidth / 2, yPosition, { align: "center" });
-      
-      yPosition += 15;
-
-      // Add activities grouped by age group
-      Object.values(grouped).forEach((group: any) => {
-        // Check if we need a new page
-        if (yPosition > pageHeight - 40) {
-          pdf.addPage();
-          yPosition = margin;
-        }
-
-        // Age group header with colored background
-        const hexColor = group.color.startsWith("#") ? group.color : "#00BCD4";
-        const r = parseInt(hexColor.slice(1, 3), 16);
-        const g = parseInt(hexColor.slice(3, 5), 16);
-        const b = parseInt(hexColor.slice(5, 7), 16);
-        
-        pdf.setFillColor(r, g, b);
-        pdf.rect(margin, yPosition - 5, pageWidth - 2 * margin, 10, "F");
-        pdf.setTextColor(255, 255, 255);
-        pdf.setFontSize(14);
-        pdf.text(group.name, margin + 5, yPosition + 2);
-        
-        yPosition += 12;
-
-        // Activities table
-        pdf.setTextColor(50, 50, 50);
-        pdf.setFontSize(10);
-
-        group.activities.forEach((activity: any) => {
-          // Check if we need a new page
-          if (yPosition > pageHeight - 30) {
-            pdf.addPage();
-            yPosition = margin;
-          }
-
-          const startTime = activity.start_time.substring(0, 5);
-          const endTime = activity.end_time.substring(0, 5);
-          const timeRange = `${startTime} - ${endTime}`;
-
-          // Time
-          pdf.setFont("helvetica", "bold");
-          pdf.text(timeRange, margin + 5, yPosition);
-          
-          // Activity name
-          pdf.setFont("helvetica", "normal");
-          pdf.text(activity.name, margin + 45, yPosition);
-
-          // Description (if exists)
-          if (activity.description) {
-            yPosition += 5;
-            pdf.setFontSize(9);
-            pdf.setTextColor(100, 100, 100);
-            const splitDescription = pdf.splitTextToSize(activity.description, pageWidth - 2 * margin - 50);
-            pdf.text(splitDescription, margin + 45, yPosition);
-            yPosition += splitDescription.length * 4;
-          }
-
-          yPosition += 8;
-          pdf.setFontSize(10);
-          pdf.setTextColor(50, 50, 50);
-        });
-
-        yPosition += 5;
+      // Generate one PDF per age group
+      groups.forEach((group: any) => {
+        generatePdfForAgeGroup(group, format(selectedDate, "yyyy-MM-dd"));
       });
 
-      // Save PDF
-      pdf.save(`programacao_${format(selectedDate, "yyyy-MM-dd")}.pdf`);
-      toast.success("Programação exportada em PDF!");
+      toast.success(`${groups.length} PDF(s) exportado(s) com sucesso!`);
       setExportDialogOpen(false);
     } catch (error: any) {
       toast.error(error.message || "Erro ao exportar programação");
