@@ -324,23 +324,23 @@ const Admin = () => {
         </div>
 
         <Tabs defaultValue="age-groups" className="w-full">
-          <div className="w-full overflow-x-auto mb-6">
-            <TabsList className={`inline-flex w-full min-w-max ${isGestor ? 'md:grid md:grid-cols-13' : 'md:grid md:grid-cols-3'}`}>
-              <TabsTrigger value="age-groups" className="flex-shrink-0">Faixas Etárias</TabsTrigger>
-              <TabsTrigger value="activity-templates" className="flex-shrink-0">Catálogo de Atividades</TabsTrigger>
-              <TabsTrigger value="activities" className="flex-shrink-0">Atividades</TabsTrigger>
+          <div className="w-full overflow-x-auto mb-6 scrollbar-thin">
+            <TabsList className="inline-flex h-auto p-1 gap-1 min-w-max">
+              <TabsTrigger value="age-groups" className="whitespace-nowrap text-xs sm:text-sm px-2 sm:px-3">Faixas Etárias</TabsTrigger>
+              <TabsTrigger value="activity-templates" className="whitespace-nowrap text-xs sm:text-sm px-2 sm:px-3">Catálogo</TabsTrigger>
+              <TabsTrigger value="activities" className="whitespace-nowrap text-xs sm:text-sm px-2 sm:px-3">Atividades</TabsTrigger>
               {isGestor && (
                 <>
-                  <TabsTrigger value="ratings" className="flex-shrink-0">Avaliações</TabsTrigger>
-                  <TabsTrigger value="gamification" className="flex-shrink-0">Gamificação</TabsTrigger>
-                  <TabsTrigger value="statistics" className="flex-shrink-0">Estatísticas</TabsTrigger>
-                  <TabsTrigger value="announcements" className="flex-shrink-0">Anúncios</TabsTrigger>
-                  <TabsTrigger value="menu" className="flex-shrink-0">Menu</TabsTrigger>
-                  <TabsTrigger value="logo" className="flex-shrink-0">Logo</TabsTrigger>
-                  <TabsTrigger value="site-name" className="flex-shrink-0">Nome do Site</TabsTrigger>
-                  <TabsTrigger value="weather" className="flex-shrink-0">Clima</TabsTrigger>
-                  <TabsTrigger value="users" className="flex-shrink-0">Usuários</TabsTrigger>
-                  <TabsTrigger value="theme" className="flex-shrink-0">Cores do Site</TabsTrigger>
+                  <TabsTrigger value="ratings" className="whitespace-nowrap text-xs sm:text-sm px-2 sm:px-3">Avaliações</TabsTrigger>
+                  <TabsTrigger value="gamification" className="whitespace-nowrap text-xs sm:text-sm px-2 sm:px-3">Gamificação</TabsTrigger>
+                  <TabsTrigger value="statistics" className="whitespace-nowrap text-xs sm:text-sm px-2 sm:px-3">Estatísticas</TabsTrigger>
+                  <TabsTrigger value="announcements" className="whitespace-nowrap text-xs sm:text-sm px-2 sm:px-3">Anúncios</TabsTrigger>
+                  <TabsTrigger value="menu" className="whitespace-nowrap text-xs sm:text-sm px-2 sm:px-3">Menu</TabsTrigger>
+                  <TabsTrigger value="logo" className="whitespace-nowrap text-xs sm:text-sm px-2 sm:px-3">Logo</TabsTrigger>
+                  <TabsTrigger value="site-name" className="whitespace-nowrap text-xs sm:text-sm px-2 sm:px-3">Nome</TabsTrigger>
+                  <TabsTrigger value="weather" className="whitespace-nowrap text-xs sm:text-sm px-2 sm:px-3">Clima</TabsTrigger>
+                  <TabsTrigger value="users" className="whitespace-nowrap text-xs sm:text-sm px-2 sm:px-3">Usuários</TabsTrigger>
+                  <TabsTrigger value="theme" className="whitespace-nowrap text-xs sm:text-sm px-2 sm:px-3">Cores</TabsTrigger>
                 </>
               )}
             </TabsList>
