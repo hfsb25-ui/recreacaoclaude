@@ -21,6 +21,7 @@ import { ActivityTemplatesManager } from "@/components/admin/ActivityTemplatesMa
 import { SplashScreenManager } from "@/components/admin/SplashScreenManager";
 import { WeatherLocationManager } from "@/components/admin/WeatherLocationManager";
 import GamificationManager from "@/components/admin/GamificationManager";
+import { StatisticsManager } from "@/components/admin/StatisticsManager";
 import { useUserRole } from "@/hooks/useUserRole";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Card } from "@/components/ui/card";
@@ -324,14 +325,15 @@ const Admin = () => {
 
         <Tabs defaultValue="age-groups" className="w-full">
           <div className="w-full overflow-x-auto mb-6">
-            <TabsList className={`inline-flex w-full min-w-max ${isGestor ? 'md:grid md:grid-cols-12' : 'md:grid md:grid-cols-5'}`}>
+            <TabsList className={`inline-flex w-full min-w-max ${isGestor ? 'md:grid md:grid-cols-13' : 'md:grid md:grid-cols-3'}`}>
               <TabsTrigger value="age-groups" className="flex-shrink-0">Faixas Etárias</TabsTrigger>
               <TabsTrigger value="activity-templates" className="flex-shrink-0">Catálogo de Atividades</TabsTrigger>
               <TabsTrigger value="activities" className="flex-shrink-0">Atividades</TabsTrigger>
-              <TabsTrigger value="ratings" className="flex-shrink-0">Avaliações</TabsTrigger>
-              <TabsTrigger value="gamification" className="flex-shrink-0">Gamificação</TabsTrigger>
               {isGestor && (
                 <>
+                  <TabsTrigger value="ratings" className="flex-shrink-0">Avaliações</TabsTrigger>
+                  <TabsTrigger value="gamification" className="flex-shrink-0">Gamificação</TabsTrigger>
+                  <TabsTrigger value="statistics" className="flex-shrink-0">Estatísticas</TabsTrigger>
                   <TabsTrigger value="announcements" className="flex-shrink-0">Anúncios</TabsTrigger>
                   <TabsTrigger value="menu" className="flex-shrink-0">Menu</TabsTrigger>
                   <TabsTrigger value="logo" className="flex-shrink-0">Logo</TabsTrigger>
@@ -356,16 +358,20 @@ const Admin = () => {
             <ActivitiesManager />
           </TabsContent>
 
-          <TabsContent value="ratings" className="space-y-4">
-            <RatingsManager />
-          </TabsContent>
-
-          <TabsContent value="gamification" className="space-y-4">
-            <GamificationManager />
-          </TabsContent>
-
           {isGestor && (
             <>
+              <TabsContent value="ratings" className="space-y-4">
+                <RatingsManager />
+              </TabsContent>
+
+              <TabsContent value="gamification" className="space-y-4">
+                <GamificationManager />
+              </TabsContent>
+
+              <TabsContent value="statistics" className="space-y-4">
+                <StatisticsManager />
+              </TabsContent>
+
               <TabsContent value="announcements" className="space-y-4">
                 <AnnouncementsManager />
               </TabsContent>
@@ -390,10 +396,10 @@ const Admin = () => {
                 <UsersManager />
               </TabsContent>
 
-          <TabsContent value="theme" className="space-y-4">
-            <ThemeManager />
-            <SplashScreenManager />
-          </TabsContent>
+              <TabsContent value="theme" className="space-y-4">
+                <ThemeManager />
+                <SplashScreenManager />
+              </TabsContent>
             </>
           )}
         </Tabs>
