@@ -6,7 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Card } from "@/components/ui/card";
 import { toast } from "sonner";
-import { Plus, Trash2, Edit, Clock, Calendar as CalendarIcon, Download, Check, ChevronsUpDown, Eye, Import } from "lucide-react";
+import { Plus, Trash2, Edit, Clock, Calendar as CalendarIcon, Download, Check, ChevronsUpDown, Eye, Import, AlertTriangle } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -81,6 +81,7 @@ const ActivitiesManager = () => {
   const [importSourceDate, setImportSourceDate] = useState<Date | undefined>(undefined);
   const [previewActivities, setPreviewActivities] = useState<Activity[]>([]);
   const [loadingPreview, setLoadingPreview] = useState(false);
+  const [existingActivitiesCount, setExistingActivitiesCount] = useState(0);
 
   // Helper function to format date without timezone issues
   const formatDateLocal = (date: Date): string => {
@@ -241,9 +242,20 @@ const ActivitiesManager = () => {
     }
   };
 
-  const handleOpenImportDialog = () => {
+  const handleOpenImportDialog = async () => {
     setImportSourceDate(undefined);
     setPreviewActivities([]);
+    
+    // Check existing activities in target date
+    if (filterDate) {
+      const targetDateStr = formatDateLocal(filterDate);
+      const { count } = await supabase
+        .from("activities")
+        .select("*", { count: 'exact', head: true })
+        .eq("activity_date", targetDateStr);
+      setExistingActivitiesCount(count || 0);
+    }
+    
     setImportDialogOpen(true);
   };
 
@@ -377,6 +389,16 @@ const ActivitiesManager = () => {
               Importar Programação para {filterDate ? format(filterDate, "dd/MM/yyyy", { locale: ptBR }) : ""}
             </DialogTitle>
           </DialogHeader>
+          
+          {existingActivitiesCount > 0 && (
+            <div className="flex items-center gap-2 p-3 rounded-md bg-amber-500/10 border border-amber-500/30 text-amber-700 dark:text-amber-400">
+              <AlertTriangle className="h-5 w-5 shrink-0" />
+              <p className="text-sm">
+                <strong>Atenção:</strong> Já existem {existingActivitiesCount} atividade(s) cadastrada(s) para este dia. 
+                As atividades importadas serão adicionadas às existentes.
+              </p>
+            </div>
+          )}
           
           <div className="space-y-4">
             <div className="space-y-2">
