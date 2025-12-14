@@ -6,7 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Card } from "@/components/ui/card";
 import { toast } from "sonner";
-import { Plus, Trash2, Edit, Clock, Calendar as CalendarIcon, Download, Check, ChevronsUpDown } from "lucide-react";
+import { Plus, Trash2, Edit, Clock, Calendar as CalendarIcon, Download, Check, ChevronsUpDown, Eye, Import } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -75,6 +75,12 @@ const ActivitiesManager = () => {
   const [filterAgeGroup, setFilterAgeGroup] = useState<string>("");
   const [importing, setImporting] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
+  
+  // Import dialog state
+  const [importDialogOpen, setImportDialogOpen] = useState(false);
+  const [importSourceDate, setImportSourceDate] = useState<Date | undefined>(undefined);
+  const [previewActivities, setPreviewActivities] = useState<Activity[]>([]);
+  const [loadingPreview, setLoadingPreview] = useState(false);
 
   // Helper function to format date without timezone issues
   const formatDateLocal = (date: Date): string => {
@@ -235,31 +241,42 @@ const ActivitiesManager = () => {
     }
   };
 
-  const handleImportPreviousWeek = async () => {
-    if (!filterDate) return;
+  const handleOpenImportDialog = () => {
+    setImportSourceDate(undefined);
+    setPreviewActivities([]);
+    setImportDialogOpen(true);
+  };
+
+  const handlePreviewActivities = async (date: Date) => {
+    setImportSourceDate(date);
+    setLoadingPreview(true);
+    
+    try {
+      const dateStr = formatDateLocal(date);
+      const { data, error } = await supabase
+        .from("activities")
+        .select("*, age_groups(name, color)")
+        .eq("activity_date", dateStr)
+        .order("start_time", { ascending: true });
+
+      if (error) throw error;
+      setPreviewActivities(data || []);
+    } catch (error: any) {
+      toast.error("Erro ao buscar atividades");
+      setPreviewActivities([]);
+    } finally {
+      setLoadingPreview(false);
+    }
+  };
+
+  const handleImportActivities = async () => {
+    if (!filterDate || !importSourceDate || previewActivities.length === 0) return;
 
     setImporting(true);
     try {
-      const previousWeekDate = subDays(filterDate, 7);
-      const previousWeekDateStr = formatDateLocal(previousWeekDate);
-
-      // Buscar atividades da semana anterior
-      const { data: previousActivities, error: fetchError } = await supabase
-        .from("activities")
-        .select("*")
-        .eq("activity_date", previousWeekDateStr);
-
-      if (fetchError) throw fetchError;
-
-      if (!previousActivities || previousActivities.length === 0) {
-        toast.error("Não há atividades cadastradas para este dia da semana anterior");
-        return;
-      }
-
-      // Copiar atividades para a data selecionada
       const targetDateStr = formatDateLocal(filterDate);
       
-      const newActivities = previousActivities.map(activity => ({
+      const newActivities = previewActivities.map(activity => ({
         name: activity.name,
         description: activity.description,
         activity_date: targetDateStr,
@@ -276,6 +293,7 @@ const ActivitiesManager = () => {
 
       toast.success(`${newActivities.length} atividades importadas com sucesso!`);
       fetchActivities();
+      setImportDialogOpen(false);
     } catch (error: any) {
       toast.error(error.message || "Erro ao importar atividades");
     } finally {
@@ -342,15 +360,109 @@ const ActivitiesManager = () => {
         {filterDate && (
           <Button
             variant="outline"
-            onClick={handleImportPreviousWeek}
-            disabled={importing}
+            onClick={handleOpenImportDialog}
             className="hover:bg-primary/10 hover:text-primary transition-[var(--transition-smooth)] mt-8"
           >
-            <Download className="mr-2 h-4 w-4" />
-            {importing ? "Importando..." : "Importar Semana Anterior"}
+            <Import className="mr-2 h-4 w-4" />
+            Importar de Outra Data
           </Button>
         )}
       </div>
+
+      {/* Import Dialog */}
+      <Dialog open={importDialogOpen} onOpenChange={setImportDialogOpen}>
+        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>
+              Importar Programação para {filterDate ? format(filterDate, "dd/MM/yyyy", { locale: ptBR }) : ""}
+            </DialogTitle>
+          </DialogHeader>
+          
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label>Selecione a data de origem</Label>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    className={cn(
+                      "w-full justify-start text-left font-normal",
+                      !importSourceDate && "text-muted-foreground"
+                    )}
+                  >
+                    <CalendarIcon className="mr-2 h-4 w-4" />
+                    {importSourceDate ? format(importSourceDate, "dd/MM/yyyy", { locale: ptBR }) : <span>Escolha uma data para importar</span>}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0 z-[200]" align="start">
+                  <Calendar
+                    mode="single"
+                    selected={importSourceDate}
+                    onSelect={(date) => date && handlePreviewActivities(date)}
+                    initialFocus
+                    className="pointer-events-auto"
+                  />
+                </PopoverContent>
+              </Popover>
+            </div>
+
+            {loadingPreview && (
+              <div className="text-center py-8 text-muted-foreground">
+                Carregando atividades...
+              </div>
+            )}
+
+            {!loadingPreview && importSourceDate && previewActivities.length === 0 && (
+              <div className="text-center py-8 text-muted-foreground border rounded-md bg-muted/20">
+                Nenhuma atividade encontrada para esta data
+              </div>
+            )}
+
+            {!loadingPreview && previewActivities.length > 0 && (
+              <div className="space-y-3">
+                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <Eye className="h-4 w-4" />
+                  <span>Pré-visualização: {previewActivities.length} atividade(s)</span>
+                </div>
+                
+                <div className="max-h-[300px] overflow-y-auto space-y-2 border rounded-md p-3 bg-muted/10">
+                  {previewActivities.map((activity) => (
+                    <div 
+                      key={activity.id} 
+                      className="flex items-center gap-3 p-2 rounded-md bg-background border"
+                    >
+                      <div 
+                        className="w-3 h-3 rounded-full shrink-0"
+                        style={{ backgroundColor: activity.age_groups?.color || '#888' }}
+                      />
+                      <div className="flex-1 min-w-0">
+                        <p className="font-medium text-sm truncate">{activity.name}</p>
+                        <p className="text-xs text-muted-foreground">
+                          {activity.age_groups?.name} • {activity.start_time.slice(0, 5)} - {activity.end_time.slice(0, 5)}
+                        </p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            <div className="flex gap-2 pt-4">
+              <Button 
+                onClick={handleImportActivities}
+                disabled={importing || previewActivities.length === 0}
+                className="flex-1"
+              >
+                <Download className="mr-2 h-4 w-4" />
+                {importing ? "Importando..." : `Importar ${previewActivities.length} Atividade(s)`}
+              </Button>
+              <Button variant="outline" onClick={() => setImportDialogOpen(false)}>
+                Cancelar
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       <Dialog open={isOpen} onOpenChange={setIsOpen}>
         <Button 
