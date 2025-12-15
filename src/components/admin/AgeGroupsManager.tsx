@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card } from "@/components/ui/card";
 import { toast } from "sonner";
-import { Plus, Trash2, Edit } from "lucide-react";
+import { Plus, Trash2, Edit, ChevronUp, ChevronDown } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -97,6 +97,52 @@ const AgeGroupsManager = () => {
     setColor("#00BCD4");
   };
 
+  const handleMoveUp = async (index: number) => {
+    if (index === 0) return;
+    
+    const currentGroup = ageGroups[index];
+    const previousGroup = ageGroups[index - 1];
+    
+    try {
+      await supabase
+        .from("age_groups")
+        .update({ sort_order: previousGroup.sort_order })
+        .eq("id", currentGroup.id);
+      
+      await supabase
+        .from("age_groups")
+        .update({ sort_order: currentGroup.sort_order })
+        .eq("id", previousGroup.id);
+      
+      fetchAgeGroups();
+    } catch (error: any) {
+      toast.error("Erro ao reordenar");
+    }
+  };
+
+  const handleMoveDown = async (index: number) => {
+    if (index === ageGroups.length - 1) return;
+    
+    const currentGroup = ageGroups[index];
+    const nextGroup = ageGroups[index + 1];
+    
+    try {
+      await supabase
+        .from("age_groups")
+        .update({ sort_order: nextGroup.sort_order })
+        .eq("id", currentGroup.id);
+      
+      await supabase
+        .from("age_groups")
+        .update({ sort_order: currentGroup.sort_order })
+        .eq("id", nextGroup.id);
+      
+      fetchAgeGroups();
+    } catch (error: any) {
+      toast.error("Erro ao reordenar");
+    }
+  };
+
   return (
     <div className="space-y-4">
       <Dialog open={isOpen} onOpenChange={setIsOpen}>
@@ -153,12 +199,37 @@ const AgeGroupsManager = () => {
       </Dialog>
 
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-        {ageGroups.map((group) => (
+        {ageGroups.map((group, index) => (
           <Card
             key={group.id}
             className="p-4 hover:shadow-[var(--shadow-hover)] transition-[var(--transition-smooth)] flex flex-col"
           >
             <div className="flex-1 mb-4">
+              <div className="flex items-center gap-2 mb-2">
+                <span className="text-xs text-muted-foreground font-medium">
+                  Posição: {index + 1}
+                </span>
+                <div className="flex gap-1 ml-auto">
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    onClick={() => handleMoveUp(index)}
+                    disabled={index === 0}
+                    className="h-7 w-7 p-0"
+                  >
+                    <ChevronUp className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    onClick={() => handleMoveDown(index)}
+                    disabled={index === ageGroups.length - 1}
+                    className="h-7 w-7 p-0"
+                  >
+                    <ChevronDown className="h-4 w-4" />
+                  </Button>
+                </div>
+              </div>
               <div
                 className="px-4 py-3 rounded-lg min-h-[64px] flex items-center justify-center text-center"
                 style={{ backgroundColor: group.color }}
