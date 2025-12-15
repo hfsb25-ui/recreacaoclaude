@@ -209,7 +209,7 @@ const Admin = () => {
         yPosition += splitDescription.length * (pdfSettings.descriptionFontSize * 0.45);
       }
 
-      yPosition += pdfSettings.activityFontSize * 0.8;
+      yPosition += pdfSettings.activityFontSize * 0.5;
       pdf.setTextColor(50, 50, 50);
     });
 
