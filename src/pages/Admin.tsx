@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { LogOut, Download, CalendarIcon } from "lucide-react";
+import { LogOut, Download, CalendarIcon, Settings2, ChevronDown, ChevronUp } from "lucide-react";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -28,7 +28,9 @@ import { Card } from "@/components/ui/card";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { cn } from "@/lib/utils";
+import { PdfSettingsManager, PdfSettings, loadPdfSettings, savePdfSettings } from "@/components/admin/PdfSettingsManager";
 
 const Admin = () => {
   const navigate = useNavigate();
@@ -38,6 +40,8 @@ const Admin = () => {
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [selectedAgeGroup, setSelectedAgeGroup] = useState<string>("all");
   const [ageGroups, setAgeGroups] = useState<any[]>([]);
+  const [pdfSettings, setPdfSettings] = useState<PdfSettings>(loadPdfSettings());
+  const [showPdfSettings, setShowPdfSettings] = useState(false);
 
   // Helper function to format date without timezone issues
   const formatDateLocal = (date: Date): string => {
@@ -81,24 +85,70 @@ const Admin = () => {
     navigate("/");
   };
 
+  const handlePdfSettingsChange = (newSettings: PdfSettings) => {
+    setPdfSettings(newSettings);
+    savePdfSettings(newSettings);
+  };
+
+  const addBackgroundImage = (pdf: jsPDF, settings: PdfSettings) => {
+    if (!settings.backgroundImage) return;
+    
+    const pageWidth = pdf.internal.pageSize.getWidth();
+    const pageHeight = pdf.internal.pageSize.getHeight();
+    
+    // Save current graphics state
+    pdf.saveGraphicsState();
+    
+    // Set opacity for background
+    const gState = pdf.GState({ opacity: settings.backgroundOpacity });
+    pdf.setGState(gState);
+    
+    // Add background image covering the entire page
+    try {
+      pdf.addImage(settings.backgroundImage, 'JPEG', 0, 0, pageWidth, pageHeight);
+    } catch (error) {
+      console.error("Error adding background image:", error);
+    }
+    
+    // Restore graphics state
+    pdf.restoreGraphicsState();
+  };
+
   const generatePdfForAgeGroup = (group: any, dateStr: string) => {
     const pdf = new jsPDF();
     const pageWidth = pdf.internal.pageSize.getWidth();
     const pageHeight = pdf.internal.pageSize.getHeight();
-    const margin = 20;
+    const margin = pdfSettings.pageMargin;
     let yPosition = margin;
 
-    // Title
-    pdf.setFontSize(20);
-    pdf.setTextColor(0, 150, 180);
-    pdf.text("Programação de Recreação", pageWidth / 2, yPosition, { align: "center" });
-    
-    yPosition += 10;
-    pdf.setFontSize(12);
-    pdf.setTextColor(100, 100, 100);
-    pdf.text(format(selectedDate, "dd/MM/yyyy", { locale: ptBR }), pageWidth / 2, yPosition, { align: "center" });
-    
-    yPosition += 15;
+    // Add background image to first page
+    addBackgroundImage(pdf, pdfSettings);
+
+    // Parse title color
+    const titleHex = pdfSettings.titleColor.startsWith("#") ? pdfSettings.titleColor : "#0096B4";
+    const titleR = parseInt(titleHex.slice(1, 3), 16);
+    const titleG = parseInt(titleHex.slice(3, 5), 16);
+    const titleB = parseInt(titleHex.slice(5, 7), 16);
+
+    // Header based on style
+    if (pdfSettings.headerStyle !== "none") {
+      // Title
+      pdf.setFontSize(pdfSettings.titleFontSize);
+      pdf.setTextColor(titleR, titleG, titleB);
+      pdf.text("Programação de Recreação", pageWidth / 2, yPosition, { align: "center" });
+      
+      yPosition += pdfSettings.titleFontSize * 0.5;
+
+      // Date
+      if (pdfSettings.showDate) {
+        pdf.setFontSize(pdfSettings.titleFontSize * 0.6);
+        pdf.setTextColor(100, 100, 100);
+        pdf.text(format(selectedDate, "dd/MM/yyyy", { locale: ptBR }), pageWidth / 2, yPosition, { align: "center" });
+        yPosition += 10;
+      }
+      
+      yPosition += 5;
+    }
 
     // Age group header with colored background
     const hexColor = group.color.startsWith("#") ? group.color : "#00BCD4";
@@ -106,22 +156,30 @@ const Admin = () => {
     const g = parseInt(hexColor.slice(3, 5), 16);
     const b = parseInt(hexColor.slice(5, 7), 16);
     
-    pdf.setFillColor(r, g, b);
-    pdf.rect(margin, yPosition - 5, pageWidth - 2 * margin, 10, "F");
-    pdf.setTextColor(255, 255, 255);
-    pdf.setFontSize(14);
-    pdf.text(group.name, margin + 5, yPosition + 2);
+    if (pdfSettings.headerStyle === "full") {
+      pdf.setFillColor(r, g, b);
+      const headerHeight = pdfSettings.activityFontSize * 1.2;
+      pdf.rect(margin, yPosition - headerHeight * 0.4, pageWidth - 2 * margin, headerHeight, "F");
+      pdf.setTextColor(255, 255, 255);
+    } else {
+      pdf.setTextColor(r, g, b);
+    }
     
-    yPosition += 12;
+    pdf.setFontSize(pdfSettings.activityFontSize + 2);
+    pdf.setFont("helvetica", "bold");
+    pdf.text(group.name, pdfSettings.headerStyle === "full" ? margin + 5 : margin, yPosition + 2);
+    
+    yPosition += pdfSettings.activityFontSize + 8;
 
     // Activities table
     pdf.setTextColor(50, 50, 50);
-    pdf.setFontSize(10);
+    pdf.setFont("helvetica", "normal");
 
     group.activities.forEach((activity: any) => {
       // Check if we need a new page
       if (yPosition > pageHeight - 30) {
         pdf.addPage();
+        addBackgroundImage(pdf, pdfSettings);
         yPosition = margin;
       }
 
@@ -130,25 +188,28 @@ const Admin = () => {
       const timeRange = `${startTime} - ${endTime}`;
 
       // Time
+      pdf.setFontSize(pdfSettings.timeFontSize);
       pdf.setFont("helvetica", "bold");
+      pdf.setTextColor(50, 50, 50);
       pdf.text(timeRange, margin + 5, yPosition);
       
       // Activity name
+      pdf.setFontSize(pdfSettings.activityFontSize);
       pdf.setFont("helvetica", "normal");
-      pdf.text(activity.name, margin + 45, yPosition);
+      const timeWidth = pdfSettings.timeFontSize * 4;
+      pdf.text(activity.name, margin + timeWidth + 10, yPosition);
 
-      // Description (if exists)
-      if (activity.description) {
-        yPosition += 5;
-        pdf.setFontSize(9);
+      // Description (if exists and enabled)
+      if (activity.description && pdfSettings.showDescription) {
+        yPosition += pdfSettings.descriptionFontSize * 0.6;
+        pdf.setFontSize(pdfSettings.descriptionFontSize);
         pdf.setTextColor(100, 100, 100);
-        const splitDescription = pdf.splitTextToSize(activity.description, pageWidth - 2 * margin - 50);
-        pdf.text(splitDescription, margin + 45, yPosition);
-        yPosition += splitDescription.length * 4;
+        const splitDescription = pdf.splitTextToSize(activity.description, pageWidth - 2 * margin - timeWidth - 15);
+        pdf.text(splitDescription, margin + timeWidth + 10, yPosition);
+        yPosition += splitDescription.length * (pdfSettings.descriptionFontSize * 0.45);
       }
 
-      yPosition += 8;
-      pdf.setFontSize(10);
+      yPosition += pdfSettings.activityFontSize * 0.8;
       pdf.setTextColor(50, 50, 50);
     });
 
@@ -256,54 +317,78 @@ const Admin = () => {
                   Exportar PDF
                 </Button>
               </DialogTrigger>
-              <DialogContent>
+              <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
                 <DialogHeader>
                   <DialogTitle>Exportar Programação</DialogTitle>
                 </DialogHeader>
                 <div className="space-y-4 py-4">
-                  <div className="space-y-2">
-                    <label className="text-sm font-medium">Data</label>
-                    <Popover>
-                      <PopoverTrigger asChild>
-                        <Button
-                          variant="outline"
-                          className={cn(
-                            "w-full justify-start text-left font-normal",
-                            !selectedDate && "text-muted-foreground"
-                          )}
-                        >
-                          <CalendarIcon className="mr-2 h-4 w-4" />
-                          {selectedDate ? format(selectedDate, "dd/MM/yyyy", { locale: ptBR }) : <span>Selecione a data</span>}
-                        </Button>
-                      </PopoverTrigger>
-                      <PopoverContent className="w-auto p-0" align="start">
-                        <Calendar
-                          mode="single"
-                          selected={selectedDate}
-                          onSelect={(date) => date && setSelectedDate(date)}
-                          initialFocus
-                          className="pointer-events-auto"
-                        />
-                      </PopoverContent>
-                    </Popover>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium">Data</label>
+                      <Popover>
+                        <PopoverTrigger asChild>
+                          <Button
+                            variant="outline"
+                            className={cn(
+                              "w-full justify-start text-left font-normal",
+                              !selectedDate && "text-muted-foreground"
+                            )}
+                          >
+                            <CalendarIcon className="mr-2 h-4 w-4" />
+                            {selectedDate ? format(selectedDate, "dd/MM/yyyy", { locale: ptBR }) : <span>Selecione a data</span>}
+                          </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-auto p-0" align="start">
+                          <Calendar
+                            mode="single"
+                            selected={selectedDate}
+                            onSelect={(date) => date && setSelectedDate(date)}
+                            initialFocus
+                            className="pointer-events-auto"
+                          />
+                        </PopoverContent>
+                      </Popover>
+                    </div>
+                    
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium">Faixa Etária</label>
+                      <Select value={selectedAgeGroup} onValueChange={setSelectedAgeGroup}>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Selecione a faixa etária" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="all">Todas as faixas etárias</SelectItem>
+                          {ageGroups.map((group) => (
+                            <SelectItem key={group.id} value={group.id}>
+                              {group.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
                   </div>
-                  
-                  <div className="space-y-2">
-                    <label className="text-sm font-medium">Faixa Etária</label>
-                    <Select value={selectedAgeGroup} onValueChange={setSelectedAgeGroup}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Selecione a faixa etária" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="all">Todas as faixas etárias</SelectItem>
-                        {ageGroups.map((group) => (
-                          <SelectItem key={group.id} value={group.id}>
-                            {group.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
+
+                  <Collapsible open={showPdfSettings} onOpenChange={setShowPdfSettings}>
+                    <CollapsibleTrigger asChild>
+                      <Button variant="ghost" className="w-full justify-between p-3 h-auto">
+                        <span className="flex items-center gap-2 text-sm">
+                          <Settings2 className="h-4 w-4" />
+                          Personalizar PDF
+                        </span>
+                        {showPdfSettings ? (
+                          <ChevronUp className="h-4 w-4" />
+                        ) : (
+                          <ChevronDown className="h-4 w-4" />
+                        )}
+                      </Button>
+                    </CollapsibleTrigger>
+                    <CollapsibleContent className="pt-2">
+                      <PdfSettingsManager 
+                        settings={pdfSettings} 
+                        onSettingsChange={handlePdfSettingsChange} 
+                      />
+                    </CollapsibleContent>
+                  </Collapsible>
                   
                   <Button onClick={handleExport} className="w-full">
                     <Download className="mr-2 h-4 w-4" />
