@@ -161,6 +161,7 @@ export type Database = {
           color: string
           created_at: string
           id: string
+          is_active: boolean
           name: string
           sort_order: number
         }
@@ -168,6 +169,7 @@ export type Database = {
           color?: string
           created_at?: string
           id?: string
+          is_active?: boolean
           name: string
           sort_order?: number
         }
@@ -175,6 +177,7 @@ export type Database = {
           color?: string
           created_at?: string
           id?: string
+          is_active?: boolean
           name?: string
           sort_order?: number
         }

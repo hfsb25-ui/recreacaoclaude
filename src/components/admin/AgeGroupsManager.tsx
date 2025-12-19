@@ -4,8 +4,9 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card } from "@/components/ui/card";
+import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
-import { Plus, Trash2, Edit, ChevronUp, ChevronDown } from "lucide-react";
+import { Plus, Trash2, Edit, ChevronUp, ChevronDown, Eye, EyeOff } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -19,6 +20,7 @@ interface AgeGroup {
   name: string;
   color: string;
   sort_order: number;
+  is_active: boolean;
 }
 
 const AgeGroupsManager = () => {
@@ -143,6 +145,21 @@ const AgeGroupsManager = () => {
     }
   };
 
+  const handleToggleActive = async (group: AgeGroup) => {
+    try {
+      const { error } = await supabase
+        .from("age_groups")
+        .update({ is_active: !group.is_active })
+        .eq("id", group.id);
+
+      if (error) throw error;
+      toast.success(group.is_active ? "Faixa etária desativada!" : "Faixa etária ativada!");
+      fetchAgeGroups();
+    } catch (error: any) {
+      toast.error(error.message || "Erro ao alterar status");
+    }
+  };
+
   return (
     <div className="space-y-4">
       <Dialog open={isOpen} onOpenChange={setIsOpen}>
@@ -202,14 +219,28 @@ const AgeGroupsManager = () => {
         {ageGroups.map((group, index) => (
           <Card
             key={group.id}
-            className="p-4 hover:shadow-[var(--shadow-hover)] transition-[var(--transition-smooth)] flex flex-col"
+            className={`p-4 hover:shadow-[var(--shadow-hover)] transition-[var(--transition-smooth)] flex flex-col ${
+              !group.is_active ? "opacity-60" : ""
+            }`}
           >
             <div className="flex-1 mb-4">
               <div className="flex items-center gap-2 mb-2">
                 <span className="text-xs text-muted-foreground font-medium">
                   Posição: {index + 1}
                 </span>
-                <div className="flex gap-1 ml-auto">
+                <div className="flex items-center gap-2 ml-auto">
+                  <div className="flex items-center gap-1">
+                    {group.is_active ? (
+                      <Eye className="h-3 w-3 text-green-600" />
+                    ) : (
+                      <EyeOff className="h-3 w-3 text-muted-foreground" />
+                    )}
+                    <Switch
+                      checked={group.is_active}
+                      onCheckedChange={() => handleToggleActive(group)}
+                      className="scale-75"
+                    />
+                  </div>
                   <Button
                     size="sm"
                     variant="ghost"
@@ -231,11 +262,18 @@ const AgeGroupsManager = () => {
                 </div>
               </div>
               <div
-                className="px-4 py-3 rounded-lg min-h-[64px] flex items-center justify-center text-center"
+                className={`px-4 py-3 rounded-lg min-h-[64px] flex items-center justify-center text-center ${
+                  !group.is_active ? "grayscale" : ""
+                }`}
                 style={{ backgroundColor: group.color }}
               >
                 <h3 className="font-semibold text-white break-words w-full">{group.name}</h3>
               </div>
+              {!group.is_active && (
+                <p className="text-xs text-muted-foreground text-center mt-2">
+                  Não visível para hóspedes
+                </p>
+              )}
             </div>
             <div className="flex gap-2 mt-auto">
               <Button
