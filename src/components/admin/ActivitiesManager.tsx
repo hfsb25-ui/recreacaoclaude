@@ -559,31 +559,65 @@ const ActivitiesManager = () => {
                       onValueChange={setName}
                     />
                     <CommandList>
-                      <CommandEmpty>Nenhuma atividade encontrada.</CommandEmpty>
-                      <CommandGroup>
-                        {activityTemplates
-                          .filter(template => 
-                            template.name.toLowerCase().includes(name.toLowerCase())
-                          )
-                          .map((template) => (
-                            <CommandItem
-                              key={template.id}
-                              value={template.name}
-                              onSelect={() => {
-                                handleTemplateSelect(template.id);
+                      {activityTemplates.filter(template => 
+                        template.name.toLowerCase().includes(name.toLowerCase())
+                      ).length === 0 && name.trim() !== "" ? (
+                        <div className="p-3 text-center">
+                          <p className="text-sm text-muted-foreground mb-3">
+                            Nenhuma atividade encontrada.
+                          </p>
+                          <Button
+                            type="button"
+                            size="sm"
+                            onClick={async () => {
+                              try {
+                                const { data, error } = await supabase
+                                  .from("activity_templates")
+                                  .insert([{ name: name.trim(), description: "" }])
+                                  .select()
+                                  .single();
+                                
+                                if (error) throw error;
+                                
+                                toast.success(`"${name.trim()}" cadastrada como modelo!`);
+                                await fetchActivityTemplates();
                                 setSearchOpen(false);
-                              }}
-                            >
-                              <Check
-                                className={cn(
-                                  "mr-2 h-4 w-4",
-                                  name === template.name ? "opacity-100" : "opacity-0"
-                                )}
-                              />
-                              {template.name}
-                            </CommandItem>
-                          ))}
-                      </CommandGroup>
+                              } catch (error: any) {
+                                toast.error(error.message || "Erro ao cadastrar");
+                              }
+                            }}
+                            className="w-full"
+                          >
+                            <Plus className="mr-2 h-4 w-4" />
+                            Cadastrar "{name.trim()}"
+                          </Button>
+                        </div>
+                      ) : (
+                        <CommandGroup>
+                          {activityTemplates
+                            .filter(template => 
+                              template.name.toLowerCase().includes(name.toLowerCase())
+                            )
+                            .map((template) => (
+                              <CommandItem
+                                key={template.id}
+                                value={template.name}
+                                onSelect={() => {
+                                  handleTemplateSelect(template.id);
+                                  setSearchOpen(false);
+                                }}
+                              >
+                                <Check
+                                  className={cn(
+                                    "mr-2 h-4 w-4",
+                                    name === template.name ? "opacity-100" : "opacity-0"
+                                  )}
+                                />
+                                {template.name}
+                              </CommandItem>
+                            ))}
+                        </CommandGroup>
+                      )}
                     </CommandList>
                   </Command>
                 </PopoverContent>
