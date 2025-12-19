@@ -30,7 +30,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { cn } from "@/lib/utils";
-import { PdfSettingsManager, PdfSettings, loadPdfSettings, savePdfSettings } from "@/components/admin/PdfSettingsManager";
+import { PdfSettingsManager, PdfSettings, loadPdfSettings, savePdfSettings, getDefaultPdfSettings } from "@/components/admin/PdfSettingsManager";
 
 const Admin = () => {
   const navigate = useNavigate();
@@ -40,7 +40,7 @@ const Admin = () => {
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [selectedAgeGroup, setSelectedAgeGroup] = useState<string>("all");
   const [ageGroups, setAgeGroups] = useState<any[]>([]);
-  const [pdfSettings, setPdfSettings] = useState<PdfSettings>(loadPdfSettings());
+  const [pdfSettings, setPdfSettings] = useState<PdfSettings>(getDefaultPdfSettings());
   const [showPdfSettings, setShowPdfSettings] = useState(false);
 
   // Helper function to format date without timezone issues
@@ -54,7 +54,13 @@ const Admin = () => {
   useEffect(() => {
     checkAuth();
     fetchAgeGroups();
+    loadPdfSettingsFromDb();
   }, []);
+
+  const loadPdfSettingsFromDb = async () => {
+    const settings = await loadPdfSettings();
+    setPdfSettings(settings);
+  };
 
   const fetchAgeGroups = async () => {
     const { data, error } = await supabase

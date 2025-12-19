@@ -489,6 +489,7 @@ export type Database = {
           footer_text: string | null
           id: string
           logo_url: string | null
+          pdf_settings: Json | null
           site_name: string | null
           splash_animation_type: string | null
           splash_duration: number | null
@@ -508,6 +509,7 @@ export type Database = {
           footer_text?: string | null
           id?: string
           logo_url?: string | null
+          pdf_settings?: Json | null
           site_name?: string | null
           splash_animation_type?: string | null
           splash_duration?: number | null
@@ -527,6 +529,7 @@ export type Database = {
           footer_text?: string | null
           id?: string
           logo_url?: string | null
+          pdf_settings?: Json | null
           site_name?: string | null
           splash_animation_type?: string | null
           splash_duration?: number | null
