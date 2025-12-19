@@ -7,8 +7,8 @@ import { Slider } from "@/components/ui/slider";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
-import { Upload, X, FileText, Eye } from "lucide-react";
-
+import { Upload, X, FileText } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
 export interface PdfSettings {
   titleFontSize: number;
   activityFontSize: number;
@@ -309,17 +309,21 @@ export const PdfSettingsManager = ({ settings, onSettingsChange }: PdfSettingsMa
 
 export const getDefaultPdfSettings = (): PdfSettings => defaultSettings;
 
-export const loadPdfSettings = (): PdfSettings => {
+export const loadPdfSettings = async (): Promise<PdfSettings> => {
   try {
-    const saved = localStorage.getItem("pdfSettings");
-    const savedImage = localStorage.getItem("pdfBackgroundImage");
-    if (saved) {
-      const parsed = { ...defaultSettings, ...JSON.parse(saved) };
-      // Load background image separately (stored in different key due to size)
-      if (savedImage) {
-        parsed.backgroundImage = savedImage;
-      }
-      return parsed;
+    const { data, error } = await supabase
+      .from("site_settings")
+      .select("pdf_settings")
+      .limit(1)
+      .single();
+    
+    if (error) {
+      console.error("Error loading PDF settings from database:", error);
+      return defaultSettings;
+    }
+    
+    if (data?.pdf_settings && typeof data.pdf_settings === 'object') {
+      return { ...defaultSettings, ...(data.pdf_settings as unknown as Partial<PdfSettings>) };
     }
   } catch (error) {
     console.error("Error loading PDF settings:", error);
@@ -327,25 +331,32 @@ export const loadPdfSettings = (): PdfSettings => {
   return defaultSettings;
 };
 
-export const savePdfSettings = (settings: PdfSettings) => {
+export const savePdfSettings = async (settings: PdfSettings) => {
   try {
-    // Store background image separately due to localStorage size limits
-    const { backgroundImage, ...otherSettings } = settings;
-    localStorage.setItem("pdfSettings", JSON.stringify({ ...otherSettings, backgroundImage: null }));
+    // Get the site settings id first
+    const { data: siteData } = await supabase
+      .from("site_settings")
+      .select("id")
+      .limit(1)
+      .single();
     
-    // Store background image in separate key
-    if (backgroundImage) {
-      localStorage.setItem("pdfBackgroundImage", backgroundImage);
-    } else {
-      localStorage.removeItem("pdfBackgroundImage");
+    if (!siteData?.id) {
+      console.error("No site settings found");
+      return;
+    }
+    
+    const { error } = await supabase
+      .from("site_settings")
+      .update({ pdf_settings: settings as unknown as Record<string, never> })
+      .eq("id", siteData.id);
+    
+    if (error) {
+      console.error("Error saving PDF settings to database:", error);
+      toast.error("Erro ao salvar configurações do PDF");
+      return;
     }
   } catch (error) {
     console.error("Error saving PDF settings:", error);
-    // If storage is full, try without image
-    if (error instanceof DOMException && error.name === 'QuotaExceededError') {
-      const { backgroundImage, ...otherSettings } = settings;
-      localStorage.setItem("pdfSettings", JSON.stringify({ ...otherSettings, backgroundImage: null }));
-      console.warn("Background image too large to save, saving other settings only");
-    }
+    toast.error("Erro ao salvar configurações do PDF");
   }
 };
