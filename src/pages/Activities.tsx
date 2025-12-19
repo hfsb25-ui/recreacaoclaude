@@ -3,7 +3,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, Clock, Star, WifiOff, User } from "lucide-react";
+import { ArrowLeft, Clock, Star, WifiOff, User, Crown } from "lucide-react";
 import { format, isToday } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { ActivityRating } from "@/components/ActivityRating";
@@ -24,6 +24,7 @@ interface Activity {
   activity_date: string;
   start_time: string;
   end_time: string;
+  is_master: boolean;
 }
 
 interface AgeGroup {
@@ -90,17 +91,17 @@ const Activities = () => {
         setAgeGroup(groupData);
       }
 
-      // Fetch today's activities
+      // Fetch today's activities for this age group and master activities
       const today = new Date().toISOString().split("T")[0];
       const { data: activitiesData } = await supabase
         .from("activities")
         .select("*")
-        .eq("age_group_id", ageGroupId)
         .eq("activity_date", today)
+        .or(`age_group_id.eq.${ageGroupId},is_master.eq.true`)
         .order("start_time", { ascending: true });
 
       if (activitiesData) {
-        setActivities(activitiesData);
+        setActivities(activitiesData as Activity[]);
         
         // Fetch ratings for all activities
         const activityIds = activitiesData.map(a => a.id);
@@ -264,13 +265,23 @@ const Activities = () => {
                   className={`p-4 sm:p-6 transition-[var(--transition-smooth)] hover:shadow-[var(--shadow-hover)] ${
                     isHappening
                       ? "bg-gradient-to-r from-primary to-primary/90 text-primary-foreground ring-4 ring-primary/30 sm:scale-105"
-                      : "bg-card hover:scale-[1.02]"
+                      : activity.is_master
+                        ? "bg-destructive/10 border-2 border-destructive hover:scale-[1.02]"
+                        : "bg-card hover:scale-[1.02]"
                   }`}
                 >
                   <div className="space-y-4">
                     <div className="flex flex-col sm:flex-row items-start sm:justify-between gap-3">
                       <div className="flex-1 min-w-0 w-full">
-                        <h3 className="text-lg sm:text-xl font-semibold mb-2 break-words">
+                        {activity.is_master && !isHappening && (
+                          <div className="flex items-center gap-1 text-destructive text-xs font-bold uppercase tracking-wide mb-2">
+                            <Crown className="h-3 w-3" />
+                            Atividade Master - Todas as idades
+                          </div>
+                        )}
+                        <h3 className={`text-lg sm:text-xl font-semibold mb-2 break-words ${
+                          activity.is_master && !isHappening ? "text-destructive" : ""
+                        }`}>
                           {activity.name}
                         </h3>
                         {activity.description && (

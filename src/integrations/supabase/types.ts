@@ -22,6 +22,7 @@ export type Database = {
           description: string | null
           end_time: string
           id: string
+          is_master: boolean
           name: string
           start_time: string
         }
@@ -32,6 +33,7 @@ export type Database = {
           description?: string | null
           end_time: string
           id?: string
+          is_master?: boolean
           name: string
           start_time: string
         }
@@ -42,6 +44,7 @@ export type Database = {
           description?: string | null
           end_time?: string
           id?: string
+          is_master?: boolean
           name?: string
           start_time?: string
         }
