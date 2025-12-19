@@ -3,6 +3,7 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { useTheme } from "@/hooks/useTheme";
+import { usePageTracking } from "@/hooks/usePageTracking";
 import { SplashScreen } from "@/components/SplashScreen";
 import { useState, useEffect } from "react";
 import Home from "./pages/Home";
@@ -16,6 +17,28 @@ import Ranking from "./pages/Ranking";
 import HallOfFame from "./pages/HallOfFame";
 import Install from "./pages/Install";
 import NotFound from "./pages/NotFound";
+
+// Component that uses hooks that require Router context
+const AppRoutes = () => {
+  usePageTracking();
+  
+  return (
+    <Routes>
+      <Route path="/" element={<Home />} />
+      <Route path="/programacao" element={<Schedule />} />
+      <Route path="/activities/:ageGroupId" element={<Activities />} />
+      <Route path="/auth" element={<Auth />} />
+      <Route path="/admin" element={<Admin />} />
+      <Route path="/guest-auth" element={<GuestAuth />} />
+      <Route path="/guest-profile" element={<GuestProfile />} />
+      <Route path="/ranking" element={<Ranking />} />
+      <Route path="/hall-of-fame" element={<HallOfFame />} />
+      <Route path="/instalar" element={<Install />} />
+      {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
+      <Route path="*" element={<NotFound />} />
+    </Routes>
+  );
+};
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -52,20 +75,7 @@ const AppContent = () => {
   return (
     <div className="overflow-x-hidden w-full">
       <BrowserRouter>
-        <Routes>
-          <Route path="/" element={<Home />} />
-          <Route path="/programacao" element={<Schedule />} />
-          <Route path="/activities/:ageGroupId" element={<Activities />} />
-          <Route path="/auth" element={<Auth />} />
-          <Route path="/admin" element={<Admin />} />
-          <Route path="/guest-auth" element={<GuestAuth />} />
-          <Route path="/guest-profile" element={<GuestProfile />} />
-          <Route path="/ranking" element={<Ranking />} />
-          <Route path="/hall-of-fame" element={<HallOfFame />} />
-          <Route path="/instalar" element={<Install />} />
-          {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-          <Route path="*" element={<NotFound />} />
-        </Routes>
+        <AppRoutes />
       </BrowserRouter>
     </div>
   );
