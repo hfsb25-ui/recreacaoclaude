@@ -7,7 +7,7 @@ import { Card } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
-import { Trash2, Upload, Image as ImageIcon, ArrowUp, ArrowDown } from "lucide-react";
+import { Trash2, Upload, Image as ImageIcon, ArrowUp, ArrowDown, Eye, EyeOff } from "lucide-react";
 
 interface Announcement {
   id: string;
@@ -219,6 +219,31 @@ const AnnouncementsManager = () => {
     }
   };
 
+  const handleToggleActive = async (id: string, currentStatus: boolean) => {
+    try {
+      const { error } = await supabase
+        .from("announcements")
+        .update({ is_active: !currentStatus })
+        .eq("id", id);
+
+      if (error) throw error;
+
+      toast({
+        title: "Sucesso",
+        description: `Anúncio ${!currentStatus ? "ativado" : "desativado"} com sucesso!`,
+      });
+
+      fetchAnnouncements();
+    } catch (error) {
+      console.error("Error:", error);
+      toast({
+        title: "Erro",
+        description: "Erro ao alterar status do anúncio",
+        variant: "destructive",
+      });
+    }
+  };
+
   const getImageUrl = (path: string | null) => {
     if (!path) return null;
     const { data } = supabase.storage.from("announcements").getPublicUrl(path);
@@ -294,7 +319,10 @@ const AnnouncementsManager = () => {
         ) : (
           <div className="space-y-4">
             {announcements.map((announcement, index) => (
-              <Card key={announcement.id} className="p-4">
+              <Card 
+                key={announcement.id} 
+                className={`p-4 ${!announcement.is_active ? "opacity-60 grayscale" : ""}`}
+              >
                 <div className="flex flex-col sm:flex-row gap-4">
                   {announcement.image_url && (
                     <div className="flex-shrink-0 w-full sm:w-[180px] h-[80px] sm:h-[50px] bg-muted rounded overflow-hidden">
@@ -319,9 +347,20 @@ const AnnouncementsManager = () => {
                             {announcement.description}
                           </p>
                         )}
-                        <p className="text-xs text-muted-foreground mt-2">
-                          Status: {announcement.is_active ? "Ativo" : "Inativo"}
-                        </p>
+                        <div className="flex items-center gap-2 mt-2">
+                          <Switch
+                            checked={announcement.is_active}
+                            onCheckedChange={() => handleToggleActive(announcement.id, announcement.is_active)}
+                          />
+                          {announcement.is_active ? (
+                            <Eye className="h-4 w-4 text-green-600" />
+                          ) : (
+                            <EyeOff className="h-4 w-4 text-muted-foreground" />
+                          )}
+                          <span className="text-xs text-muted-foreground">
+                            {announcement.is_active ? "Visível" : "Oculto"}
+                          </span>
+                        </div>
                       </div>
                       <div className="flex gap-2 flex-shrink-0">
                         <Button
