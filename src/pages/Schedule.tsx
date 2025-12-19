@@ -51,6 +51,7 @@ const Index = () => {
       const { data } = await supabase
         .from("age_groups")
         .select("*")
+        .eq("is_active", true)
         .order("sort_order", { ascending: true });
 
       if (data) setAgeGroups(data);
