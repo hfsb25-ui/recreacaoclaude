@@ -6,7 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Card } from "@/components/ui/card";
 import { toast } from "sonner";
-import { Plus, Trash2, Edit, Clock, Calendar as CalendarIcon, Download, Check, ChevronsUpDown, Eye, Import, AlertTriangle } from "lucide-react";
+import { Plus, Trash2, Edit, Clock, Calendar as CalendarIcon, Download, Check, ChevronsUpDown, Eye, Import, AlertTriangle, Crown } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -43,6 +43,7 @@ interface Activity {
   start_time: string;
   end_time: string;
   age_group_id: string;
+  is_master: boolean;
   age_groups?: { name: string; color: string };
 }
 
@@ -71,6 +72,7 @@ const ActivitiesManager = () => {
   const [startTime, setStartTime] = useState("");
   const [endTime, setEndTime] = useState("");
   const [ageGroupId, setAgeGroupId] = useState("");
+  const [isMaster, setIsMaster] = useState(false);
   const [filterDate, setFilterDate] = useState<Date | undefined>(undefined);
   const [filterAgeGroup, setFilterAgeGroup] = useState<string>("");
   const [importing, setImporting] = useState(false);
@@ -120,9 +122,10 @@ const ActivitiesManager = () => {
       .from("activities")
       .select("*, age_groups(name, color)")
       .order("activity_date", { ascending: false })
+      .order("is_master", { ascending: false })
       .order("start_time", { ascending: true });
 
-    if (data) setActivities(data);
+    if (data) setActivities(data as Activity[]);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -139,6 +142,7 @@ const ActivitiesManager = () => {
             start_time: startTime,
             end_time: endTime,
             age_group_id: ageGroupId,
+            is_master: isMaster,
           })
           .eq("id", editingActivity.id);
 
@@ -153,11 +157,12 @@ const ActivitiesManager = () => {
             start_time: startTime,
             end_time: endTime,
             age_group_id: ageGroupId,
+            is_master: isMaster,
           },
         ]);
 
         if (error) throw error;
-        toast.success("Atividade criada!");
+        toast.success(isMaster ? "Atividade Master criada!" : "Atividade criada!");
       }
 
       fetchActivities();
@@ -192,6 +197,7 @@ const ActivitiesManager = () => {
     setStartTime(activity.start_time);
     setEndTime(activity.end_time);
     setAgeGroupId(activity.age_group_id);
+    setIsMaster(activity.is_master || false);
     setIsOpen(true);
   };
 
@@ -205,13 +211,15 @@ const ActivitiesManager = () => {
     setStartTime("");
     setEndTime("");
     setAgeGroupId("");
+    setIsMaster(false);
   };
 
-  const handleOpenNew = () => {
+  const handleOpenNew = (master: boolean = false) => {
     setEditingActivity(null);
     setSelectedTemplateId("");
     setName("");
     setDescription("");
+    setIsMaster(master);
     
     // Pre-fill from filters
     if (filterDate) {
@@ -220,8 +228,10 @@ const ActivitiesManager = () => {
       setActivityDate("");
     }
     
-    if (filterAgeGroup) {
+    if (filterAgeGroup && !master) {
       setAgeGroupId(filterAgeGroup);
+    } else if (ageGroups.length > 0) {
+      setAgeGroupId(ageGroups[0].id);
     } else {
       setAgeGroupId("");
     }
@@ -295,6 +305,7 @@ const ActivitiesManager = () => {
         start_time: activity.start_time,
         end_time: activity.end_time,
         age_group_id: activity.age_group_id,
+        is_master: activity.is_master || false,
       }));
 
       const { error: insertError } = await supabase
@@ -487,17 +498,26 @@ const ActivitiesManager = () => {
       </Dialog>
 
       <Dialog open={isOpen} onOpenChange={setIsOpen}>
-        <Button 
-          onClick={handleOpenNew}
-          className="bg-secondary text-secondary-foreground hover:bg-secondary/90 transition-[var(--transition-smooth)]"
-        >
-          <Plus className="mr-2 h-4 w-4" />
-          Nova Atividade
-        </Button>
+        <div className="flex gap-2">
+          <Button 
+            onClick={() => handleOpenNew(false)}
+            className="bg-secondary text-secondary-foreground hover:bg-secondary/90 transition-[var(--transition-smooth)]"
+          >
+            <Plus className="mr-2 h-4 w-4" />
+            Nova Atividade
+          </Button>
+          <Button 
+            onClick={() => handleOpenNew(true)}
+            className="bg-destructive text-destructive-foreground hover:bg-destructive/90 transition-[var(--transition-smooth)]"
+          >
+            <Crown className="mr-2 h-4 w-4" />
+            Nova Atividade Master
+          </Button>
+        </div>
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>
-              {editingActivity ? "Editar" : "Nova"} Atividade
+            <DialogTitle className={isMaster ? "text-destructive" : ""}>
+              {editingActivity ? "Editar" : "Nova"} {isMaster ? "Atividade Master" : "Atividade"}
             </DialogTitle>
           </DialogHeader>
           <form onSubmit={handleSubmit} className="space-y-4">
@@ -656,21 +676,31 @@ const ActivitiesManager = () => {
         {filteredActivities.map((activity) => (
           <Card
             key={activity.id}
-            className="p-6 hover:shadow-[var(--shadow-hover)] transition-[var(--transition-smooth)]"
+            className={`p-6 hover:shadow-[var(--shadow-hover)] transition-[var(--transition-smooth)] ${
+              activity.is_master ? "border-2 border-destructive bg-destructive/5" : ""
+            }`}
           >
             <div className="flex items-start justify-between">
               <div className="flex-1">
-                <div className="flex items-center gap-3 mb-2">
+                <div className="flex items-center gap-3 mb-2 flex-wrap">
+                  {activity.is_master && (
+                    <div className="px-3 py-1 rounded-lg text-sm font-medium text-white bg-destructive flex items-center gap-1">
+                      <Crown className="h-3 w-3" />
+                      MASTER
+                    </div>
+                  )}
                   <div
                     className="px-3 py-1 rounded-lg text-sm font-medium text-white"
                     style={{
-                      backgroundColor: activity.age_groups?.color || "#00BCD4",
+                      backgroundColor: activity.is_master ? "#ef4444" : (activity.age_groups?.color || "#00BCD4"),
                     }}
                   >
-                    {activity.age_groups?.name}
+                    {activity.is_master ? "Todas as idades" : activity.age_groups?.name}
                   </div>
                 </div>
-                <h3 className="text-xl font-semibold mb-2">{activity.name}</h3>
+                <h3 className={`text-xl font-semibold mb-2 ${activity.is_master ? "text-destructive" : ""}`}>
+                  {activity.name}
+                </h3>
                 {activity.description && (
                   <p className="text-muted-foreground mb-3">
                     {activity.description}
