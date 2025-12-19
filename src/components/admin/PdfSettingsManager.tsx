@@ -312,8 +312,14 @@ export const getDefaultPdfSettings = (): PdfSettings => defaultSettings;
 export const loadPdfSettings = (): PdfSettings => {
   try {
     const saved = localStorage.getItem("pdfSettings");
+    const savedImage = localStorage.getItem("pdfBackgroundImage");
     if (saved) {
-      return { ...defaultSettings, ...JSON.parse(saved) };
+      const parsed = { ...defaultSettings, ...JSON.parse(saved) };
+      // Load background image separately (stored in different key due to size)
+      if (savedImage) {
+        parsed.backgroundImage = savedImage;
+      }
+      return parsed;
     }
   } catch (error) {
     console.error("Error loading PDF settings:", error);
@@ -323,8 +329,23 @@ export const loadPdfSettings = (): PdfSettings => {
 
 export const savePdfSettings = (settings: PdfSettings) => {
   try {
-    localStorage.setItem("pdfSettings", JSON.stringify(settings));
+    // Store background image separately due to localStorage size limits
+    const { backgroundImage, ...otherSettings } = settings;
+    localStorage.setItem("pdfSettings", JSON.stringify({ ...otherSettings, backgroundImage: null }));
+    
+    // Store background image in separate key
+    if (backgroundImage) {
+      localStorage.setItem("pdfBackgroundImage", backgroundImage);
+    } else {
+      localStorage.removeItem("pdfBackgroundImage");
+    }
   } catch (error) {
     console.error("Error saving PDF settings:", error);
+    // If storage is full, try without image
+    if (error instanceof DOMException && error.name === 'QuotaExceededError') {
+      const { backgroundImage, ...otherSettings } = settings;
+      localStorage.setItem("pdfSettings", JSON.stringify({ ...otherSettings, backgroundImage: null }));
+      console.warn("Background image too large to save, saving other settings only");
+    }
   }
 };
