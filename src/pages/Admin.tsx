@@ -432,12 +432,12 @@ const Admin = () => {
                   <TabsTrigger value="statistics" className="whitespace-nowrap text-xs sm:text-sm px-2 sm:px-3">Estatísticas</TabsTrigger>
                   <TabsTrigger value="announcements" className="whitespace-nowrap text-xs sm:text-sm px-2 sm:px-3">Anúncios</TabsTrigger>
                   <TabsTrigger value="menu" className="whitespace-nowrap text-xs sm:text-sm px-2 sm:px-3">Menu</TabsTrigger>
-                  <TabsTrigger value="logo" className="whitespace-nowrap text-xs sm:text-sm px-2 sm:px-3">Logo</TabsTrigger>
-                  <TabsTrigger value="pwa-icon" className="whitespace-nowrap text-xs sm:text-sm px-2 sm:px-3">Ícone PWA</TabsTrigger>
                   <TabsTrigger value="site-name" className="whitespace-nowrap text-xs sm:text-sm px-2 sm:px-3">Nome</TabsTrigger>
-                  <TabsTrigger value="weather" className="whitespace-nowrap text-xs sm:text-sm px-2 sm:px-3">Clima</TabsTrigger>
                   <TabsTrigger value="users" className="whitespace-nowrap text-xs sm:text-sm px-2 sm:px-3">Usuários</TabsTrigger>
-                  <TabsTrigger value="theme" className="whitespace-nowrap text-xs sm:text-sm px-2 sm:px-3">Cores</TabsTrigger>
+                  <TabsTrigger value="settings" className="whitespace-nowrap text-xs sm:text-sm px-2 sm:px-3 flex items-center gap-1">
+                    <Settings2 className="h-3 w-3" />
+                    Configurações
+                  </TabsTrigger>
                 </>
               )}
             </TabsList>
@@ -477,29 +477,38 @@ const Admin = () => {
                 <MenuItemsManager />
               </TabsContent>
 
-              <TabsContent value="logo" className="space-y-4">
-                <LogoManager />
-              </TabsContent>
-
-              <TabsContent value="pwa-icon" className="space-y-4">
-                <PwaIconManager />
-              </TabsContent>
-
               <TabsContent value="site-name" className="space-y-4">
                 <SiteNameManager />
-              </TabsContent>
-
-              <TabsContent value="weather" className="space-y-4">
-                <WeatherLocationManager />
               </TabsContent>
 
               <TabsContent value="users" className="space-y-4">
                 <UsersManager />
               </TabsContent>
 
-              <TabsContent value="theme" className="space-y-4">
-                <ThemeManager />
-                <SplashScreenManager />
+              <TabsContent value="settings" className="space-y-4">
+                <Card className="p-4">
+                  <Tabs defaultValue="logo" className="w-full">
+                    <TabsList className="grid w-full grid-cols-2 sm:grid-cols-4 gap-1 h-auto">
+                      <TabsTrigger value="logo" className="text-xs sm:text-sm">Logo</TabsTrigger>
+                      <TabsTrigger value="pwa-icon" className="text-xs sm:text-sm">Ícone PWA</TabsTrigger>
+                      <TabsTrigger value="theme" className="text-xs sm:text-sm">Cores</TabsTrigger>
+                      <TabsTrigger value="weather" className="text-xs sm:text-sm">Clima</TabsTrigger>
+                    </TabsList>
+                    <TabsContent value="logo" className="mt-4">
+                      <LogoManager />
+                    </TabsContent>
+                    <TabsContent value="pwa-icon" className="mt-4">
+                      <PwaIconManager />
+                    </TabsContent>
+                    <TabsContent value="theme" className="mt-4 space-y-4">
+                      <ThemeManager />
+                      <SplashScreenManager />
+                    </TabsContent>
+                    <TabsContent value="weather" className="mt-4">
+                      <WeatherLocationManager />
+                    </TabsContent>
+                  </Tabs>
+                </Card>
               </TabsContent>
             </>
           )}
