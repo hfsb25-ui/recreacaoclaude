@@ -331,32 +331,40 @@ export const loadPdfSettings = async (): Promise<PdfSettings> => {
   return defaultSettings;
 };
 
-export const savePdfSettings = async (settings: PdfSettings) => {
+export const savePdfSettings = async (settings: PdfSettings): Promise<boolean> => {
   try {
     // Get the site settings id first
-    const { data: siteData } = await supabase
+    const { data: siteData, error: fetchError } = await supabase
       .from("site_settings")
       .select("id")
       .limit(1)
       .single();
     
-    if (!siteData?.id) {
-      console.error("No site settings found");
-      return;
+    if (fetchError || !siteData?.id) {
+      console.error("No site settings found:", fetchError);
+      toast.error("Erro ao buscar configurações");
+      return false;
     }
     
     const { error } = await supabase
       .from("site_settings")
-      .update({ pdf_settings: settings as unknown as Record<string, never> })
+      .update({ 
+        pdf_settings: settings as unknown as Record<string, never>,
+        updated_at: new Date().toISOString()
+      })
       .eq("id", siteData.id);
     
     if (error) {
       console.error("Error saving PDF settings to database:", error);
-      toast.error("Erro ao salvar configurações do PDF");
-      return;
+      toast.error("Erro ao salvar configurações do PDF. Verifique suas permissões.");
+      return false;
     }
+    
+    toast.success("Configurações do PDF salvas!");
+    return true;
   } catch (error) {
     console.error("Error saving PDF settings:", error);
     toast.error("Erro ao salvar configurações do PDF");
+    return false;
   }
 };
