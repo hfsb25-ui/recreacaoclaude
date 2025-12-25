@@ -6,18 +6,21 @@ interface SplashScreenProps {
   onFinish: () => void;
 }
 
+interface SplashSettings {
+  splash_title: string;
+  splash_subtitle: string;
+  splash_duration: number;
+  splash_gradient_from: string;
+  splash_gradient_via: string;
+  splash_gradient_to: string;
+  splash_icon: string;
+  splash_animation_type: string;
+}
+
 export const SplashScreen = ({ onFinish }: SplashScreenProps) => {
   const [isVisible, setIsVisible] = useState(true);
-  const [settings, setSettings] = useState({
-    splash_title: "Recreação Hotel",
-    splash_subtitle: "Sua programação de atividades",
-    splash_duration: 2000,
-    splash_gradient_from: "192 92% 60%",
-    splash_gradient_via: "280 80% 65%",
-    splash_gradient_to: "340 85% 70%",
-    splash_icon: "Waves",
-    splash_animation_type: "scale",
-  });
+  const [isLoaded, setIsLoaded] = useState(false);
+  const [settings, setSettings] = useState<SplashSettings | null>(null);
 
   const iconMap: Record<string, LucideIcon> = {
     Waves,
@@ -30,7 +33,7 @@ export const SplashScreen = ({ onFinish }: SplashScreenProps) => {
     Trophy,
   };
 
-  const SelectedIcon = iconMap[settings.splash_icon] || Waves;
+  const SelectedIcon = settings ? (iconMap[settings.splash_icon] || Waves) : Waves;
 
   const getAnimationClass = (animationType: string) => {
     switch (animationType) {
@@ -56,20 +59,33 @@ export const SplashScreen = ({ onFinish }: SplashScreenProps) => {
           .select("splash_title, splash_subtitle, splash_duration, splash_gradient_from, splash_gradient_via, splash_gradient_to, splash_icon, splash_animation_type")
           .single();
 
-        if (data) {
-          setSettings({
-            splash_title: data.splash_title || "Recreação Hotel",
-            splash_subtitle: data.splash_subtitle || "Sua programação de atividades",
-            splash_duration: data.splash_duration || 2000,
-            splash_gradient_from: data.splash_gradient_from || "192 92% 60%",
-            splash_gradient_via: data.splash_gradient_via || "280 80% 65%",
-            splash_gradient_to: data.splash_gradient_to || "340 85% 70%",
-            splash_icon: data.splash_icon || "Waves",
-            splash_animation_type: data.splash_animation_type || "scale",
-          });
-        }
+        const loadedSettings: SplashSettings = {
+          splash_title: data?.splash_title || "Recreação Hotel",
+          splash_subtitle: data?.splash_subtitle || "Sua programação de atividades",
+          splash_duration: data?.splash_duration || 2000,
+          splash_gradient_from: data?.splash_gradient_from || "192 92% 60%",
+          splash_gradient_via: data?.splash_gradient_via || "280 80% 65%",
+          splash_gradient_to: data?.splash_gradient_to || "340 85% 70%",
+          splash_icon: data?.splash_icon || "Waves",
+          splash_animation_type: data?.splash_animation_type || "scale",
+        };
+        
+        setSettings(loadedSettings);
+        setIsLoaded(true);
       } catch (error) {
         console.error("Erro ao carregar configurações do splash:", error);
+        // Set defaults on error
+        setSettings({
+          splash_title: "Recreação Hotel",
+          splash_subtitle: "Sua programação de atividades",
+          splash_duration: 2000,
+          splash_gradient_from: "192 92% 60%",
+          splash_gradient_via: "280 80% 65%",
+          splash_gradient_to: "340 85% 70%",
+          splash_icon: "Waves",
+          splash_animation_type: "scale",
+        });
+        setIsLoaded(true);
       }
     };
 
@@ -77,13 +93,22 @@ export const SplashScreen = ({ onFinish }: SplashScreenProps) => {
   }, []);
 
   useEffect(() => {
+    if (!isLoaded || !settings) return;
+    
     const timer = setTimeout(() => {
       setIsVisible(false);
       setTimeout(onFinish, 500);
     }, settings.splash_duration);
 
     return () => clearTimeout(timer);
-  }, [onFinish, settings.splash_duration]);
+  }, [onFinish, isLoaded, settings]);
+
+  // Don't render until settings are loaded
+  if (!isLoaded || !settings) {
+    return (
+      <div className="fixed inset-0 z-[9999] bg-background" />
+    );
+  }
 
   return (
     <div
