@@ -496,6 +496,7 @@ export type Database = {
           id: string
           logo_url: string | null
           pdf_settings: Json | null
+          pwa_icon_url: string | null
           site_name: string | null
           splash_animation_type: string | null
           splash_duration: number | null
@@ -516,6 +517,7 @@ export type Database = {
           id?: string
           logo_url?: string | null
           pdf_settings?: Json | null
+          pwa_icon_url?: string | null
           site_name?: string | null
           splash_animation_type?: string | null
           splash_duration?: number | null
@@ -536,6 +538,7 @@ export type Database = {
           id?: string
           logo_url?: string | null
           pdf_settings?: Json | null
+          pwa_icon_url?: string | null
           site_name?: string | null
           splash_animation_type?: string | null
           splash_duration?: number | null
