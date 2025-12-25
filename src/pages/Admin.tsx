@@ -120,34 +120,34 @@ const Admin = () => {
     pdf.restoreGraphicsState();
   };
 
-  const generatePdfForAgeGroup = (group: any, dateStr: string) => {
+  const generatePdfForAgeGroup = (group: any, dateStr: string, settings: PdfSettings) => {
     const pdf = new jsPDF();
     const pageWidth = pdf.internal.pageSize.getWidth();
     const pageHeight = pdf.internal.pageSize.getHeight();
-    const margin = pdfSettings.pageMargin;
+    const margin = settings.pageMargin;
     let yPosition = margin;
 
     // Add background image to first page
-    addBackgroundImage(pdf, pdfSettings);
+    addBackgroundImage(pdf, settings);
 
     // Parse title color
-    const titleHex = pdfSettings.titleColor.startsWith("#") ? pdfSettings.titleColor : "#0096B4";
+    const titleHex = settings.titleColor.startsWith("#") ? settings.titleColor : "#0096B4";
     const titleR = parseInt(titleHex.slice(1, 3), 16);
     const titleG = parseInt(titleHex.slice(3, 5), 16);
     const titleB = parseInt(titleHex.slice(5, 7), 16);
 
     // Header based on style
-    if (pdfSettings.headerStyle !== "none") {
+    if (settings.headerStyle !== "none") {
       // Title
-      pdf.setFontSize(pdfSettings.titleFontSize);
+      pdf.setFontSize(settings.titleFontSize);
       pdf.setTextColor(titleR, titleG, titleB);
       pdf.text("Programação de Recreação", pageWidth / 2, yPosition, { align: "center" });
       
-      yPosition += pdfSettings.titleFontSize * 0.5;
+      yPosition += settings.titleFontSize * 0.5;
 
       // Date
-      if (pdfSettings.showDate) {
-        pdf.setFontSize(pdfSettings.titleFontSize * 0.6);
+      if (settings.showDate) {
+        pdf.setFontSize(settings.titleFontSize * 0.6);
         pdf.setTextColor(100, 100, 100);
         pdf.text(format(selectedDate, "dd/MM/yyyy", { locale: ptBR }), pageWidth / 2, yPosition, { align: "center" });
         yPosition += 10;
@@ -162,20 +162,20 @@ const Admin = () => {
     const g = parseInt(hexColor.slice(3, 5), 16);
     const b = parseInt(hexColor.slice(5, 7), 16);
     
-    if (pdfSettings.headerStyle === "full") {
+    if (settings.headerStyle === "full") {
       pdf.setFillColor(r, g, b);
-      const headerHeight = pdfSettings.activityFontSize * 1.2;
+      const headerHeight = settings.activityFontSize * 1.2;
       pdf.rect(margin, yPosition - headerHeight * 0.4, pageWidth - 2 * margin, headerHeight, "F");
       pdf.setTextColor(255, 255, 255);
     } else {
       pdf.setTextColor(r, g, b);
     }
     
-    pdf.setFontSize(pdfSettings.activityFontSize + 2);
+    pdf.setFontSize(settings.activityFontSize + 2);
     pdf.setFont("helvetica", "bold");
-    pdf.text(group.name, pdfSettings.headerStyle === "full" ? margin + 5 : margin, yPosition + 2);
+    pdf.text(group.name, settings.headerStyle === "full" ? margin + 5 : margin, yPosition + 2);
     
-    yPosition += pdfSettings.activityFontSize + 8;
+    yPosition += settings.activityFontSize + 8;
 
     // Activities table
     pdf.setTextColor(50, 50, 50);
@@ -185,7 +185,7 @@ const Admin = () => {
       // Check if we need a new page
       if (yPosition > pageHeight - 30) {
         pdf.addPage();
-        addBackgroundImage(pdf, pdfSettings);
+        addBackgroundImage(pdf, settings);
         yPosition = margin;
       }
 
@@ -194,28 +194,28 @@ const Admin = () => {
       const timeRange = `${startTime} - ${endTime}`;
 
       // Time
-      pdf.setFontSize(pdfSettings.timeFontSize);
+      pdf.setFontSize(settings.timeFontSize);
       pdf.setFont("helvetica", "bold");
       pdf.setTextColor(50, 50, 50);
       pdf.text(timeRange, margin + 5, yPosition);
       
       // Activity name
-      pdf.setFontSize(pdfSettings.activityFontSize);
+      pdf.setFontSize(settings.activityFontSize);
       pdf.setFont("helvetica", "normal");
-      const timeWidth = pdfSettings.timeFontSize * 4;
+      const timeWidth = settings.timeFontSize * 4;
       pdf.text(activity.name, margin + timeWidth + 10, yPosition);
 
       // Description (if exists and enabled)
-      if (activity.description && pdfSettings.showDescription) {
-        yPosition += pdfSettings.descriptionFontSize * 0.6;
-        pdf.setFontSize(pdfSettings.descriptionFontSize);
+      if (activity.description && settings.showDescription) {
+        yPosition += settings.descriptionFontSize * 0.6;
+        pdf.setFontSize(settings.descriptionFontSize);
         pdf.setTextColor(100, 100, 100);
         const splitDescription = pdf.splitTextToSize(activity.description, pageWidth - 2 * margin - timeWidth - 15);
         pdf.text(splitDescription, margin + timeWidth + 10, yPosition);
-        yPosition += splitDescription.length * (pdfSettings.descriptionFontSize * 0.45);
+        yPosition += splitDescription.length * (settings.descriptionFontSize * 0.45);
       }
 
-      yPosition += pdfSettings.activityFontSize * 0.5;
+      yPosition += settings.activityFontSize * 0.5;
       pdf.setTextColor(50, 50, 50);
     });
 
@@ -231,6 +231,10 @@ const Admin = () => {
 
   const handleExport = async () => {
     try {
+      // Reload PDF settings from database before export
+      const freshSettings = await loadPdfSettings();
+      setPdfSettings(freshSettings);
+      
       const dateStr = formatDateLocal(selectedDate);
       
       // Build query
@@ -270,9 +274,9 @@ const Admin = () => {
 
       const groups = Object.values(grouped);
       
-      // Generate one PDF per age group
+      // Generate one PDF per age group using fresh settings
       groups.forEach((group: any) => {
-        generatePdfForAgeGroup(group, format(selectedDate, "yyyy-MM-dd"));
+        generatePdfForAgeGroup(group, format(selectedDate, "yyyy-MM-dd"), freshSettings);
       });
 
       toast.success(`${groups.length} PDF(s) exportado(s) com sucesso!`);
