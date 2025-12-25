@@ -419,9 +419,9 @@ const Admin = () => {
           </div>
         </div>
 
-        <Tabs defaultValue="age-groups" className="w-full">
-          <div className="w-full overflow-x-auto mb-6 scrollbar-thin">
-            <TabsList className="inline-flex h-auto p-1 gap-1 min-w-max">
+        <Tabs defaultValue="age-groups" className="w-full max-w-full">
+          <div className="w-full overflow-x-auto mb-6 scrollbar-thin -mx-4 px-4 sm:mx-0 sm:px-0">
+            <TabsList className="inline-flex h-auto p-1 gap-1 w-max">
               <TabsTrigger value="age-groups" className="whitespace-nowrap text-xs sm:text-sm px-2 sm:px-3">Faixas Etárias</TabsTrigger>
               <TabsTrigger value="activity-templates" className="whitespace-nowrap text-xs sm:text-sm px-2 sm:px-3">Catálogo</TabsTrigger>
               <TabsTrigger value="activities" className="whitespace-nowrap text-xs sm:text-sm px-2 sm:px-3">Atividades</TabsTrigger>
