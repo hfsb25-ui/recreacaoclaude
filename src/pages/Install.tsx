@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { ArrowLeft, Download, Smartphone, Share } from "lucide-react";
+import { usePwaIcon } from "@/hooks/usePwaIcon";
 
 interface BeforeInstallPromptEvent extends Event {
   prompt: () => Promise<void>;
@@ -14,6 +15,7 @@ const Install = () => {
   const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null);
   const [isInstalled, setIsInstalled] = useState(false);
   const [isIOS, setIsIOS] = useState(false);
+  const { iconUrl } = usePwaIcon();
 
   useEffect(() => {
     // Check if already installed
@@ -65,9 +67,15 @@ const Install = () => {
 
         <Card className="p-8">
           <div className="text-center mb-8">
-            <div className="w-24 h-24 mx-auto mb-4 bg-primary/10 rounded-3xl flex items-center justify-center">
-              <Smartphone className="h-12 w-12 text-primary" />
-            </div>
+            {iconUrl ? (
+              <div className="w-24 h-24 mx-auto mb-4 rounded-3xl overflow-hidden shadow-lg">
+                <img src={iconUrl} alt="App Icon" className="w-full h-full object-cover" />
+              </div>
+            ) : (
+              <div className="w-24 h-24 mx-auto mb-4 bg-primary/10 rounded-3xl flex items-center justify-center">
+                <Smartphone className="h-12 w-12 text-primary" />
+              </div>
+            )}
             <h1 className="text-3xl font-bold mb-2">Instalar App</h1>
             <p className="text-muted-foreground">
               Acesse a programação de forma rápida e offline

@@ -22,6 +22,7 @@ import { SplashScreenManager } from "@/components/admin/SplashScreenManager";
 import { WeatherLocationManager } from "@/components/admin/WeatherLocationManager";
 import GamificationManager from "@/components/admin/GamificationManager";
 import { StatisticsManager } from "@/components/admin/StatisticsManager";
+import { PwaIconManager } from "@/components/admin/PwaIconManager";
 import { useUserRole } from "@/hooks/useUserRole";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Card } from "@/components/ui/card";
@@ -432,6 +433,7 @@ const Admin = () => {
                   <TabsTrigger value="announcements" className="whitespace-nowrap text-xs sm:text-sm px-2 sm:px-3">Anúncios</TabsTrigger>
                   <TabsTrigger value="menu" className="whitespace-nowrap text-xs sm:text-sm px-2 sm:px-3">Menu</TabsTrigger>
                   <TabsTrigger value="logo" className="whitespace-nowrap text-xs sm:text-sm px-2 sm:px-3">Logo</TabsTrigger>
+                  <TabsTrigger value="pwa-icon" className="whitespace-nowrap text-xs sm:text-sm px-2 sm:px-3">Ícone PWA</TabsTrigger>
                   <TabsTrigger value="site-name" className="whitespace-nowrap text-xs sm:text-sm px-2 sm:px-3">Nome</TabsTrigger>
                   <TabsTrigger value="weather" className="whitespace-nowrap text-xs sm:text-sm px-2 sm:px-3">Clima</TabsTrigger>
                   <TabsTrigger value="users" className="whitespace-nowrap text-xs sm:text-sm px-2 sm:px-3">Usuários</TabsTrigger>
@@ -477,6 +479,10 @@ const Admin = () => {
 
               <TabsContent value="logo" className="space-y-4">
                 <LogoManager />
+              </TabsContent>
+
+              <TabsContent value="pwa-icon" className="space-y-4">
+                <PwaIconManager />
               </TabsContent>
 
               <TabsContent value="site-name" className="space-y-4">
