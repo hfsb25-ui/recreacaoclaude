@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { Calendar, Settings, Waves, Menu, User, Trophy, Star, ChevronRight } from "lucide-react";
+import { Calendar, Settings, Waves, Menu, User, Trophy, Star, ChevronRight, ExternalLink } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -21,6 +21,8 @@ interface Announcement {
   description: string | null;
   image_url: string | null;
   sort_order: number;
+  button_text: string | null;
+  button_url: string | null;
 }
 
 interface MenuItem {
@@ -404,6 +406,22 @@ const Home = () => {
                       <p className="text-muted-foreground whitespace-pre-wrap">
                         {announcement.description}
                       </p>
+                    )}
+                    {announcement.button_text && announcement.button_url && (
+                      <Button
+                        onClick={() => {
+                          const url = announcement.button_url!;
+                          if (url.startsWith("http://") || url.startsWith("https://")) {
+                            window.open(url, "_blank");
+                          } else {
+                            navigate(url);
+                          }
+                        }}
+                        className="mt-4"
+                      >
+                        {announcement.button_text}
+                        <ExternalLink className="ml-2 h-4 w-4" />
+                      </Button>
                     )}
                   </div>
                 </Card>
