@@ -3,7 +3,8 @@ import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { ArrowLeft, Trophy } from "lucide-react";
+import { ArrowLeft, Trophy, Sparkles } from "lucide-react";
+import { useGuestAuth } from "@/hooks/useGuestAuth";
 
 interface RankingGuest {
   id: string;
@@ -21,6 +22,7 @@ interface RankingPeriod {
 
 const Ranking = () => {
   const navigate = useNavigate();
+  const { guest } = useGuestAuth();
   const [guests, setGuests] = useState<RankingGuest[]>([]);
   const [period, setPeriod] = useState<RankingPeriod | null>(null);
   const [loading, setLoading] = useState(true);
@@ -130,6 +132,30 @@ const Ranking = () => {
                 </div>
               ))}
             </div>
+          )}
+
+          {/* Banner de incentivo para visitantes não logados */}
+          {!guest && (
+            <Card className="mt-8 p-6 bg-gradient-to-r from-primary/10 via-primary/5 to-transparent border-primary/30">
+              <div className="text-center">
+                <div className="flex items-center justify-center gap-2 mb-3">
+                  <Sparkles className="h-5 w-5 text-primary" />
+                  <h3 className="text-lg font-bold text-foreground">
+                    Quer aparecer no ranking?
+                  </h3>
+                  <Sparkles className="h-5 w-5 text-primary" />
+                </div>
+                <p className="text-muted-foreground mb-4">
+                  Cadastre-se e participe das atividades para ganhar pontos e concorrer a prêmios!
+                </p>
+                <Button
+                  onClick={() => navigate("/guest-auth")}
+                  className="bg-primary hover:bg-primary/90"
+                >
+                  🚀 Cadastre-se Agora
+                </Button>
+              </div>
+            </Card>
           )}
 
           <div className="mt-8 text-center">
