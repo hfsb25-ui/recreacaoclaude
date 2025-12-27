@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { Calendar, Settings, Waves, Menu, User } from "lucide-react";
+import { Calendar, Settings, Waves, Menu, User, Trophy, Star, ChevronRight } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -30,6 +30,16 @@ interface MenuItem {
   is_active: boolean;
 }
 
+interface TopGuest {
+  id: string;
+  name: string;
+  room_number: string;
+  total_points: number;
+  current_level: number;
+  level_name?: string;
+  badge_emoji?: string;
+}
+
 const Home = () => {
   const navigate = useNavigate();
   const { guest, currentLevel, logout } = useGuestAuth();
@@ -41,11 +51,13 @@ const Home = () => {
   const [weatherLng, setWeatherLng] = useState<number | null>(null);
   const [weatherCity, setWeatherCity] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [topGuest, setTopGuest] = useState<TopGuest | null>(null);
 
   useEffect(() => {
     fetchAnnouncements();
     fetchMenuItems();
     fetchLogo();
+    fetchTopGuest();
   }, []);
 
   const fetchAnnouncements = async () => {
@@ -113,6 +125,40 @@ const Home = () => {
       }
     } catch (error) {
       console.error("Error fetching logo:", error);
+    }
+  };
+
+  const fetchTopGuest = async () => {
+    try {
+      // Buscar o hóspede com mais pontos
+      const { data: guestData, error: guestError } = await supabase
+        .from("guests")
+        .select("id, name, room_number, total_points, current_level")
+        .gt("total_points", 0)
+        .order("total_points", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      if (guestError || !guestData) {
+        console.log("No top guest found");
+        return;
+      }
+
+      // Buscar informações do nível
+      const { data: levelData } = await supabase
+        .from("levels")
+        .select("name, badge_emoji")
+        .eq("level_number", guestData.current_level || 1)
+        .maybeSingle();
+
+      setTopGuest({
+        ...guestData,
+        current_level: guestData.current_level || 1,
+        level_name: levelData?.name,
+        badge_emoji: levelData?.badge_emoji,
+      });
+    } catch (error) {
+      console.error("Error fetching top guest:", error);
     }
   };
 
@@ -286,6 +332,57 @@ const Home = () => {
               🎮 Área do Hóspede
             </Button>
           </div>
+
+          {/* Top Guest of the Week */}
+          {topGuest && (
+            <Card className="mb-8 overflow-hidden bg-gradient-to-r from-amber-500/10 via-yellow-500/10 to-orange-500/10 border-amber-500/30 shadow-lg">
+              <div className="p-6">
+                <div className="flex items-center gap-2 mb-4">
+                  <div className="p-2 bg-gradient-to-r from-amber-500 to-yellow-500 rounded-full">
+                    <Trophy className="h-5 w-5 text-white" />
+                  </div>
+                  <h3 className="text-lg font-bold text-foreground">
+                    Hóspede Mais Ativo da Semana
+                  </h3>
+                </div>
+                
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-4">
+                    <div className="text-4xl">
+                      {topGuest.badge_emoji || "🏆"}
+                    </div>
+                    <div>
+                      <p className="text-xl font-bold text-foreground">{topGuest.name}</p>
+                      <p className="text-sm text-muted-foreground">Quarto {topGuest.room_number}</p>
+                    </div>
+                  </div>
+                  
+                  <div className="text-right">
+                    <div className="flex items-center gap-1 text-amber-600 dark:text-amber-400">
+                      <Star className="h-5 w-5 fill-current" />
+                      <span className="text-2xl font-bold">{topGuest.total_points}</span>
+                    </div>
+                    <p className="text-sm text-muted-foreground">pontos</p>
+                    {topGuest.level_name && (
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Nível: {topGuest.level_name}
+                      </p>
+                    )}
+                  </div>
+                </div>
+
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => navigate("/ranking")}
+                  className="w-full mt-4 text-amber-600 hover:text-amber-700 hover:bg-amber-500/10"
+                >
+                  Ver Ranking Completo
+                  <ChevronRight className="h-4 w-4 ml-1" />
+                </Button>
+              </div>
+            </Card>
+          )}
 
           {/* Announcements */}
           {announcements.length > 0 ? (
