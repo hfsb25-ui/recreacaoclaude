@@ -7,7 +7,7 @@ import { Card } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
-import { Trash2, Upload, Image as ImageIcon, ArrowUp, ArrowDown, Eye, EyeOff } from "lucide-react";
+import { Trash2, Upload, Image as ImageIcon, ArrowUp, ArrowDown, Eye, EyeOff, Pencil, X } from "lucide-react";
 
 interface Announcement {
   id: string;
@@ -29,6 +29,8 @@ const AnnouncementsManager = () => {
   const [buttonText, setButtonText] = useState("");
   const [buttonUrl, setButtonUrl] = useState("");
   const [loading, setLoading] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editingImageUrl, setEditingImageUrl] = useState<string | null>(null);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -83,9 +85,14 @@ const AnnouncementsManager = () => {
     setLoading(true);
 
     try {
-      let imageUrl = null;
+      let imageUrl = editingImageUrl;
 
       if (imageFile) {
+        // Delete old image if editing and replacing
+        if (editingId && editingImageUrl) {
+          await supabase.storage.from("announcements").remove([editingImageUrl]);
+        }
+
         const fileExt = imageFile.name.split(".").pop();
         const fileName = `${Date.now()}.${fileExt}`;
         const { error: uploadError } = await supabase.storage
@@ -96,40 +103,83 @@ const AnnouncementsManager = () => {
         imageUrl = fileName;
       }
 
-      const { error } = await supabase.from("announcements").insert({
-        title,
-        description: description || null,
-        image_url: imageUrl,
-        is_active: isActive,
-        sort_order: announcements.length,
-        button_text: buttonText || null,
-        button_url: buttonUrl || null,
-      });
+      if (editingId) {
+        // Update existing announcement
+        const { error } = await supabase
+          .from("announcements")
+          .update({
+            title,
+            description: description || null,
+            image_url: imageUrl,
+            is_active: isActive,
+            button_text: buttonText || null,
+            button_url: buttonUrl || null,
+          })
+          .eq("id", editingId);
 
-      if (error) throw error;
+        if (error) throw error;
 
-      toast({
-        title: "Sucesso",
-        description: "Anúncio cadastrado com sucesso!",
-      });
+        toast({
+          title: "Sucesso",
+          description: "Anúncio atualizado com sucesso!",
+        });
+      } else {
+        // Insert new announcement
+        const { error } = await supabase.from("announcements").insert({
+          title,
+          description: description || null,
+          image_url: imageUrl,
+          is_active: isActive,
+          sort_order: announcements.length,
+          button_text: buttonText || null,
+          button_url: buttonUrl || null,
+        });
 
-      setTitle("");
-      setDescription("");
-      setImageFile(null);
-      setIsActive(true);
-      setButtonText("");
-      setButtonUrl("");
+        if (error) throw error;
+
+        toast({
+          title: "Sucesso",
+          description: "Anúncio cadastrado com sucesso!",
+        });
+      }
+
+      resetForm();
       fetchAnnouncements();
     } catch (error) {
       console.error("Error:", error);
       toast({
         title: "Erro",
-        description: "Erro ao cadastrar anúncio",
+        description: editingId ? "Erro ao atualizar anúncio" : "Erro ao cadastrar anúncio",
         variant: "destructive",
       });
     } finally {
       setLoading(false);
     }
+  };
+
+  const resetForm = () => {
+    setTitle("");
+    setDescription("");
+    setImageFile(null);
+    setIsActive(true);
+    setButtonText("");
+    setButtonUrl("");
+    setEditingId(null);
+    setEditingImageUrl(null);
+  };
+
+  const handleEdit = (announcement: Announcement) => {
+    setEditingId(announcement.id);
+    setTitle(announcement.title);
+    setDescription(announcement.description || "");
+    setIsActive(announcement.is_active);
+    setButtonText(announcement.button_text || "");
+    setButtonUrl(announcement.button_url || "");
+    setEditingImageUrl(announcement.image_url);
+    setImageFile(null);
+    
+    // Scroll to form
+    window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
   const handleDelete = async (id: string, imageUrl: string | null) => {
@@ -261,7 +311,17 @@ const AnnouncementsManager = () => {
   return (
     <div className="space-y-6">
       <Card className="p-6">
-        <h2 className="text-2xl font-bold mb-4">Cadastrar Novo Anúncio</h2>
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-2xl font-bold">
+            {editingId ? "Editar Anúncio" : "Cadastrar Novo Anúncio"}
+          </h2>
+          {editingId && (
+            <Button variant="ghost" size="sm" onClick={resetForm}>
+              <X className="h-4 w-4 mr-2" />
+              Cancelar Edição
+            </Button>
+          )}
+        </div>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
             <Label htmlFor="title">Título *</Label>
@@ -303,6 +363,11 @@ const AnnouncementsManager = () => {
                 Arquivo selecionado: {imageFile.name}
               </p>
             )}
+            {editingImageUrl && !imageFile && (
+              <p className="text-sm text-primary mt-2">
+                ✓ Imagem atual será mantida (selecione outra para substituir)
+              </p>
+            )}
           </div>
 
           <div className="border-t border-border pt-4 mt-4">
@@ -342,7 +407,10 @@ const AnnouncementsManager = () => {
           </div>
 
           <Button type="submit" disabled={loading}>
-            {loading ? "Cadastrando..." : "Cadastrar Anúncio"}
+            {loading 
+              ? (editingId ? "Atualizando..." : "Cadastrando...") 
+              : (editingId ? "Atualizar Anúncio" : "Cadastrar Anúncio")
+            }
           </Button>
         </form>
       </Card>
@@ -403,6 +471,14 @@ const AnnouncementsManager = () => {
                         </div>
                       </div>
                       <div className="flex gap-2 flex-shrink-0">
+                        <Button
+                          variant="outline"
+                          size="icon"
+                          onClick={() => handleEdit(announcement)}
+                          title="Editar"
+                        >
+                          <Pencil className="h-4 w-4" />
+                        </Button>
                         <Button
                           variant="outline"
                           size="icon"
