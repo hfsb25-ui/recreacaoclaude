@@ -16,6 +16,8 @@ interface Announcement {
   image_url: string | null;
   sort_order: number;
   is_active: boolean;
+  button_text: string | null;
+  button_url: string | null;
 }
 
 const AnnouncementsManager = () => {
@@ -24,6 +26,8 @@ const AnnouncementsManager = () => {
   const [description, setDescription] = useState("");
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [isActive, setIsActive] = useState(true);
+  const [buttonText, setButtonText] = useState("");
+  const [buttonUrl, setButtonUrl] = useState("");
   const [loading, setLoading] = useState(false);
   const { toast } = useToast();
 
@@ -98,6 +102,8 @@ const AnnouncementsManager = () => {
         image_url: imageUrl,
         is_active: isActive,
         sort_order: announcements.length,
+        button_text: buttonText || null,
+        button_url: buttonUrl || null,
       });
 
       if (error) throw error;
@@ -111,6 +117,8 @@ const AnnouncementsManager = () => {
       setDescription("");
       setImageFile(null);
       setIsActive(true);
+      setButtonText("");
+      setButtonUrl("");
       fetchAnnouncements();
     } catch (error) {
       console.error("Error:", error);
@@ -297,6 +305,33 @@ const AnnouncementsManager = () => {
             )}
           </div>
 
+          <div className="border-t border-border pt-4 mt-4">
+            <h3 className="font-semibold mb-3 text-foreground">Botão de Ação (opcional)</h3>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="buttonText">Texto do Botão</Label>
+                <Input
+                  id="buttonText"
+                  value={buttonText}
+                  onChange={(e) => setButtonText(e.target.value)}
+                  placeholder="Ex: Saiba Mais"
+                />
+              </div>
+              <div>
+                <Label htmlFor="buttonUrl">Link do Botão</Label>
+                <Input
+                  id="buttonUrl"
+                  value={buttonUrl}
+                  onChange={(e) => setButtonUrl(e.target.value)}
+                  placeholder="Ex: https://exemplo.com"
+                />
+              </div>
+            </div>
+            <p className="text-xs text-muted-foreground mt-2">
+              Se preenchidos, um botão será exibido abaixo da descrição do anúncio.
+            </p>
+          </div>
+
           <div className="flex items-center space-x-2">
             <Switch
               id="is_active"
@@ -345,6 +380,11 @@ const AnnouncementsManager = () => {
                         {announcement.description && (
                           <p className="text-sm text-muted-foreground mt-1 break-words">
                             {announcement.description}
+                          </p>
+                        )}
+                        {announcement.button_text && announcement.button_url && (
+                          <p className="text-xs text-primary mt-1">
+                            🔗 Botão: "{announcement.button_text}" → {announcement.button_url}
                           </p>
                         )}
                         <div className="flex items-center gap-2 mt-2">
