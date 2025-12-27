@@ -335,39 +335,34 @@ const Home = () => {
 
           {/* Top Guest of the Week */}
           {topGuest && (
-            <Card className="mb-8 overflow-hidden bg-gradient-to-r from-amber-500/10 via-yellow-500/10 to-orange-500/10 border-amber-500/30 shadow-lg">
-              <div className="p-6">
-                <div className="flex items-center gap-2 mb-4">
-                  <div className="p-2 bg-gradient-to-r from-amber-500 to-yellow-500 rounded-full">
-                    <Trophy className="h-5 w-5 text-white" />
+            <Card className="mb-6 overflow-hidden bg-gradient-to-r from-amber-500/10 via-yellow-500/10 to-orange-500/10 border-amber-500/30">
+              <div className="p-4">
+                <div className="flex items-center gap-2 mb-3">
+                  <div className="p-1.5 bg-gradient-to-r from-amber-500 to-yellow-500 rounded-full">
+                    <Trophy className="h-4 w-4 text-white" />
                   </div>
-                  <h3 className="text-lg font-bold text-foreground">
+                  <h3 className="text-sm font-bold text-foreground">
                     Hóspede Mais Ativo da Semana
                   </h3>
                 </div>
                 
                 <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-4">
-                    <div className="text-4xl">
+                  <div className="flex items-center gap-3">
+                    <div className="text-2xl">
                       {topGuest.badge_emoji || "🏆"}
                     </div>
                     <div>
-                      <p className="text-xl font-bold text-foreground">{topGuest.name}</p>
-                      <p className="text-sm text-muted-foreground">Quarto {topGuest.room_number}</p>
+                      <p className="text-base font-bold text-foreground">{topGuest.name}</p>
+                      <p className="text-xs text-muted-foreground">Quarto {topGuest.room_number}</p>
                     </div>
                   </div>
                   
                   <div className="text-right">
                     <div className="flex items-center gap-1 text-amber-600 dark:text-amber-400">
-                      <Star className="h-5 w-5 fill-current" />
-                      <span className="text-2xl font-bold">{topGuest.total_points}</span>
+                      <Star className="h-4 w-4 fill-current" />
+                      <span className="text-lg font-bold">{topGuest.total_points}</span>
                     </div>
-                    <p className="text-sm text-muted-foreground">pontos</p>
-                    {topGuest.level_name && (
-                      <p className="text-xs text-muted-foreground mt-1">
-                        Nível: {topGuest.level_name}
-                      </p>
-                    )}
+                    <p className="text-xs text-muted-foreground">pontos</p>
                   </div>
                 </div>
 
@@ -375,10 +370,10 @@ const Home = () => {
                   variant="ghost"
                   size="sm"
                   onClick={() => navigate("/ranking")}
-                  className="w-full mt-4 text-amber-600 hover:text-amber-700 hover:bg-amber-500/10"
+                  className="w-full mt-3 h-8 text-xs text-amber-600 hover:text-amber-700 hover:bg-amber-500/10"
                 >
                   Ver Ranking Completo
-                  <ChevronRight className="h-4 w-4 ml-1" />
+                  <ChevronRight className="h-3 w-3 ml-1" />
                 </Button>
               </div>
             </Card>
