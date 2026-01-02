@@ -1,7 +1,7 @@
 {
-  "name": "Recreação Hotel",
-  "short_name": "Recreação",
-  "description": "App de programação de recreação do hotel",
+  "name": "Programação HFSB",
+  "short_name": "Prog. HFSB",
+  "description": "App de programação de atividades HFSB",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#ffffff",
