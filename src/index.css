@@ -128,4 +128,8 @@ All colors MUST be HSL.
     overflow-x: hidden;
     width: 100%;
   }
+
+  #lovable-badge {
+    display: none !important;
+  }
 }
