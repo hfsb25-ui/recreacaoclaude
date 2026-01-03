@@ -4,12 +4,13 @@ import { supabase } from "@/integrations/supabase/client";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft, Clock, Star, WifiOff, User, Crown } from "lucide-react";
-import { format, isToday } from "date-fns";
+import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { ActivityRating } from "@/components/ActivityRating";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import CheckInButton from "@/components/CheckInButton";
 import { useGuestAuth } from "@/hooks/useGuestAuth";
+import { getLocalDateString } from "@/lib/utils";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -92,7 +93,7 @@ const Activities = () => {
       }
 
       // Fetch today's activities for this age group and master activities
-      const today = new Date().toISOString().split("T")[0];
+      const today = getLocalDateString();
       const { data: activitiesData } = await supabase
         .from("activities")
         .select("*")
