@@ -5,6 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { Check } from "lucide-react";
+import { getLocalDateString } from "@/lib/utils";
 
 interface CheckInButtonProps {
   activityId: string;
@@ -45,7 +46,7 @@ const CheckInButton = ({
 
   const checkIfActivityTime = () => {
     const now = new Date();
-    const today = now.toISOString().split("T")[0];
+    const today = getLocalDateString(now);
 
     // Check if activity is today
     if (activityDate !== today) {
