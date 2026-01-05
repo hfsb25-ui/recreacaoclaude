@@ -176,7 +176,19 @@ const Admin = () => {
     pdf.setFont("helvetica", "bold");
     pdf.text(group.name, settings.headerStyle === "full" ? margin + 5 : margin, yPosition + 2);
     
-    yPosition += settings.activityFontSize + 8;
+    yPosition += settings.activityFontSize + 4;
+
+    // Recreadores (staff names) below age group
+    if (group.recreadores && group.recreadores.length > 0) {
+      pdf.setFontSize(settings.descriptionFontSize);
+      pdf.setFont("helvetica", "italic");
+      pdf.setTextColor(80, 80, 80);
+      const recreadorNames = group.recreadores.map((r: any) => r.recreador_name).join(", ");
+      pdf.text(`Recreadores: ${recreadorNames}`, margin + 5, yPosition);
+      yPosition += settings.descriptionFontSize + 4;
+    }
+
+    yPosition += 4;
 
     // Activities table
     pdf.setTextColor(50, 50, 50);
@@ -241,7 +253,7 @@ const Admin = () => {
       // Build query
       let query = supabase
         .from("activities")
-        .select("*, age_groups(name, color)")
+        .select("*, age_groups(id, name, color)")
         .eq("activity_date", dateStr)
         .order("start_time", { ascending: true });
       
@@ -259,13 +271,33 @@ const Admin = () => {
         return;
       }
 
-      // Group by age group
+      // Get all unique age group IDs
+      const ageGroupIds = [...new Set(activities.map(a => a.age_groups?.id).filter(Boolean))];
+      
+      // Fetch recreadores for these age groups
+      const { data: recreadoresData } = await supabase
+        .from("age_group_recreadores")
+        .select("age_group_id, recreador_name")
+        .in("age_group_id", ageGroupIds);
+
+      // Group recreadores by age group
+      const recreadoresByGroup = (recreadoresData || []).reduce((acc: any, item: any) => {
+        if (!acc[item.age_group_id]) {
+          acc[item.age_group_id] = [];
+        }
+        acc[item.age_group_id].push(item);
+        return acc;
+      }, {});
+
+      // Group activities by age group
       const grouped = activities.reduce((acc: any, activity: any) => {
+        const ageGroupId = activity.age_groups?.id;
         const ageGroupName = activity.age_groups?.name || "Sem faixa etária";
         if (!acc[ageGroupName]) {
           acc[ageGroupName] = {
             name: ageGroupName,
             color: activity.age_groups?.color || "#00BCD4",
+            recreadores: ageGroupId ? recreadoresByGroup[ageGroupId] || [] : [],
             activities: []
           };
         }
