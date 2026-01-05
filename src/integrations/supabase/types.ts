@@ -156,6 +156,38 @@ export type Database = {
         }
         Relationships: []
       }
+      age_group_recreadores: {
+        Row: {
+          age_group_id: string
+          created_at: string
+          id: string
+          recreador_name: string
+          user_id: string
+        }
+        Insert: {
+          age_group_id: string
+          created_at?: string
+          id?: string
+          recreador_name: string
+          user_id: string
+        }
+        Update: {
+          age_group_id?: string
+          created_at?: string
+          id?: string
+          recreador_name?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "age_group_recreadores_age_group_id_fkey"
+            columns: ["age_group_id"]
+            isOneToOne: false
+            referencedRelation: "age_groups"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       age_groups: {
         Row: {
           color: string
