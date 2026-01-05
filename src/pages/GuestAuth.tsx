@@ -7,6 +7,7 @@ import { Card } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import { ArrowLeft } from "lucide-react";
+import { CelebrationModal } from "@/components/CelebrationModal";
 
 const GuestAuth = () => {
   const navigate = useNavigate();
@@ -16,6 +17,8 @@ const GuestAuth = () => {
   const [name, setName] = useState("");
   const [roomNumber, setRoomNumber] = useState("");
   const [pin, setPin] = useState("");
+  const [showCelebration, setShowCelebration] = useState(false);
+  const [registeredName, setRegisteredName] = useState("");
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -25,16 +28,22 @@ const GuestAuth = () => {
       if (isLogin) {
         await login(roomNumber, pin);
         toast.success("Login realizado com sucesso!");
+        navigate("/guest-profile");
       } else {
         await register(name, roomNumber, pin);
-        toast.success("Cadastro realizado com sucesso!");
+        setRegisteredName(name);
+        setShowCelebration(true);
       }
-      navigate("/guest-profile");
     } catch (error: any) {
       toast.error(error.message || "Erro ao processar solicitação");
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleCelebrationClose = () => {
+    setShowCelebration(false);
+    navigate("/guest-profile");
   };
 
   return (
@@ -54,7 +63,7 @@ const GuestAuth = () => {
             🎮 Área do Hóspede
           </h1>
           <p className="text-muted-foreground">
-            {isLogin ? "Entre para acompanhar seus pontos" : "Cadastre-se para começar a jogar"}
+            {isLogin ? "Entre para acompanhar seus pontos" : "Cadastre-se e ganhe 50 pontos de boas-vindas! 🎁"}
           </p>
         </div>
 
@@ -103,7 +112,7 @@ const GuestAuth = () => {
             className="w-full"
             disabled={loading}
           >
-            {loading ? "Processando..." : isLogin ? "Entrar" : "Cadastrar"}
+            {loading ? "Processando..." : isLogin ? "Entrar" : "Cadastrar e Ganhar 50 Pontos! 🎉"}
           </Button>
         </form>
 
@@ -116,6 +125,13 @@ const GuestAuth = () => {
           </button>
         </div>
       </Card>
+
+      <CelebrationModal
+        isOpen={showCelebration}
+        onClose={handleCelebrationClose}
+        guestName={registeredName}
+        points={50}
+      />
     </div>
   );
 };

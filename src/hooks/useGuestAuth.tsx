@@ -79,6 +79,7 @@ export const useGuestAuth = () => {
         name,
         room_number: roomNumber,
         pin_code: pin,
+        total_points: 50, // Welcome bonus!
       })
       .select()
       .single();
