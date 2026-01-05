@@ -53,6 +53,13 @@ interface WeeklyComparison {
   lastWeek: number;
 }
 
+interface MultiWeekStats {
+  week: string;
+  visits: number;
+  checkins: number;
+  guests: number;
+}
+
 const COLORS = ['hsl(var(--primary))', 'hsl(142, 71%, 45%)', 'hsl(280, 65%, 60%)', 'hsl(45, 93%, 47%)', 'hsl(0, 72%, 51%)'];
 
 export const StatisticsManager = () => {
@@ -78,6 +85,7 @@ export const StatisticsManager = () => {
   const [hourlyVisits, setHourlyVisits] = useState<HourlyVisits[]>([]);
   const [pageVisits, setPageVisits] = useState<PageVisits[]>([]);
   const [weeklyComparison, setWeeklyComparison] = useState<WeeklyComparison[]>([]);
+  const [multiWeekStats, setMultiWeekStats] = useState<MultiWeekStats[]>([]);
   const [ageGroupStats, setAgeGroupStats] = useState<AgeGroupStats[]>([]);
   
   // Insights
@@ -258,59 +266,64 @@ export const StatisticsManager = () => {
       }
       setDailyStats(last7Days);
 
-      // ===== WEEKLY COMPARISON =====
+      // ===== MULTI-WEEK COMPARISON (8 weeks) =====
+      const weeksData: MultiWeekStats[] = [];
       const thisWeekStart = startOfWeek(new Date(), { weekStartsOn: 0 });
       const thisWeekEnd = endOfWeek(new Date(), { weekStartsOn: 0 });
-      const lastWeekStart = subDays(thisWeekStart, 7);
-      const lastWeekEnd = subDays(thisWeekEnd, 7);
+      
+      for (let i = 0; i < 8; i++) {
+        const weekStart = subDays(thisWeekStart, i * 7);
+        const weekEnd = subDays(thisWeekEnd, i * 7);
+        const weekLabel = i === 0 ? "Atual" : i === 1 ? "Sem. -1" : `Sem. -${i}`;
 
-      const { count: thisWeekVisits } = await supabase
-        .from("site_visits")
-        .select("*", { count: "exact", head: true })
-        .gte("created_at", thisWeekStart.toISOString())
-        .lte("created_at", thisWeekEnd.toISOString());
+        const { count: weekVisits } = await supabase
+          .from("site_visits")
+          .select("*", { count: "exact", head: true })
+          .gte("created_at", weekStart.toISOString())
+          .lte("created_at", weekEnd.toISOString());
 
-      const { count: lastWeekVisits } = await supabase
-        .from("site_visits")
-        .select("*", { count: "exact", head: true })
-        .gte("created_at", lastWeekStart.toISOString())
-        .lte("created_at", lastWeekEnd.toISOString());
+        const { count: weekCheckins } = await supabase
+          .from("activity_checkins")
+          .select("*", { count: "exact", head: true })
+          .gte("checked_in_at", weekStart.toISOString())
+          .lte("checked_in_at", weekEnd.toISOString());
 
-      const { count: thisWeekCheckins } = await supabase
-        .from("activity_checkins")
-        .select("*", { count: "exact", head: true })
-        .gte("checked_in_at", thisWeekStart.toISOString())
-        .lte("checked_in_at", thisWeekEnd.toISOString());
+        const { count: weekGuests } = await supabase
+          .from("guests")
+          .select("*", { count: "exact", head: true })
+          .gte("created_at", weekStart.toISOString())
+          .lte("created_at", weekEnd.toISOString());
 
-      const { count: lastWeekCheckins } = await supabase
-        .from("activity_checkins")
-        .select("*", { count: "exact", head: true })
-        .gte("checked_in_at", lastWeekStart.toISOString())
-        .lte("checked_in_at", lastWeekEnd.toISOString());
+        weeksData.push({
+          week: weekLabel,
+          visits: weekVisits || 0,
+          checkins: weekCheckins || 0,
+          guests: weekGuests || 0,
+        });
+      }
+      
+      // Reverse to show oldest to newest
+      setMultiWeekStats(weeksData.reverse());
 
-      const { count: thisWeekGuests } = await supabase
-        .from("guests")
-        .select("*", { count: "exact", head: true })
-        .gte("created_at", thisWeekStart.toISOString())
-        .lte("created_at", thisWeekEnd.toISOString());
-
-      const { count: lastWeekGuests } = await supabase
-        .from("guests")
-        .select("*", { count: "exact", head: true })
-        .gte("created_at", lastWeekStart.toISOString())
-        .lte("created_at", lastWeekEnd.toISOString());
+      // Keep the simple comparison for the summary card
+      const thisWeekVisits = weeksData[weeksData.length - 1]?.visits || 0;
+      const lastWeekVisits = weeksData[weeksData.length - 2]?.visits || 0;
+      const thisWeekCheckins = weeksData[weeksData.length - 1]?.checkins || 0;
+      const lastWeekCheckins = weeksData[weeksData.length - 2]?.checkins || 0;
+      const thisWeekGuests = weeksData[weeksData.length - 1]?.guests || 0;
+      const lastWeekGuests = weeksData[weeksData.length - 2]?.guests || 0;
 
       setWeeklyComparison([
-        { label: "Visitas", thisWeek: thisWeekVisits || 0, lastWeek: lastWeekVisits || 0 },
-        { label: "Check-ins", thisWeek: thisWeekCheckins || 0, lastWeek: lastWeekCheckins || 0 },
-        { label: "Cadastros", thisWeek: thisWeekGuests || 0, lastWeek: lastWeekGuests || 0 },
+        { label: "Visitas", thisWeek: thisWeekVisits, lastWeek: lastWeekVisits },
+        { label: "Check-ins", thisWeek: thisWeekCheckins, lastWeek: lastWeekCheckins },
+        { label: "Cadastros", thisWeek: thisWeekGuests, lastWeek: lastWeekGuests },
       ]);
 
       // Weekly growth
-      if ((lastWeekGuests || 0) > 0) {
-        const growth = (((thisWeekGuests || 0) - (lastWeekGuests || 0)) / (lastWeekGuests || 1)) * 100;
+      if (lastWeekGuests > 0) {
+        const growth = ((thisWeekGuests - lastWeekGuests) / lastWeekGuests) * 100;
         setWeeklyGrowth(growth);
-      } else if ((thisWeekGuests || 0) > 0) {
+      } else if (thisWeekGuests > 0) {
         setWeeklyGrowth(100);
       }
 
@@ -687,42 +700,48 @@ export const StatisticsManager = () => {
         </Card>
       </div>
 
+      {/* Multi-Week Comparison - Full Width */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Activity className="h-5 w-5" />
+            Comparativo das Últimas 8 Semanas
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <ChartContainer
+            config={{
+              visits: {
+                label: "Visitas",
+                color: "hsl(var(--primary))",
+              },
+              checkins: {
+                label: "Check-ins",
+                color: "hsl(142, 71%, 45%)",
+              },
+              guests: {
+                label: "Cadastros",
+                color: "hsl(280, 65%, 60%)",
+              },
+            }}
+            className="h-[300px]"
+          >
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={multiWeekStats}>
+                <XAxis dataKey="week" tick={{ fontSize: 11 }} />
+                <YAxis />
+                <ChartTooltip content={<ChartTooltipContent />} />
+                <Bar dataKey="visits" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} name="Visitas" />
+                <Bar dataKey="checkins" fill="hsl(142, 71%, 45%)" radius={[4, 4, 0, 0]} name="Check-ins" />
+                <Bar dataKey="guests" fill="hsl(280, 65%, 60%)" radius={[4, 4, 0, 0]} name="Cadastros" />
+              </BarChart>
+            </ResponsiveContainer>
+          </ChartContainer>
+        </CardContent>
+      </Card>
+
       {/* Charts Row 2 */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Weekly Comparison Chart */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Activity className="h-5 w-5" />
-              Comparativo Semanal
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <ChartContainer
-              config={{
-                thisWeek: {
-                  label: "Esta Semana",
-                  color: "hsl(var(--primary))",
-                },
-                lastWeek: {
-                  label: "Semana Passada",
-                  color: "hsl(var(--muted-foreground))",
-                },
-              }}
-              className="h-[250px]"
-            >
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={weeklyComparison}>
-                  <XAxis dataKey="label" tick={{ fontSize: 12 }} />
-                  <YAxis />
-                  <ChartTooltip content={<ChartTooltipContent />} />
-                  <Bar dataKey="lastWeek" fill="hsl(var(--muted-foreground))" radius={4} name="Semana Passada" />
-                  <Bar dataKey="thisWeek" fill="hsl(var(--primary))" radius={4} name="Esta Semana" />
-                </BarChart>
-              </ResponsiveContainer>
-            </ChartContainer>
-          </CardContent>
-        </Card>
 
         {/* Age Group Participation */}
         <Card>
