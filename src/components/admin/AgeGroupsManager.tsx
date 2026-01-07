@@ -5,7 +5,6 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
-import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "sonner";
 import { Plus, Trash2, Edit, ChevronUp, ChevronDown, Eye, EyeOff, Users } from "lucide-react";
 import {
@@ -24,12 +23,6 @@ interface AgeGroup {
   is_active: boolean;
 }
 
-interface Recreador {
-  id: string;
-  email: string;
-  role: string | null;
-}
-
 interface AgeGroupRecreador {
   user_id: string;
   recreador_name: string;
@@ -41,14 +34,11 @@ const AgeGroupsManager = () => {
   const [editingGroup, setEditingGroup] = useState<AgeGroup | null>(null);
   const [name, setName] = useState("");
   const [color, setColor] = useState("#00BCD4");
-  const [recreadores, setRecreadores] = useState<Recreador[]>([]);
-  const [selectedRecreadores, setSelectedRecreadores] = useState<string[]>([]);
+  const [recreadorNames, setRecreadorNames] = useState("");
   const [ageGroupRecreadores, setAgeGroupRecreadores] = useState<Record<string, AgeGroupRecreador[]>>({});
-  const [loadingRecreadores, setLoadingRecreadores] = useState(false);
 
   useEffect(() => {
     fetchAgeGroups();
-    fetchRecreadores();
   }, []);
 
   const fetchAgeGroups = async () => {
@@ -59,12 +49,13 @@ const AgeGroupsManager = () => {
 
     if (data) {
       setAgeGroups(data);
-      // Fetch recreadores for each age group
       fetchAgeGroupRecreadores(data.map(g => g.id));
     }
   };
 
   const fetchAgeGroupRecreadores = async (ageGroupIds: string[]) => {
+    if (ageGroupIds.length === 0) return;
+    
     const { data } = await supabase
       .from("age_group_recreadores")
       .select("age_group_id, user_id, recreador_name")
@@ -82,34 +73,6 @@ const AgeGroupsManager = () => {
         return acc;
       }, {} as Record<string, AgeGroupRecreador[]>);
       setAgeGroupRecreadores(grouped);
-    }
-  };
-
-  const fetchRecreadores = async () => {
-    setLoadingRecreadores(true);
-    try {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) return;
-
-      const response = await supabase.functions.invoke("list-users", {
-        headers: {
-          Authorization: `Bearer ${session.access_token}`,
-        },
-      });
-
-      if (response.error) {
-        console.error("Error fetching users:", response.error);
-        return;
-      }
-
-      // Filter only users with recreador role
-      const allUsers = response.data?.users || [];
-      const recreadorUsers = allUsers.filter((u: Recreador) => u.role === "recreador" || u.role === "gestor");
-      setRecreadores(recreadorUsers);
-    } catch (error) {
-      console.error("Error:", error);
-    } finally {
-      setLoadingRecreadores(false);
     }
   };
 
@@ -160,16 +123,18 @@ const AgeGroupsManager = () => {
       .delete()
       .eq("age_group_id", ageGroupId);
 
-    // Insert selected recreadores
-    if (selectedRecreadores.length > 0) {
-      const inserts = selectedRecreadores.map(userId => {
-        const recreador = recreadores.find(r => r.id === userId);
-        return {
-          age_group_id: ageGroupId,
-          user_id: userId,
-          recreador_name: recreador?.email?.split("@")[0] || "Recreador",
-        };
-      });
+    // Parse recreador names from comma-separated string
+    const namesList = recreadorNames
+      .split(",")
+      .map(n => n.trim())
+      .filter(n => n.length > 0);
+
+    if (namesList.length > 0) {
+      const inserts = namesList.map(recreadorName => ({
+        age_group_id: ageGroupId,
+        user_id: "manual-entry",
+        recreador_name: recreadorName,
+      }));
 
       const { error } = await supabase
         .from("age_group_recreadores")
@@ -199,9 +164,9 @@ const AgeGroupsManager = () => {
     setEditingGroup(group);
     setName(group.name);
     setColor(group.color);
-    // Load existing recreadores for this group
+    // Load existing recreadores for this group as comma-separated names
     const existing = ageGroupRecreadores[group.id] || [];
-    setSelectedRecreadores(existing.map(r => r.user_id));
+    setRecreadorNames(existing.map(r => r.recreador_name).join(", "));
     setIsOpen(true);
   };
 
@@ -210,7 +175,7 @@ const AgeGroupsManager = () => {
     setEditingGroup(null);
     setName("");
     setColor("#00BCD4");
-    setSelectedRecreadores([]);
+    setRecreadorNames("");
   };
 
   const handleMoveUp = async (index: number) => {
@@ -274,14 +239,6 @@ const AgeGroupsManager = () => {
     }
   };
 
-  const toggleRecreador = (userId: string) => {
-    setSelectedRecreadores(prev => 
-      prev.includes(userId) 
-        ? prev.filter(id => id !== userId)
-        : [...prev, userId]
-    );
-  };
-
   return (
     <div className="space-y-4">
       <Dialog open={isOpen} onOpenChange={setIsOpen}>
@@ -326,40 +283,21 @@ const AgeGroupsManager = () => {
               </div>
             </div>
             
-            {/* Recreadores Selection */}
+            {/* Recreadores - Manual Input */}
             <div className="space-y-2">
-              <Label className="flex items-center gap-2">
+              <Label htmlFor="recreadores" className="flex items-center gap-2">
                 <Users className="h-4 w-4" />
                 Recreadores Responsáveis
               </Label>
-              {loadingRecreadores ? (
-                <p className="text-sm text-muted-foreground">Carregando...</p>
-              ) : recreadores.length === 0 ? (
-                <p className="text-sm text-muted-foreground">
-                  Nenhum recreador cadastrado
-                </p>
-              ) : (
-                <div className="space-y-2 max-h-40 overflow-y-auto border rounded-md p-3">
-                  {recreadores.map((recreador) => (
-                    <div key={recreador.id} className="flex items-center gap-2">
-                      <Checkbox
-                        id={`recreador-${recreador.id}`}
-                        checked={selectedRecreadores.includes(recreador.id)}
-                        onCheckedChange={() => toggleRecreador(recreador.id)}
-                      />
-                      <label
-                        htmlFor={`recreador-${recreador.id}`}
-                        className="text-sm cursor-pointer flex-1"
-                      >
-                        {recreador.email}
-                        <span className="text-xs text-muted-foreground ml-2">
-                          ({recreador.role})
-                        </span>
-                      </label>
-                    </div>
-                  ))}
-                </div>
-              )}
+              <Input
+                id="recreadores"
+                value={recreadorNames}
+                onChange={(e) => setRecreadorNames(e.target.value)}
+                placeholder="Ex: João, Maria, Pedro"
+              />
+              <p className="text-xs text-muted-foreground">
+                Digite os nomes separados por vírgula
+              </p>
             </div>
 
             <div className="flex gap-2">
