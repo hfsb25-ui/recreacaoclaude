@@ -2,10 +2,11 @@ import { useState, useEffect, lazy, Suspense } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Star, Trash2 } from "lucide-react";
+import { Star, Trash2, FileDown } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { jsPDF } from "jspdf";
 
 const RatingsCharts = lazy(() =>
   import("./RatingsCharts").then((module) => ({
@@ -130,6 +131,105 @@ export const RatingsManager = () => {
     fetchRatings();
   }, []);
 
+  const exportRatingsPdf = () => {
+    const doc = new jsPDF({
+      orientation: "portrait",
+      unit: "mm",
+      format: "a4",
+    });
+
+    const pageWidth = doc.internal.pageSize.getWidth();
+    const pageHeight = doc.internal.pageSize.getHeight();
+    const margin = 15;
+    const lineHeight = 4;
+    let yPos = margin;
+
+    // Header
+    doc.setFillColor(59, 130, 246);
+    doc.rect(0, 0, pageWidth, 20, "F");
+    doc.setTextColor(255, 255, 255);
+    doc.setFontSize(12);
+    doc.setFont("helvetica", "bold");
+    doc.text("AVALIAÇÕES DAS ATIVIDADES", pageWidth / 2, 13, { align: "center" });
+
+    yPos = 30;
+
+    // Stats summary
+    if (stats) {
+      doc.setTextColor(60, 60, 60);
+      doc.setFontSize(8);
+      doc.setFont("helvetica", "normal");
+      doc.text(
+        `Total: ${stats.totalRatings} avaliações | Média geral: ${stats.overallAverage.toFixed(1)} estrelas | Gerado em: ${format(new Date(), "dd/MM/yyyy HH:mm")}`,
+        pageWidth / 2,
+        yPos,
+        { align: "center" }
+      );
+      yPos += 8;
+    }
+
+    // Ratings list
+    doc.setTextColor(30, 30, 30);
+
+    ratings.forEach((rating, index) => {
+      // Check if we need a new page
+      if (yPos > pageHeight - 25) {
+        doc.addPage();
+        yPos = margin;
+      }
+
+      // Alternating background
+      if (index % 2 === 0) {
+        doc.setFillColor(248, 248, 248);
+        doc.rect(margin - 2, yPos - 3, pageWidth - 2 * margin + 4, 14, "F");
+      }
+
+      // Activity name and stars
+      doc.setFontSize(7);
+      doc.setFont("helvetica", "bold");
+      doc.setTextColor(30, 30, 30);
+      const stars = "★".repeat(rating.rating) + "☆".repeat(5 - rating.rating);
+      doc.text(`${rating.activities.name}  ${stars}`, margin, yPos);
+
+      // Guest info and date
+      yPos += lineHeight;
+      doc.setFontSize(6);
+      doc.setFont("helvetica", "normal");
+      doc.setTextColor(100, 100, 100);
+      const dateStr = format(new Date(rating.created_at), "dd/MM/yyyy HH:mm", { locale: ptBR });
+      const guestInfo = `${rating.guest_name}${rating.room_number ? ` - Apto ${rating.room_number}` : ""} | ${dateStr}`;
+      doc.text(guestInfo, margin, yPos);
+
+      // Comment if exists
+      if (rating.comment) {
+        yPos += lineHeight;
+        doc.setTextColor(60, 60, 60);
+        doc.setFontSize(6);
+        // Truncate long comments
+        const maxWidth = pageWidth - 2 * margin;
+        const lines = doc.splitTextToSize(`"${rating.comment}"`, maxWidth);
+        doc.text(lines.slice(0, 2), margin, yPos); // Max 2 lines
+        yPos += (Math.min(lines.length, 2) - 1) * lineHeight;
+      }
+
+      yPos += 6;
+    });
+
+    // Footer
+    doc.setFontSize(6);
+    doc.setTextColor(150, 150, 150);
+    doc.text(
+      "Relatório de Avaliações - Recreação Hotel",
+      pageWidth / 2,
+      pageHeight - 10,
+      { align: "center" }
+    );
+
+    const today = format(new Date(), "dd-MM-yyyy");
+    doc.save(`avaliacoes-${today}.pdf`);
+    toast({ title: "PDF exportado com sucesso!" });
+  };
+
   if (loading) {
     return <div className="text-center p-8">Carregando avaliações...</div>;
   }
@@ -157,7 +257,13 @@ export const RatingsManager = () => {
 
           {/* Recent Ratings List */}
           <div className="space-y-4">
-            <h3 className="text-xl font-semibold">Avaliações Recentes</h3>
+            <div className="flex items-center justify-between">
+              <h3 className="text-xl font-semibold">Avaliações Recentes</h3>
+              <Button variant="outline" size="sm" onClick={exportRatingsPdf}>
+                <FileDown className="h-4 w-4 mr-2" />
+                Exportar PDF
+              </Button>
+            </div>
             <div className="grid gap-4">
               {ratings.map((rating) => (
                 <Card key={rating.id} className="p-4">
