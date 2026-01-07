@@ -6,6 +6,8 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
+import { FileDown } from "lucide-react";
+import { jsPDF } from "jspdf";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -194,6 +196,107 @@ const GamificationManager = () => {
     }
   };
 
+  const exportRankingPdf = async (guests: RankingGuest[]) => {
+    const doc = new jsPDF({
+      orientation: "portrait",
+      unit: "mm",
+      format: "a4",
+    });
+
+    const pageWidth = doc.internal.pageSize.getWidth();
+    const pageHeight = doc.internal.pageSize.getHeight();
+    const margin = 20;
+
+    // Background gradient effect (light blue to white)
+    doc.setFillColor(240, 248, 255);
+    doc.rect(0, 0, pageWidth, pageHeight, "F");
+
+    // Header decoration
+    doc.setFillColor(59, 130, 246);
+    doc.rect(0, 0, pageWidth, 50, "F");
+
+    // Trophy emoji and title
+    doc.setTextColor(255, 255, 255);
+    doc.setFontSize(32);
+    doc.setFont("helvetica", "bold");
+    doc.text("🏆 RANKING TOP 10", pageWidth / 2, 30, { align: "center" });
+
+    // Period info
+    doc.setFontSize(12);
+    doc.setFont("helvetica", "normal");
+    const today = new Date().toLocaleDateString("pt-BR");
+    doc.text(`Atualizado em: ${today}`, pageWidth / 2, 42, { align: "center" });
+
+    // Reset text color for content
+    doc.setTextColor(30, 30, 30);
+
+    // Ranking items
+    let yPos = 70;
+    const rowHeight = 20;
+
+    guests.forEach((guest, index) => {
+      const position = index + 1;
+      const isTop3 = position <= 3;
+
+      // Medal/position background
+      if (isTop3) {
+        const colors: Record<number, [number, number, number]> = {
+          1: [255, 215, 0],   // Gold
+          2: [192, 192, 192], // Silver
+          3: [205, 127, 50],  // Bronze
+        };
+        doc.setFillColor(...colors[position]);
+        doc.roundedRect(margin, yPos - 6, pageWidth - 2 * margin, rowHeight, 4, 4, "F");
+      } else {
+        doc.setFillColor(245, 245, 245);
+        doc.roundedRect(margin, yPos - 6, pageWidth - 2 * margin, rowHeight, 4, 4, "F");
+      }
+
+      // Position/medal
+      doc.setFontSize(16);
+      doc.setFont("helvetica", "bold");
+      const medals: Record<number, string> = { 1: "🥇", 2: "🥈", 3: "🥉" };
+      const posText = medals[position] || `${position}º`;
+      doc.setTextColor(isTop3 ? 50 : 80, isTop3 ? 50 : 80, isTop3 ? 50 : 80);
+      doc.text(posText, margin + 10, yPos + 5);
+
+      // Guest name
+      doc.setFontSize(14);
+      doc.setFont("helvetica", "bold");
+      doc.setTextColor(30, 30, 30);
+      doc.text(guest.name, margin + 30, yPos + 4);
+
+      // Room number
+      doc.setFontSize(10);
+      doc.setFont("helvetica", "normal");
+      doc.setTextColor(100, 100, 100);
+      doc.text(`Quarto ${guest.room_number}`, margin + 30, yPos + 10);
+
+      // Points
+      doc.setFontSize(16);
+      doc.setFont("helvetica", "bold");
+      doc.setTextColor(59, 130, 246);
+      doc.text(`${guest.total_points} pts`, pageWidth - margin - 10, yPos + 5, { align: "right" });
+
+      yPos += rowHeight + 5;
+    });
+
+    // Footer
+    doc.setFontSize(10);
+    doc.setFont("helvetica", "normal");
+    doc.setTextColor(150, 150, 150);
+    doc.text(
+      "Participe das atividades e ganhe pontos!",
+      pageWidth / 2,
+      pageHeight - 20,
+      { align: "center" }
+    );
+
+    // Save PDF
+    doc.save(`ranking-top10-${today.replace(/\//g, "-")}.pdf`);
+    toast.success("PDF do ranking exportado com sucesso!");
+  };
+
   return (
     <div className="space-y-6">
       <Card className="p-6">
@@ -247,7 +350,19 @@ const GamificationManager = () => {
       </Card>
 
       <Card className="p-6">
-        <h3 className="text-lg font-semibold mb-4">Ranking Atual (Top 10)</h3>
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="text-lg font-semibold">Ranking Atual (Top 10)</h3>
+          {topGuests.length > 0 && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => exportRankingPdf(topGuests)}
+            >
+              <FileDown className="h-4 w-4 mr-2" />
+              Exportar PDF
+            </Button>
+          )}
+        </div>
         {topGuests.length === 0 ? (
           <p className="text-muted-foreground">Nenhum hóspede cadastrado</p>
         ) : (
