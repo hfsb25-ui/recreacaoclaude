@@ -197,6 +197,8 @@ const GamificationManager = () => {
   };
 
   const exportRankingPdf = async (guests: RankingGuest[]) => {
+    const top3 = guests.slice(0, 3);
+    
     const doc = new jsPDF({
       orientation: "portrait",
       unit: "mm",
@@ -215,11 +217,11 @@ const GamificationManager = () => {
     doc.setFillColor(59, 130, 246);
     doc.rect(0, 0, pageWidth, 50, "F");
 
-    // Trophy emoji and title
+    // Title (without emoji - using text only)
     doc.setTextColor(255, 255, 255);
     doc.setFontSize(32);
     doc.setFont("helvetica", "bold");
-    doc.text("🏆 RANKING TOP 10", pageWidth / 2, 30, { align: "center" });
+    doc.text("RANKING TOP 3", pageWidth / 2, 30, { align: "center" });
 
     // Period info
     doc.setFontSize(12);
@@ -230,56 +232,79 @@ const GamificationManager = () => {
     // Reset text color for content
     doc.setTextColor(30, 30, 30);
 
-    // Ranking items
+    // Ranking items - TOP 3 only
     let yPos = 70;
-    const rowHeight = 20;
+    const rowHeight = 28;
 
-    guests.forEach((guest, index) => {
+    top3.forEach((guest, index) => {
       const position = index + 1;
-      const isTop3 = position <= 3;
 
-      // Medal/position background
-      if (isTop3) {
-        const colors: Record<number, [number, number, number]> = {
-          1: [255, 215, 0],   // Gold
-          2: [192, 192, 192], // Silver
-          3: [205, 127, 50],  // Bronze
-        };
-        doc.setFillColor(...colors[position]);
-        doc.roundedRect(margin, yPos - 6, pageWidth - 2 * margin, rowHeight, 4, 4, "F");
-      } else {
-        doc.setFillColor(245, 245, 245);
-        doc.roundedRect(margin, yPos - 6, pageWidth - 2 * margin, rowHeight, 4, 4, "F");
-      }
+      // Medal/position background with larger boxes for top 3
+      const colors: Record<number, [number, number, number]> = {
+        1: [255, 215, 0],   // Gold
+        2: [192, 192, 192], // Silver
+        3: [205, 127, 50],  // Bronze
+      };
+      doc.setFillColor(...colors[position]);
+      doc.roundedRect(margin, yPos - 6, pageWidth - 2 * margin, rowHeight, 4, 4, "F");
 
-      // Position/medal
-      doc.setFontSize(16);
+      // Position number (using text instead of emoji)
+      doc.setFontSize(20);
       doc.setFont("helvetica", "bold");
-      const medals: Record<number, string> = { 1: "🥇", 2: "🥈", 3: "🥉" };
-      const posText = medals[position] || `${position}º`;
-      doc.setTextColor(isTop3 ? 50 : 80, isTop3 ? 50 : 80, isTop3 ? 50 : 80);
-      doc.text(posText, margin + 10, yPos + 5);
+      doc.setTextColor(50, 50, 50);
+      const posText = `${position}o`;
+      doc.text(posText, margin + 12, yPos + 8);
 
-      // Guest name
-      doc.setFontSize(14);
+      // Guest name (truncate if too long to avoid overlap)
+      doc.setFontSize(16);
       doc.setFont("helvetica", "bold");
       doc.setTextColor(30, 30, 30);
-      doc.text(guest.name, margin + 30, yPos + 4);
+      const maxNameWidth = 80; // Maximum width for name
+      let displayName = guest.name;
+      while (doc.getTextWidth(displayName) > maxNameWidth && displayName.length > 10) {
+        displayName = displayName.slice(0, -1);
+      }
+      if (displayName !== guest.name) {
+        displayName += "...";
+      }
+      doc.text(displayName, margin + 35, yPos + 6);
 
       // Room number
-      doc.setFontSize(10);
+      doc.setFontSize(11);
       doc.setFont("helvetica", "normal");
-      doc.setTextColor(100, 100, 100);
-      doc.text(`Quarto ${guest.room_number}`, margin + 30, yPos + 10);
+      doc.setTextColor(80, 80, 80);
+      doc.text(`Quarto ${guest.room_number}`, margin + 35, yPos + 14);
 
-      // Points
-      doc.setFontSize(16);
+      // Points - positioned to the right with fixed position
+      doc.setFontSize(18);
       doc.setFont("helvetica", "bold");
       doc.setTextColor(59, 130, 246);
-      doc.text(`${guest.total_points} pts`, pageWidth - margin - 10, yPos + 5, { align: "right" });
+      doc.text(`${guest.total_points} pts`, pageWidth - margin - 5, yPos + 8, { align: "right" });
 
-      yPos += rowHeight + 5;
+      yPos += rowHeight + 8;
     });
+
+    // CTA Section
+    yPos += 20;
+    
+    // CTA Background
+    doc.setFillColor(34, 197, 94); // Green
+    doc.roundedRect(margin, yPos, pageWidth - 2 * margin, 50, 6, 6, "F");
+    
+    // CTA Title
+    doc.setTextColor(255, 255, 255);
+    doc.setFontSize(18);
+    doc.setFont("helvetica", "bold");
+    doc.text("AINDA DA TEMPO!", pageWidth / 2, yPos + 18, { align: "center" });
+    
+    // CTA Subtitle
+    doc.setFontSize(12);
+    doc.setFont("helvetica", "normal");
+    doc.text("Entre para o Hall da Fama do Santa Barbara!", pageWidth / 2, yPos + 30, { align: "center" });
+    
+    // CTA instruction
+    doc.setFontSize(10);
+    doc.text("Cadastre-se e participe das atividades para ganhar pontos!", pageWidth / 2, yPos + 42, { align: "center" });
 
     // Footer
     doc.setFontSize(10);
@@ -293,7 +318,7 @@ const GamificationManager = () => {
     );
 
     // Save PDF
-    doc.save(`ranking-top10-${today.replace(/\//g, "-")}.pdf`);
+    doc.save(`ranking-top3-${today.replace(/\//g, "-")}.pdf`);
     toast.success("PDF do ranking exportado com sucesso!");
   };
 
