@@ -2,9 +2,11 @@ import { useState, useEffect, lazy, Suspense } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Star, Trash2, FileDown } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Star, Trash2, FileDown, Calendar } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
-import { format } from "date-fns";
+import { format, isWithinInterval, parseISO, startOfDay, endOfDay } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { jsPDF } from "jspdf";
 
@@ -30,6 +32,8 @@ interface Rating {
 export const RatingsManager = () => {
   const [ratings, setRatings] = useState<Rating[]>([]);
   const [loading, setLoading] = useState(true);
+  const [filterStartDate, setFilterStartDate] = useState("");
+  const [filterEndDate, setFilterEndDate] = useState("");
 
   const calculateStats = () => {
     if (ratings.length === 0) return null;
@@ -131,7 +135,33 @@ export const RatingsManager = () => {
     fetchRatings();
   }, []);
 
+  const getFilteredRatings = () => {
+    if (!filterStartDate && !filterEndDate) return ratings;
+    
+    return ratings.filter((rating) => {
+      const ratingDate = parseISO(rating.created_at);
+      const start = filterStartDate ? startOfDay(parseISO(filterStartDate)) : null;
+      const end = filterEndDate ? endOfDay(parseISO(filterEndDate)) : null;
+      
+      if (start && end) {
+        return isWithinInterval(ratingDate, { start, end });
+      } else if (start) {
+        return ratingDate >= start;
+      } else if (end) {
+        return ratingDate <= end;
+      }
+      return true;
+    });
+  };
+
   const exportRatingsPdf = () => {
+    const filteredRatings = getFilteredRatings();
+    
+    if (filteredRatings.length === 0) {
+      toast({ title: "Nenhuma avaliação no período selecionado", variant: "destructive" });
+      return;
+    }
+
     const doc = new jsPDF({
       orientation: "portrait",
       unit: "mm",
@@ -150,28 +180,43 @@ export const RatingsManager = () => {
     doc.setTextColor(255, 255, 255);
     doc.setFontSize(12);
     doc.setFont("helvetica", "bold");
-    doc.text("AVALIAÇÕES DAS ATIVIDADES", pageWidth / 2, 13, { align: "center" });
+    doc.text("AVALIACOES DAS ATIVIDADES", pageWidth / 2, 13, { align: "center" });
 
     yPos = 30;
 
-    // Stats summary
-    if (stats) {
-      doc.setTextColor(60, 60, 60);
-      doc.setFontSize(8);
-      doc.setFont("helvetica", "normal");
-      doc.text(
-        `Total: ${stats.totalRatings} avaliações | Média geral: ${stats.overallAverage.toFixed(1)} estrelas | Gerado em: ${format(new Date(), "dd/MM/yyyy HH:mm")}`,
-        pageWidth / 2,
-        yPos,
-        { align: "center" }
-      );
-      yPos += 8;
+    // Period info
+    let periodText = "";
+    if (filterStartDate && filterEndDate) {
+      periodText = `Periodo: ${format(parseISO(filterStartDate), "dd/MM/yyyy")} a ${format(parseISO(filterEndDate), "dd/MM/yyyy")}`;
+    } else if (filterStartDate) {
+      periodText = `A partir de: ${format(parseISO(filterStartDate), "dd/MM/yyyy")}`;
+    } else if (filterEndDate) {
+      periodText = `Ate: ${format(parseISO(filterEndDate), "dd/MM/yyyy")}`;
     }
+
+    // Stats summary
+    const filteredAverage = filteredRatings.reduce((sum, r) => sum + r.rating, 0) / filteredRatings.length;
+    doc.setTextColor(60, 60, 60);
+    doc.setFontSize(8);
+    doc.setFont("helvetica", "normal");
+    doc.text(
+      `Total: ${filteredRatings.length} avaliacoes | Media: ${filteredAverage.toFixed(1)}/5 | Gerado em: ${format(new Date(), "dd/MM/yyyy HH:mm")}`,
+      pageWidth / 2,
+      yPos,
+      { align: "center" }
+    );
+    yPos += 5;
+    
+    if (periodText) {
+      doc.text(periodText, pageWidth / 2, yPos, { align: "center" });
+      yPos += 5;
+    }
+    yPos += 3;
 
     // Ratings list
     doc.setTextColor(30, 30, 30);
 
-    ratings.forEach((rating, index) => {
+    filteredRatings.forEach((rating, index) => {
       // Check if we need a new page
       if (yPos > pageHeight - 25) {
         doc.addPage();
@@ -184,12 +229,11 @@ export const RatingsManager = () => {
         doc.rect(margin - 2, yPos - 3, pageWidth - 2 * margin + 4, 14, "F");
       }
 
-      // Activity name and stars
+      // Activity name and numeric rating (replacing stars with numbers)
       doc.setFontSize(7);
       doc.setFont("helvetica", "bold");
       doc.setTextColor(30, 30, 30);
-      const stars = "★".repeat(rating.rating) + "☆".repeat(5 - rating.rating);
-      doc.text(`${rating.activities.name}  ${stars}`, margin, yPos);
+      doc.text(`${rating.activities.name}  [Nota: ${rating.rating}/5]`, margin, yPos);
 
       // Guest info and date
       yPos += lineHeight;
@@ -219,7 +263,7 @@ export const RatingsManager = () => {
     doc.setFontSize(6);
     doc.setTextColor(150, 150, 150);
     doc.text(
-      "Relatório de Avaliações - Recreação Hotel",
+      "Relatorio de Avaliacoes - Recreacao Hotel",
       pageWidth / 2,
       pageHeight - 10,
       { align: "center" }
@@ -257,12 +301,57 @@ export const RatingsManager = () => {
 
           {/* Recent Ratings List */}
           <div className="space-y-4">
-            <div className="flex items-center justify-between">
-              <h3 className="text-xl font-semibold">Avaliações Recentes</h3>
-              <Button variant="outline" size="sm" onClick={exportRatingsPdf}>
-                <FileDown className="h-4 w-4 mr-2" />
-                Exportar PDF
-              </Button>
+            <div className="flex flex-col gap-4">
+              <div className="flex items-center justify-between">
+                <h3 className="text-xl font-semibold">Avaliações Recentes</h3>
+                <Button variant="outline" size="sm" onClick={exportRatingsPdf}>
+                  <FileDown className="h-4 w-4 mr-2" />
+                  Exportar PDF
+                </Button>
+              </div>
+              
+              {/* Date filters */}
+              <Card className="p-4">
+                <div className="flex flex-wrap items-end gap-4">
+                  <div className="flex items-center gap-2">
+                    <Calendar className="h-4 w-4 text-muted-foreground" />
+                    <span className="text-sm font-medium">Filtrar período:</span>
+                  </div>
+                  <div className="flex flex-wrap gap-4">
+                    <div className="space-y-1">
+                      <Label className="text-xs">Data inicial</Label>
+                      <Input
+                        type="date"
+                        value={filterStartDate}
+                        onChange={(e) => setFilterStartDate(e.target.value)}
+                        className="w-40"
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <Label className="text-xs">Data final</Label>
+                      <Input
+                        type="date"
+                        value={filterEndDate}
+                        onChange={(e) => setFilterEndDate(e.target.value)}
+                        className="w-40"
+                      />
+                    </div>
+                    {(filterStartDate || filterEndDate) && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => {
+                          setFilterStartDate("");
+                          setFilterEndDate("");
+                        }}
+                        className="self-end"
+                      >
+                        Limpar filtro
+                      </Button>
+                    )}
+                  </div>
+                </div>
+              </Card>
             </div>
             <div className="grid gap-4">
               {ratings.map((rating) => (
