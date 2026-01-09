@@ -335,9 +335,9 @@ const Home = () => {
             </Button>
           </div>
 
-          {/* Top Guest of the Week */}
-          {topGuest && (
-            <Card className="mb-6 overflow-hidden bg-gradient-to-r from-amber-500/10 via-yellow-500/10 to-orange-500/10 border-amber-500/30">
+          {/* Top Guest of the Week OR CTA */}
+          <Card className="mb-6 overflow-hidden bg-gradient-to-r from-amber-500/10 via-yellow-500/10 to-orange-500/10 border-amber-500/30">
+            {topGuest ? (
               <div className="p-4">
                 <div className="flex items-center gap-2 mb-3">
                   <div className="p-1.5 bg-gradient-to-r from-amber-500 to-yellow-500 rounded-full">
@@ -378,8 +378,31 @@ const Home = () => {
                   <ChevronRight className="h-3 w-3 ml-1" />
                 </Button>
               </div>
-            </Card>
-          )}
+            ) : (
+              <div className="p-4 text-center">
+                <div className="flex justify-center mb-3">
+                  <div className="p-3 bg-gradient-to-r from-amber-500 to-yellow-500 rounded-full">
+                    <Trophy className="h-6 w-6 text-white" />
+                  </div>
+                </div>
+                <h3 className="text-lg font-bold text-foreground mb-2">
+                  Entre para o Ranking!
+                </h3>
+                <p className="text-sm text-amber-600 dark:text-amber-400 font-medium mb-2">
+                  Ainda dá tempo de entrar para o Hall da Fama do Santa Barbara!
+                </p>
+                <p className="text-xs text-muted-foreground mb-4">
+                  Participe das atividades e acumule pontos
+                </p>
+                <Button
+                  onClick={() => navigate("/guest-auth")}
+                  className="bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white"
+                >
+                  Cadastre-se Agora
+                </Button>
+              </div>
+            )}
+          </Card>
 
           {/* Announcements */}
           {announcements.length > 0 ? (
