@@ -5,7 +5,7 @@ import {
   Users, Activity, Star, TrendingUp, Trophy, Calendar, CheckCircle, 
   Globe, Eye, UserPlus, Clock, ArrowUp, ArrowDown, Minus
 } from "lucide-react";
-import { format, subDays, subHours, startOfWeek, endOfWeek, startOfDay, endOfDay } from "date-fns";
+import { format, subDays, startOfWeek, endOfWeek, startOfDay, endOfDay, subWeeks } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import {
   ChartContainer,
@@ -100,119 +100,147 @@ export const StatisticsManager = () => {
   const fetchStatistics = async () => {
     setLoading(true);
     try {
-      const today = format(new Date(), "yyyy-MM-dd");
-      
-      // ===== BASIC STATS =====
-      
-      // Fetch total guests
-      const { count: guestsCount } = await supabase
-        .from("guests")
-        .select("*", { count: "exact", head: true });
-      setTotalGuests(guestsCount || 0);
+      const today = new Date();
+      const todayStr = format(today, "yyyy-MM-dd");
+      const todayStart = `${todayStr}T00:00:00`;
+      const todayEnd = `${todayStr}T23:59:59`;
+      const last24h = new Date(today.getTime() - 24 * 60 * 60 * 1000);
+      const last7Days = subDays(today, 6);
+      const last8Weeks = subWeeks(today, 8);
 
-      // Fetch total check-ins
-      const { count: checkinsCount } = await supabase
-        .from("activity_checkins")
-        .select("*", { count: "exact", head: true });
-      setTotalCheckins(checkinsCount || 0);
+      // ===== PARALLEL BATCH 1: All count queries =====
+      const [
+        guestsResult,
+        checkinsResult,
+        ratingsResult,
+        activitiesResult,
+        totalVisitsResult,
+        visitsTodayResult,
+        newGuestsTodayResult,
+      ] = await Promise.all([
+        supabase.from("guests").select("*", { count: "exact", head: true }),
+        supabase.from("activity_checkins").select("*", { count: "exact", head: true }),
+        supabase.from("activity_ratings").select("rating", { count: "exact" }),
+        supabase.from("activities").select("*", { count: "exact", head: true }),
+        supabase.from("site_visits").select("*", { count: "exact", head: true }),
+        supabase.from("site_visits").select("*", { count: "exact", head: true }).gte("created_at", todayStart).lte("created_at", todayEnd),
+        supabase.from("guests").select("*", { count: "exact", head: true }).gte("created_at", todayStart).lte("created_at", todayEnd),
+      ]);
 
-      // Fetch total ratings and average
-      const { data: ratingsData, count: ratingsCount } = await supabase
-        .from("activity_ratings")
-        .select("rating", { count: "exact" });
-      setTotalRatings(ratingsCount || 0);
-      if (ratingsData && ratingsData.length > 0) {
-        const avg = ratingsData.reduce((sum, r) => sum + r.rating, 0) / ratingsData.length;
+      const guestsCount = guestsResult.count || 0;
+      const checkinsCount = checkinsResult.count || 0;
+      const ratingsCount = ratingsResult.count || 0;
+      const activitiesCount = activitiesResult.count || 0;
+      const totalVisitsCount = totalVisitsResult.count || 0;
+      const visitsTodayCount = visitsTodayResult.count || 0;
+      const newGuestsCount = newGuestsTodayResult.count || 0;
+
+      setTotalGuests(guestsCount);
+      setTotalCheckins(checkinsCount);
+      setTotalRatings(ratingsCount);
+      setTotalActivities(activitiesCount);
+      setTotalVisits(totalVisitsCount);
+      setVisitsToday(visitsTodayCount);
+      setNewGuestsToday(newGuestsCount);
+
+      // Calculate average rating
+      if (ratingsResult.data && ratingsResult.data.length > 0) {
+        const avg = ratingsResult.data.reduce((sum, r) => sum + r.rating, 0) / ratingsResult.data.length;
         setAverageRating(avg);
       }
 
-      // Fetch total activities
-      const { count: activitiesCount } = await supabase
-        .from("activities")
-        .select("*", { count: "exact", head: true });
-      setTotalActivities(activitiesCount || 0);
-
-      // Fetch active guests today (those who checked in today)
-      const { data: todayCheckins } = await supabase
-        .from("activity_checkins")
-        .select("guest_id")
-        .gte("checked_in_at", `${today}T00:00:00`)
-        .lte("checked_in_at", `${today}T23:59:59`);
-      const uniqueGuests = new Set(todayCheckins?.map(c => c.guest_id) || []);
-      setActiveGuestsToday(uniqueGuests.size);
-
-      // ===== VISIT STATS =====
-      
-      // Total visits
-      const { count: totalVisitsCount } = await supabase
-        .from("site_visits")
-        .select("*", { count: "exact", head: true });
-      setTotalVisits(totalVisitsCount || 0);
-
-      // Visits today
-      const { count: visitsTodayCount } = await supabase
-        .from("site_visits")
-        .select("*", { count: "exact", head: true })
-        .gte("created_at", `${today}T00:00:00`)
-        .lte("created_at", `${today}T23:59:59`);
-      setVisitsToday(visitsTodayCount || 0);
-
-      // Unique visitors today
-      const { data: uniqueVisitorsData } = await supabase
-        .from("site_visits")
-        .select("session_id")
-        .gte("created_at", `${today}T00:00:00`)
-        .lte("created_at", `${today}T23:59:59`);
-      const uniqueSessions = new Set(uniqueVisitorsData?.map(v => v.session_id) || []);
-      setUniqueVisitorsToday(uniqueSessions.size);
-
-      // New guests today
-      const { count: newGuestsCount } = await supabase
-        .from("guests")
-        .select("*", { count: "exact", head: true })
-        .gte("created_at", `${today}T00:00:00`)
-        .lte("created_at", `${today}T23:59:59`);
-      setNewGuestsToday(newGuestsCount || 0);
-
-      // Conversion rate (guests / unique visitors)
-      if (uniqueSessions.size > 0) {
-        setConversionRate(((guestsCount || 0) / (totalVisitsCount || 1)) * 100);
+      // Conversion rate
+      if (totalVisitsCount > 0) {
+        setConversionRate((guestsCount / totalVisitsCount) * 100);
       }
 
-      // ===== HOURLY VISITS (last 24h) =====
+      // ===== PARALLEL BATCH 2: Data for processing =====
+      const [
+        todayCheckinsResult,
+        uniqueVisitorsResult,
+        visitsLast24hResult,
+        pageVisitsResult,
+        checkinsLast7DaysResult,
+        ratingsLast7DaysResult,
+        visitsLast8WeeksResult,
+        checkinsLast8WeeksResult,
+        guestsLast8WeeksResult,
+        ageGroupsResult,
+        allCheckinsWithActivityResult,
+        allRatingsWithActivityResult,
+        allCheckinsWithGuestResult,
+      ] = await Promise.all([
+        // Today's check-ins for active guests
+        supabase.from("activity_checkins").select("guest_id").gte("checked_in_at", todayStart).lte("checked_in_at", todayEnd),
+        // Unique visitors today
+        supabase.from("site_visits").select("session_id").gte("created_at", todayStart).lte("created_at", todayEnd),
+        // Visits last 24h for hourly chart
+        supabase.from("site_visits").select("created_at").gte("created_at", last24h.toISOString()),
+        // Page visits today
+        supabase.from("site_visits").select("page_path").gte("created_at", todayStart),
+        // Check-ins last 7 days
+        supabase.from("activity_checkins").select("checked_in_at").gte("checked_in_at", format(last7Days, "yyyy-MM-dd") + "T00:00:00"),
+        // Ratings last 7 days
+        supabase.from("activity_ratings").select("created_at").gte("created_at", format(last7Days, "yyyy-MM-dd") + "T00:00:00"),
+        // Visits last 8 weeks
+        supabase.from("site_visits").select("created_at").gte("created_at", last8Weeks.toISOString()),
+        // Check-ins last 8 weeks
+        supabase.from("activity_checkins").select("checked_in_at").gte("checked_in_at", last8Weeks.toISOString()),
+        // Guests last 8 weeks
+        supabase.from("guests").select("created_at").gte("created_at", last8Weeks.toISOString()),
+        // Age groups
+        supabase.from("age_groups").select("id, name, color"),
+        // All check-ins with activity names
+        supabase.from("activity_checkins").select("activity_id, activities(name, age_group_id)"),
+        // All ratings with activity names
+        supabase.from("activity_ratings").select("activity_id, rating, activities(name)"),
+        // All check-ins with guest names
+        supabase.from("activity_checkins").select("guest_id, guests(name)"),
+      ]);
+
+      // Active guests today
+      const uniqueGuests = new Set(todayCheckinsResult.data?.map(c => c.guest_id) || []);
+      setActiveGuestsToday(uniqueGuests.size);
+
+      // Unique visitors today
+      const uniqueSessions = new Set(uniqueVisitorsResult.data?.map(v => v.session_id) || []);
+      setUniqueVisitorsToday(uniqueSessions.size);
+
+      // ===== HOURLY VISITS (process from data, not queries) =====
       const hourlyData: HourlyVisits[] = [];
+      const visitsData = visitsLast24hResult.data || [];
+      
+      // Group by hour
+      const hourCounts: Record<number, number> = {};
+      for (let i = 0; i < 24; i++) {
+        hourCounts[i] = 0;
+      }
+      
+      visitsData.forEach(v => {
+        const hour = new Date(v.created_at).getHours();
+        hourCounts[hour] = (hourCounts[hour] || 0) + 1;
+      });
+
       let maxVisits = 0;
       let maxHour = "";
       
-      for (let i = 23; i >= 0; i--) {
-        const hourStart = subHours(new Date(), i);
-        const hourEnd = subHours(new Date(), i - 1);
+      for (let i = 0; i < 24; i++) {
+        const hourLabel = `${i.toString().padStart(2, '0')}:00`;
+        const visits = hourCounts[i] || 0;
+        hourlyData.push({ hour: hourLabel, visits });
         
-        const { count: hourCount } = await supabase
-          .from("site_visits")
-          .select("*", { count: "exact", head: true })
-          .gte("created_at", hourStart.toISOString())
-          .lt("created_at", hourEnd.toISOString());
-        
-        const hourLabel = format(hourStart, "HH:00");
-        hourlyData.push({ hour: hourLabel, visits: hourCount || 0 });
-        
-        if ((hourCount || 0) > maxVisits) {
-          maxVisits = hourCount || 0;
+        if (visits > maxVisits) {
+          maxVisits = visits;
           maxHour = hourLabel;
         }
       }
+      
       setHourlyVisits(hourlyData);
       setPeakHour(maxHour || null);
 
       // ===== PAGE VISITS =====
-      const { data: pageData } = await supabase
-        .from("site_visits")
-        .select("page_path")
-        .gte("created_at", `${today}T00:00:00`);
-      
-      if (pageData) {
-        const pageCount = pageData.reduce((acc, v) => {
+      if (pageVisitsResult.data) {
+        const pageCount = pageVisitsResult.data.reduce((acc, v) => {
           const page = v.page_path || "/";
           acc[page] = (acc[page] || 0) + 1;
           return acc;
@@ -240,72 +268,70 @@ export const StatisticsManager = () => {
         setPageVisits(sorted);
       }
 
-      // ===== DAILY STATS (last 7 days) =====
-      const last7Days: DailyStats[] = [];
+      // ===== DAILY STATS (process from data) =====
+      const last7DaysData: DailyStats[] = [];
+      const checkinsData = checkinsLast7DaysResult.data || [];
+      const ratingsData = ratingsLast7DaysResult.data || [];
+      
       for (let i = 6; i >= 0; i--) {
-        const date = subDays(new Date(), i);
+        const date = subDays(today, i);
         const dateStr = format(date, "yyyy-MM-dd");
         
-        const { count: dayCheckins } = await supabase
-          .from("activity_checkins")
-          .select("*", { count: "exact", head: true })
-          .gte("checked_in_at", `${dateStr}T00:00:00`)
-          .lte("checked_in_at", `${dateStr}T23:59:59`);
+        const dayCheckins = checkinsData.filter(c => 
+          c.checked_in_at?.startsWith(dateStr)
+        ).length;
+        
+        const dayRatings = ratingsData.filter(r => 
+          r.created_at?.startsWith(dateStr)
+        ).length;
 
-        const { count: dayRatings } = await supabase
-          .from("activity_ratings")
-          .select("*", { count: "exact", head: true })
-          .gte("created_at", `${dateStr}T00:00:00`)
-          .lte("created_at", `${dateStr}T23:59:59`);
-
-        last7Days.push({
+        last7DaysData.push({
           date: format(date, "dd/MM", { locale: ptBR }),
-          checkins: dayCheckins || 0,
-          ratings: dayRatings || 0,
+          checkins: dayCheckins,
+          ratings: dayRatings,
         });
       }
-      setDailyStats(last7Days);
+      setDailyStats(last7DaysData);
 
-      // ===== MULTI-WEEK COMPARISON (8 weeks) =====
+      // ===== MULTI-WEEK STATS (process from data) =====
       const weeksData: MultiWeekStats[] = [];
-      const thisWeekStart = startOfWeek(new Date(), { weekStartsOn: 0 });
-      const thisWeekEnd = endOfWeek(new Date(), { weekStartsOn: 0 });
+      const visitsWeekData = visitsLast8WeeksResult.data || [];
+      const checkinsWeekData = checkinsLast8WeeksResult.data || [];
+      const guestsWeekData = guestsLast8WeeksResult.data || [];
       
-      for (let i = 0; i < 8; i++) {
-        const weekStart = subDays(thisWeekStart, i * 7);
-        const weekEnd = subDays(thisWeekEnd, i * 7);
+      for (let i = 7; i >= 0; i--) {
+        const weekStart = startOfWeek(subWeeks(today, i), { weekStartsOn: 0 });
+        const weekEnd = endOfWeek(subWeeks(today, i), { weekStartsOn: 0 });
         const weekLabel = i === 0 ? "Atual" : i === 1 ? "Sem. -1" : `Sem. -${i}`;
 
-        const { count: weekVisits } = await supabase
-          .from("site_visits")
-          .select("*", { count: "exact", head: true })
-          .gte("created_at", weekStart.toISOString())
-          .lte("created_at", weekEnd.toISOString());
+        const weekVisits = visitsWeekData.filter(v => {
+          const date = new Date(v.created_at);
+          return date >= weekStart && date <= weekEnd;
+        }).length;
 
-        const { count: weekCheckins } = await supabase
-          .from("activity_checkins")
-          .select("*", { count: "exact", head: true })
-          .gte("checked_in_at", weekStart.toISOString())
-          .lte("checked_in_at", weekEnd.toISOString());
+        const weekCheckins = checkinsWeekData.filter(c => {
+          if (!c.checked_in_at) return false;
+          const date = new Date(c.checked_in_at);
+          return date >= weekStart && date <= weekEnd;
+        }).length;
 
-        const { count: weekGuests } = await supabase
-          .from("guests")
-          .select("*", { count: "exact", head: true })
-          .gte("created_at", weekStart.toISOString())
-          .lte("created_at", weekEnd.toISOString());
+        const weekGuests = guestsWeekData.filter(g => {
+          if (!g.created_at) return false;
+          const date = new Date(g.created_at);
+          return date >= weekStart && date <= weekEnd;
+        }).length;
 
         weeksData.push({
           week: weekLabel,
-          visits: weekVisits || 0,
-          checkins: weekCheckins || 0,
-          guests: weekGuests || 0,
+          visits: weekVisits,
+          checkins: weekCheckins,
+          guests: weekGuests,
         });
       }
       
-      // Reverse to show oldest to newest
-      setMultiWeekStats(weeksData.reverse());
+      setMultiWeekStats(weeksData);
 
-      // Keep the simple comparison for the summary card
+      // Weekly comparison
       const thisWeekVisits = weeksData[weeksData.length - 1]?.visits || 0;
       const lastWeekVisits = weeksData[weeksData.length - 2]?.visits || 0;
       const thisWeekCheckins = weeksData[weeksData.length - 1]?.checkins || 0;
@@ -327,43 +353,30 @@ export const StatisticsManager = () => {
         setWeeklyGrowth(100);
       }
 
-      // ===== AGE GROUP STATS =====
-      const { data: ageGroups } = await supabase
-        .from("age_groups")
-        .select("id, name, color");
-
-      if (ageGroups) {
+      // ===== AGE GROUP STATS (process from data) =====
+      if (ageGroupsResult.data && allCheckinsWithActivityResult.data) {
         const ageGroupCheckins: AgeGroupStats[] = [];
-        for (const group of ageGroups) {
-          const { data: activities } = await supabase
-            .from("activities")
-            .select("id")
-            .eq("age_group_id", group.id);
+        const checkinsWithActivity = allCheckinsWithActivityResult.data;
+        
+        for (const group of ageGroupsResult.data) {
+          const groupCheckins = checkinsWithActivity.filter(c => 
+            (c.activities as any)?.age_group_id === group.id
+          ).length;
 
-          if (activities && activities.length > 0) {
-            const activityIds = activities.map(a => a.id);
-            const { count: groupCheckins } = await supabase
-              .from("activity_checkins")
-              .select("*", { count: "exact", head: true })
-              .in("activity_id", activityIds);
-
+          if (groupCheckins > 0) {
             ageGroupCheckins.push({
               name: group.name,
-              checkins: groupCheckins || 0,
+              checkins: groupCheckins,
               color: group.color,
             });
           }
         }
-        setAgeGroupStats(ageGroupCheckins.filter(a => a.checkins > 0));
+        setAgeGroupStats(ageGroupCheckins);
       }
 
-      // ===== TOP ACTIVITIES =====
-      const { data: checkinsByActivity } = await supabase
-        .from("activity_checkins")
-        .select("activity_id, activities(name)");
-      
-      if (checkinsByActivity) {
-        const activityCount = checkinsByActivity.reduce((acc, c) => {
+      // ===== TOP ACTIVITIES (process from data) =====
+      if (allCheckinsWithActivityResult.data) {
+        const activityCount = allCheckinsWithActivityResult.data.reduce((acc, c) => {
           const name = (c.activities as any)?.name || "Desconhecida";
           acc[name] = (acc[name] || 0) + 1;
           return acc;
@@ -377,12 +390,8 @@ export const StatisticsManager = () => {
       }
 
       // ===== BEST RATED ACTIVITY =====
-      const { data: ratingsByActivity } = await supabase
-        .from("activity_ratings")
-        .select("activity_id, rating, activities(name)");
-
-      if (ratingsByActivity && ratingsByActivity.length > 0) {
-        const activityRatings = ratingsByActivity.reduce((acc, r) => {
+      if (allRatingsWithActivityResult.data && allRatingsWithActivityResult.data.length > 0) {
+        const activityRatings = allRatingsWithActivityResult.data.reduce((acc, r) => {
           const name = (r.activities as any)?.name || "Desconhecida";
           if (!acc[name]) acc[name] = { total: 0, count: 0 };
           acc[name].total += r.rating;
@@ -398,12 +407,8 @@ export const StatisticsManager = () => {
       }
 
       // ===== MOST ACTIVE GUEST =====
-      const { data: checkinsByGuest } = await supabase
-        .from("activity_checkins")
-        .select("guest_id, guests(name)");
-
-      if (checkinsByGuest && checkinsByGuest.length > 0) {
-        const guestCount = checkinsByGuest.reduce((acc, c) => {
+      if (allCheckinsWithGuestResult.data && allCheckinsWithGuestResult.data.length > 0) {
+        const guestCount = allCheckinsWithGuestResult.data.reduce((acc, c) => {
           const name = (c.guests as any)?.name || "Desconhecido";
           acc[name] = (acc[name] || 0) + 1;
           return acc;
@@ -430,7 +435,12 @@ export const StatisticsManager = () => {
   };
 
   if (loading) {
-    return <div className="text-center p-8">Carregando estatísticas...</div>;
+    return (
+      <div className="flex flex-col items-center justify-center p-8 space-y-4">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+        <p className="text-muted-foreground">Carregando estatísticas...</p>
+      </div>
+    );
   }
 
   return (
@@ -494,13 +504,13 @@ export const StatisticsManager = () => {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{peakHour || "-"}</div>
-            <p className="text-xs text-muted-foreground">mais acessos</p>
+            <p className="text-xs text-muted-foreground">maior movimento</p>
           </CardContent>
         </Card>
       </div>
 
       {/* Basic Stats Row */}
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Hóspedes</CardTitle>
@@ -521,7 +531,7 @@ export const StatisticsManager = () => {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{totalCheckins}</div>
-            <p className="text-xs text-muted-foreground">participações</p>
+            <p className="text-xs text-muted-foreground">total de participações</p>
           </CardContent>
         </Card>
 
@@ -533,7 +543,7 @@ export const StatisticsManager = () => {
           <CardContent>
             <div className="text-2xl font-bold">{totalRatings}</div>
             <p className="text-xs text-muted-foreground">
-              Média: {averageRating.toFixed(1)} ⭐
+              média {averageRating.toFixed(1)} ⭐
             </p>
           </CardContent>
         </Card>
@@ -541,11 +551,11 @@ export const StatisticsManager = () => {
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Atividades</CardTitle>
-            <Calendar className="h-4 w-4 text-muted-foreground" />
+            <Activity className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{totalActivities}</div>
-            <p className="text-xs text-muted-foreground">na programação</p>
+            <p className="text-xs text-muted-foreground">programadas</p>
           </CardContent>
         </Card>
 
@@ -555,10 +565,25 @@ export const StatisticsManager = () => {
             {getGrowthIcon(weeklyGrowth)}
           </CardHeader>
           <CardContent>
-            <div className={`text-2xl font-bold ${weeklyGrowth >= 0 ? 'text-green-500' : 'text-red-500'}`}>
-              {weeklyGrowth >= 0 ? '+' : ''}{weeklyGrowth.toFixed(1)}%
+            <div className="text-2xl font-bold">
+              {weeklyGrowth > 0 ? "+" : ""}{weeklyGrowth.toFixed(0)}%
             </div>
-            <p className="text-xs text-muted-foreground">semanal</p>
+            <p className="text-xs text-muted-foreground">vs. semana passada</p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Média/Dia</CardTitle>
+            <Calendar className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">
+              {dailyStats.length > 0 
+                ? (dailyStats.reduce((sum, d) => sum + d.checkins, 0) / dailyStats.length).toFixed(1)
+                : 0}
+            </div>
+            <p className="text-xs text-muted-foreground">check-ins por dia</p>
           </CardContent>
         </Card>
       </div>
@@ -566,24 +591,24 @@ export const StatisticsManager = () => {
       {/* Insight Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         {bestRatedActivity && (
-          <Card className="bg-gradient-to-br from-yellow-500/10 to-orange-500/10 border-yellow-500/20">
+          <Card className="border-yellow-500/30 bg-yellow-500/5">
             <CardHeader className="pb-2">
               <CardTitle className="text-sm font-medium flex items-center gap-2">
                 <Star className="h-4 w-4 text-yellow-500" />
-                Atividade Mais Bem Avaliada
+                Atividade Melhor Avaliada
               </CardTitle>
             </CardHeader>
             <CardContent>
               <div className="text-lg font-bold">{bestRatedActivity.name}</div>
               <p className="text-sm text-muted-foreground">
-                ⭐ {bestRatedActivity.rating.toFixed(1)} de média
+                {bestRatedActivity.rating.toFixed(1)} ⭐ de média
               </p>
             </CardContent>
           </Card>
         )}
 
         {mostActiveGuest && (
-          <Card className="bg-gradient-to-br from-blue-500/10 to-cyan-500/10 border-blue-500/20">
+          <Card className="border-blue-500/30 bg-blue-500/5">
             <CardHeader className="pb-2">
               <CardTitle className="text-sm font-medium flex items-center gap-2">
                 <Trophy className="h-4 w-4 text-blue-500" />
@@ -593,65 +618,49 @@ export const StatisticsManager = () => {
             <CardContent>
               <div className="text-lg font-bold">{mostActiveGuest.name}</div>
               <p className="text-sm text-muted-foreground">
-                {mostActiveGuest.checkins} participações
+                {mostActiveGuest.checkins} check-ins realizados
               </p>
             </CardContent>
           </Card>
         )}
 
-        <Card className="bg-gradient-to-br from-green-500/10 to-emerald-500/10 border-green-500/20">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium flex items-center gap-2">
-              <TrendingUp className="h-4 w-4 text-green-500" />
-              Resumo da Semana
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-1">
-              {weeklyComparison.map((item) => (
-                <div key={item.label} className="flex justify-between text-sm">
-                  <span className="text-muted-foreground">{item.label}:</span>
-                  <span className="font-medium">
-                    {item.thisWeek} 
-                    {item.lastWeek > 0 && (
-                      <span className={item.thisWeek >= item.lastWeek ? 'text-green-500' : 'text-red-500'}>
-                        {' '}({item.thisWeek >= item.lastWeek ? '+' : ''}{item.thisWeek - item.lastWeek})
-                      </span>
-                    )}
-                  </span>
-                </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
+        {topActivities.length > 0 && (
+          <Card className="border-green-500/30 bg-green-500/5">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm font-medium flex items-center gap-2">
+                <TrendingUp className="h-4 w-4 text-green-500" />
+                Atividade Mais Popular
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-lg font-bold">{topActivities[0]?.name}</div>
+              <p className="text-sm text-muted-foreground">
+                {topActivities[0]?.checkins} participações
+              </p>
+            </CardContent>
+          </Card>
+        )}
       </div>
 
-      {/* Charts Row 1 */}
+      {/* Charts */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Hourly Visits Chart */}
         <Card>
           <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Clock className="h-5 w-5" />
-              Visitas por Hora (24h)
-            </CardTitle>
+            <CardTitle className="text-lg">Visitas por Hora (Últimas 24h)</CardTitle>
           </CardHeader>
           <CardContent>
-            <ChartContainer
-              config={{
-                visits: {
-                  label: "Visitas",
-                  color: "hsl(var(--primary))",
-                },
-              }}
-              className="h-[250px]"
-            >
+            <ChartContainer config={{}} className="h-[200px]">
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={hourlyVisits}>
-                  <XAxis dataKey="hour" tick={{ fontSize: 10 }} interval={2} />
-                  <YAxis />
+                  <XAxis 
+                    dataKey="hour" 
+                    tick={{ fontSize: 10 }}
+                    interval={2}
+                  />
+                  <YAxis tick={{ fontSize: 10 }} />
                   <ChartTooltip content={<ChartTooltipContent />} />
-                  <Bar dataKey="visits" fill="hsl(var(--primary))" radius={2} />
+                  <Bar dataKey="visits" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} />
                 </BarChart>
               </ResponsiveContainer>
             </ChartContainer>
@@ -661,119 +670,102 @@ export const StatisticsManager = () => {
         {/* Page Visits Chart */}
         <Card>
           <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Globe className="h-5 w-5" />
-              Páginas Mais Acessadas (Hoje)
-            </CardTitle>
+            <CardTitle className="text-lg">Páginas Mais Visitadas (Hoje)</CardTitle>
           </CardHeader>
           <CardContent>
-            {pageVisits.length > 0 ? (
-              <ChartContainer
-                config={{
-                  visits: {
-                    label: "Visitas",
-                    color: "hsl(var(--primary))",
-                  },
-                }}
-                className="h-[250px]"
-              >
-                <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={pageVisits} layout="vertical">
-                    <XAxis type="number" />
-                    <YAxis
-                      dataKey="page"
-                      type="category"
-                      width={100}
-                      tick={{ fontSize: 11 }}
-                    />
-                    <ChartTooltip content={<ChartTooltipContent />} />
-                    <Bar dataKey="visits" fill="hsl(var(--primary))" radius={4} />
-                  </BarChart>
-                </ResponsiveContainer>
-              </ChartContainer>
-            ) : (
-              <div className="h-[250px] flex items-center justify-center text-muted-foreground">
-                Nenhuma visita registrada hoje
-              </div>
-            )}
+            <ChartContainer config={{}} className="h-[200px]">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={pageVisits} layout="vertical">
+                  <XAxis type="number" tick={{ fontSize: 10 }} />
+                  <YAxis 
+                    dataKey="page" 
+                    type="category" 
+                    tick={{ fontSize: 10 }} 
+                    width={80}
+                  />
+                  <ChartTooltip content={<ChartTooltipContent />} />
+                  <Bar dataKey="visits" fill="hsl(142, 71%, 45%)" radius={[0, 4, 4, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
+            </ChartContainer>
           </CardContent>
         </Card>
-      </div>
 
-      {/* Multi-Week Comparison - Full Width */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Activity className="h-5 w-5" />
-            Comparativo das Últimas 8 Semanas
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <ChartContainer
-            config={{
-              visits: {
-                label: "Visitas",
-                color: "hsl(var(--primary))",
-              },
-              checkins: {
-                label: "Check-ins",
-                color: "hsl(142, 71%, 45%)",
-              },
-              guests: {
-                label: "Cadastros",
-                color: "hsl(280, 65%, 60%)",
-              },
-            }}
-            className="h-[300px]"
-          >
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={multiWeekStats}>
-                <XAxis dataKey="week" tick={{ fontSize: 11 }} />
-                <YAxis />
-                <ChartTooltip content={<ChartTooltipContent />} />
-                <Bar dataKey="visits" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} name="Visitas" />
-                <Bar dataKey="checkins" fill="hsl(142, 71%, 45%)" radius={[4, 4, 0, 0]} name="Check-ins" />
-                <Bar dataKey="guests" fill="hsl(280, 65%, 60%)" radius={[4, 4, 0, 0]} name="Cadastros" />
-              </BarChart>
-            </ResponsiveContainer>
-          </ChartContainer>
-        </CardContent>
-      </Card>
-
-      {/* Charts Row 2 */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-
-        {/* Age Group Participation */}
+        {/* Multi-Week Comparison Chart */}
         <Card>
           <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Users className="h-5 w-5" />
-              Participação por Faixa Etária
-            </CardTitle>
+            <CardTitle className="text-lg">Comparativo Semanal (8 semanas)</CardTitle>
           </CardHeader>
           <CardContent>
-            {ageGroupStats.length > 0 ? (
-              <ChartContainer
-                config={{
-                  checkins: {
-                    label: "Check-ins",
-                  },
-                }}
-                className="h-[250px]"
-              >
+            <ChartContainer config={{}} className="h-[200px]">
+              <ResponsiveContainer width="100%" height="100%">
+                <LineChart data={multiWeekStats}>
+                  <XAxis dataKey="week" tick={{ fontSize: 10 }} />
+                  <YAxis tick={{ fontSize: 10 }} />
+                  <ChartTooltip content={<ChartTooltipContent />} />
+                  <Line 
+                    type="monotone" 
+                    dataKey="visits" 
+                    stroke="hsl(var(--primary))" 
+                    strokeWidth={2}
+                    dot={{ r: 4 }}
+                    name="Visitas"
+                  />
+                  <Line 
+                    type="monotone" 
+                    dataKey="checkins" 
+                    stroke="hsl(142, 71%, 45%)" 
+                    strokeWidth={2}
+                    dot={{ r: 4 }}
+                    name="Check-ins"
+                  />
+                  <Line 
+                    type="monotone" 
+                    dataKey="guests" 
+                    stroke="hsl(280, 65%, 60%)" 
+                    strokeWidth={2}
+                    dot={{ r: 4 }}
+                    name="Cadastros"
+                  />
+                </LineChart>
+              </ResponsiveContainer>
+            </ChartContainer>
+            <div className="flex justify-center gap-4 mt-2 text-xs">
+              <span className="flex items-center gap-1">
+                <span className="w-3 h-3 rounded-full bg-primary"></span>
+                Visitas
+              </span>
+              <span className="flex items-center gap-1">
+                <span className="w-3 h-3 rounded-full" style={{ backgroundColor: 'hsl(142, 71%, 45%)' }}></span>
+                Check-ins
+              </span>
+              <span className="flex items-center gap-1">
+                <span className="w-3 h-3 rounded-full" style={{ backgroundColor: 'hsl(280, 65%, 60%)' }}></span>
+                Cadastros
+              </span>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Age Group Stats */}
+        {ageGroupStats.length > 0 && (
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-lg">Participação por Faixa Etária</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <ChartContainer config={{}} className="h-[200px]">
                 <ResponsiveContainer width="100%" height="100%">
                   <PieChart>
                     <Pie
                       data={ageGroupStats}
                       cx="50%"
                       cy="50%"
-                      innerRadius={60}
-                      outerRadius={90}
-                      paddingAngle={5}
+                      labelLine={false}
+                      outerRadius={80}
                       dataKey="checkins"
                       nameKey="name"
-                      label={({ name, percent }) => `${name} (${(percent * 100).toFixed(0)}%)`}
-                      labelLine={false}
+                      label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
                     >
                       {ageGroupStats.map((entry, index) => (
                         <Cell key={`cell-${index}`} fill={entry.color || COLORS[index % COLORS.length]} />
@@ -783,105 +775,84 @@ export const StatisticsManager = () => {
                   </PieChart>
                 </ResponsiveContainer>
               </ChartContainer>
-            ) : (
-              <div className="h-[250px] flex items-center justify-center text-muted-foreground">
-                Nenhum check-in por faixa etária
-              </div>
-            )}
-          </CardContent>
-        </Card>
-      </div>
+            </CardContent>
+          </Card>
+        )}
 
-      {/* Charts Row 3 */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Daily Activity Chart */}
         <Card>
           <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <TrendingUp className="h-5 w-5" />
-              Atividade dos Últimos 7 Dias
-            </CardTitle>
+            <CardTitle className="text-lg">Atividade Diária (Últimos 7 dias)</CardTitle>
           </CardHeader>
           <CardContent>
-            <ChartContainer
-              config={{
-                checkins: {
-                  label: "Check-ins",
-                  color: "hsl(var(--primary))",
-                },
-                ratings: {
-                  label: "Avaliações",
-                  color: "hsl(142, 71%, 45%)",
-                },
-              }}
-              className="h-[250px]"
-            >
+            <ChartContainer config={{}} className="h-[200px]">
               <ResponsiveContainer width="100%" height="100%">
-                <LineChart data={dailyStats}>
-                  <XAxis dataKey="date" tick={{ fontSize: 12 }} />
-                  <YAxis />
+                <BarChart data={dailyStats}>
+                  <XAxis dataKey="date" tick={{ fontSize: 10 }} />
+                  <YAxis tick={{ fontSize: 10 }} />
                   <ChartTooltip content={<ChartTooltipContent />} />
-                  <Line
-                    type="monotone"
-                    dataKey="checkins"
-                    stroke="hsl(var(--primary))"
-                    strokeWidth={2}
-                    dot={{ fill: "hsl(var(--primary))" }}
-                  />
-                  <Line
-                    type="monotone"
-                    dataKey="ratings"
-                    stroke="hsl(142, 71%, 45%)"
-                    strokeWidth={2}
-                    dot={{ fill: "hsl(142, 71%, 45%)" }}
-                  />
-                </LineChart>
+                  <Bar dataKey="checkins" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} name="Check-ins" />
+                  <Bar dataKey="ratings" fill="hsl(45, 93%, 47%)" radius={[4, 4, 0, 0]} name="Avaliações" />
+                </BarChart>
               </ResponsiveContainer>
             </ChartContainer>
           </CardContent>
         </Card>
 
-        {/* Top Activities Chart */}
+        {/* Top Activities */}
         <Card>
           <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Trophy className="h-5 w-5" />
-              Top 5 Atividades Mais Populares
-            </CardTitle>
+            <CardTitle className="text-lg">Top 5 Atividades</CardTitle>
           </CardHeader>
           <CardContent>
-            {topActivities.length > 0 ? (
-              <ChartContainer
-                config={{
-                  checkins: {
-                    label: "Check-ins",
-                    color: "hsl(var(--primary))",
-                  },
-                }}
-                className="h-[250px]"
-              >
-                <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={topActivities} layout="vertical">
-                    <XAxis type="number" />
-                    <YAxis
-                      dataKey="name"
-                      type="category"
-                      width={120}
-                      tick={{ fontSize: 11 }}
-                    />
-                    <ChartTooltip content={<ChartTooltipContent />} />
-                    <Bar dataKey="checkins" fill="hsl(var(--primary))" radius={4} />
-                  </BarChart>
-                </ResponsiveContainer>
-              </ChartContainer>
-            ) : (
-              <div className="h-[250px] flex items-center justify-center text-muted-foreground">
-                Nenhum check-in registrado ainda
-              </div>
-            )}
+            <ChartContainer config={{}} className="h-[200px]">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={topActivities} layout="vertical">
+                  <XAxis type="number" tick={{ fontSize: 10 }} />
+                  <YAxis 
+                    dataKey="name" 
+                    type="category" 
+                    tick={{ fontSize: 10 }} 
+                    width={100}
+                  />
+                  <ChartTooltip content={<ChartTooltipContent />} />
+                  <Bar dataKey="checkins" fill="hsl(280, 65%, 60%)" radius={[0, 4, 4, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
+            </ChartContainer>
           </CardContent>
         </Card>
       </div>
+
+      {/* Weekly Comparison Table */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-lg">Resumo Semanal</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-3 gap-4">
+            {weeklyComparison.map((item) => {
+              const diff = item.thisWeek - item.lastWeek;
+              const percentChange = item.lastWeek > 0 
+                ? ((diff / item.lastWeek) * 100).toFixed(0) 
+                : item.thisWeek > 0 ? "+100" : "0";
+              
+              return (
+                <div key={item.label} className="text-center p-4 bg-muted/50 rounded-lg">
+                  <div className="text-sm text-muted-foreground">{item.label}</div>
+                  <div className="text-2xl font-bold mt-1">{item.thisWeek}</div>
+                  <div className={`text-xs mt-1 flex items-center justify-center gap-1 ${
+                    diff > 0 ? 'text-green-500' : diff < 0 ? 'text-red-500' : 'text-muted-foreground'
+                  }`}>
+                    {diff > 0 ? <ArrowUp className="h-3 w-3" /> : diff < 0 ? <ArrowDown className="h-3 w-3" /> : null}
+                    {diff > 0 ? "+" : ""}{percentChange}% vs sem. passada
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </CardContent>
+      </Card>
     </div>
   );
 };
