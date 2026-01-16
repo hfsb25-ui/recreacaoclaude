@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import { useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { TotemSlideSchedule } from "@/components/totem/TotemSlideSchedule";
@@ -7,6 +7,7 @@ import { TotemSlideAnnouncements } from "@/components/totem/TotemSlideAnnounceme
 import { TotemSlideWeather } from "@/components/totem/TotemSlideWeather";
 import { TotemSlideQRCode } from "@/components/totem/TotemSlideQRCode";
 import { TotemHeader } from "@/components/totem/TotemHeader";
+import { cn } from "@/lib/utils";
 
 interface SlideConfig {
   type: string;
@@ -36,8 +37,11 @@ const Totem = () => {
   const [searchParams] = useSearchParams();
   const [config, setConfig] = useState<TotemConfig | null>(null);
   const [currentSlideIndex, setCurrentSlideIndex] = useState(0);
+  const [previousSlideIndex, setPreviousSlideIndex] = useState<number | null>(null);
+  const [isTransitioning, setIsTransitioning] = useState(false);
   const [loading, setLoading] = useState(true);
   const [authorized, setAuthorized] = useState(false);
+  const transitionTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const [activeSlides, setActiveSlides] = useState<SlideConfig[]>([]);
 
   const fetchConfig = useCallback(async () => {
@@ -104,7 +108,7 @@ const Totem = () => {
     return () => clearInterval(interval);
   }, [config?.refresh_interval, fetchConfig]);
 
-  // Slide rotation
+  // Slide rotation with transition
   useEffect(() => {
     if (activeSlides.length === 0) return;
 
@@ -112,10 +116,24 @@ const Totem = () => {
     const duration = (currentSlide?.duration || 10) * 1000;
 
     const timer = setTimeout(() => {
-      setCurrentSlideIndex((prev) => (prev + 1) % activeSlides.length);
+      // Start transition
+      setIsTransitioning(true);
+      setPreviousSlideIndex(currentSlideIndex);
+      
+      // After fade out, change slide
+      transitionTimeoutRef.current = setTimeout(() => {
+        setCurrentSlideIndex((prev) => (prev + 1) % activeSlides.length);
+        setIsTransitioning(false);
+        setPreviousSlideIndex(null);
+      }, 500); // Match CSS transition duration
     }, duration);
 
-    return () => clearTimeout(timer);
+    return () => {
+      clearTimeout(timer);
+      if (transitionTimeoutRef.current) {
+        clearTimeout(transitionTimeoutRef.current);
+      }
+    };
   }, [currentSlideIndex, activeSlides]);
 
   // Fullscreen on click
@@ -196,12 +214,17 @@ const Totem = () => {
       <TotemHeader qrCodeUrl={config.qr_code_url} />
 
       {/* Main Content Area */}
-      <main className="flex-1 flex items-center justify-center p-8 overflow-hidden">
-        <div className="w-full h-full max-w-[1800px] animate-fade-in">
+      <main className="flex-1 flex items-center justify-center p-8 overflow-hidden relative">
+        <div 
+          className={cn(
+            "w-full h-full max-w-[1800px] transition-all duration-500 ease-in-out",
+            isTransitioning ? "opacity-0 scale-95 blur-sm" : "opacity-100 scale-100 blur-0"
+          )}
+        >
           {SlideComponent && (
             <SlideComponent 
               key={`${currentSlide.type}-${currentSlideIndex}`} 
-              isActive={true} 
+              isActive={!isTransitioning} 
             />
           )}
         </div>
