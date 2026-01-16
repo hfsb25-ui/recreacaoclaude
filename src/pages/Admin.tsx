@@ -465,6 +465,7 @@ const Admin = () => {
                   <TabsTrigger value="statistics" className="whitespace-nowrap text-xs sm:text-sm px-2 sm:px-3">Estatísticas</TabsTrigger>
                   <TabsTrigger value="announcements" className="whitespace-nowrap text-xs sm:text-sm px-2 sm:px-3">Anúncios</TabsTrigger>
                   <TabsTrigger value="menu" className="whitespace-nowrap text-xs sm:text-sm px-2 sm:px-3">Menu</TabsTrigger>
+                  <TabsTrigger value="totem" className="whitespace-nowrap text-xs sm:text-sm px-2 sm:px-3">Totem</TabsTrigger>
                   <TabsTrigger value="site-name" className="whitespace-nowrap text-xs sm:text-sm px-2 sm:px-3">Nome</TabsTrigger>
                   <TabsTrigger value="users" className="whitespace-nowrap text-xs sm:text-sm px-2 sm:px-3">Usuários</TabsTrigger>
                   <TabsTrigger value="settings" className="whitespace-nowrap text-xs sm:text-sm px-2 sm:px-3 flex items-center gap-1">
@@ -508,6 +509,10 @@ const Admin = () => {
 
               <TabsContent value="menu" className="space-y-4">
                 <MenuItemsManager />
+              </TabsContent>
+
+              <TabsContent value="totem" className="space-y-4">
+                <TotemManager />
               </TabsContent>
 
               <TabsContent value="site-name" className="space-y-4">
