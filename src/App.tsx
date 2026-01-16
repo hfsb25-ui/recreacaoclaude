@@ -16,6 +16,7 @@ import GuestProfile from "./pages/GuestProfile";
 import Ranking from "./pages/Ranking";
 import HallOfFame from "./pages/HallOfFame";
 import Install from "./pages/Install";
+import Totem from "./pages/Totem";
 import NotFound from "./pages/NotFound";
 
 // Component that uses hooks that require Router context
@@ -34,6 +35,7 @@ const AppRoutes = () => {
       <Route path="/ranking" element={<Ranking />} />
       <Route path="/hall-of-fame" element={<HallOfFame />} />
       <Route path="/instalar" element={<Install />} />
+      <Route path="/totem" element={<Totem />} />
       {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
       <Route path="*" element={<NotFound />} />
     </Routes>

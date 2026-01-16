@@ -1,0 +1,232 @@
+import { useEffect, useState, useCallback } from "react";
+import { useSearchParams } from "react-router-dom";
+import { supabase } from "@/integrations/supabase/client";
+import { TotemSlideSchedule } from "@/components/totem/TotemSlideSchedule";
+import { TotemSlideRanking } from "@/components/totem/TotemSlideRanking";
+import { TotemSlideAnnouncements } from "@/components/totem/TotemSlideAnnouncements";
+import { TotemSlideWeather } from "@/components/totem/TotemSlideWeather";
+import { TotemSlideQRCode } from "@/components/totem/TotemSlideQRCode";
+import { TotemHeader } from "@/components/totem/TotemHeader";
+
+interface SlideConfig {
+  type: string;
+  order: number;
+  duration: number;
+  active: boolean;
+}
+
+interface TotemConfig {
+  is_active: boolean;
+  slides_config: SlideConfig[];
+  theme: string;
+  qr_code_url: string | null;
+  refresh_interval: number;
+  access_key: string | null;
+}
+
+const slideComponents: Record<string, React.ComponentType<{ isActive: boolean }>> = {
+  schedule: TotemSlideSchedule,
+  ranking: TotemSlideRanking,
+  announcements: TotemSlideAnnouncements,
+  weather: TotemSlideWeather,
+  qrcode: TotemSlideQRCode,
+};
+
+const Totem = () => {
+  const [searchParams] = useSearchParams();
+  const [config, setConfig] = useState<TotemConfig | null>(null);
+  const [currentSlideIndex, setCurrentSlideIndex] = useState(0);
+  const [loading, setLoading] = useState(true);
+  const [authorized, setAuthorized] = useState(false);
+  const [activeSlides, setActiveSlides] = useState<SlideConfig[]>([]);
+
+  const fetchConfig = useCallback(async () => {
+    try {
+      const { data } = await supabase
+        .from("totem_config")
+        .select("*")
+        .single();
+
+      if (data) {
+        const slidesConfig = data.slides_config as unknown as SlideConfig[];
+        setConfig({
+          is_active: data.is_active,
+          slides_config: slidesConfig,
+          theme: data.theme,
+          qr_code_url: data.qr_code_url,
+          refresh_interval: data.refresh_interval,
+          access_key: data.access_key,
+        });
+        
+        const active = slidesConfig
+          .filter((s) => s.active)
+          .sort((a, b) => a.order - b.order);
+        setActiveSlides(active);
+      }
+    } catch (error) {
+      console.error("Error fetching totem config:", error);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  // Check authorization
+  useEffect(() => {
+    const checkAuth = async () => {
+      const { data } = await supabase
+        .from("totem_config")
+        .select("access_key")
+        .single();
+
+      const key = searchParams.get("key");
+      
+      // If no access key is set, allow access
+      if (!data?.access_key) {
+        setAuthorized(true);
+      } else if (key === data.access_key) {
+        setAuthorized(true);
+      }
+      
+      fetchConfig();
+    };
+
+    checkAuth();
+  }, [searchParams, fetchConfig]);
+
+  // Auto-refresh data
+  useEffect(() => {
+    if (!config?.refresh_interval) return;
+
+    const interval = setInterval(() => {
+      fetchConfig();
+    }, config.refresh_interval * 60 * 1000);
+
+    return () => clearInterval(interval);
+  }, [config?.refresh_interval, fetchConfig]);
+
+  // Slide rotation
+  useEffect(() => {
+    if (activeSlides.length === 0) return;
+
+    const currentSlide = activeSlides[currentSlideIndex];
+    const duration = (currentSlide?.duration || 10) * 1000;
+
+    const timer = setTimeout(() => {
+      setCurrentSlideIndex((prev) => (prev + 1) % activeSlides.length);
+    }, duration);
+
+    return () => clearTimeout(timer);
+  }, [currentSlideIndex, activeSlides]);
+
+  // Fullscreen on click
+  const handleFullscreen = () => {
+    if (document.fullscreenElement) {
+      document.exitFullscreen();
+    } else {
+      document.documentElement.requestFullscreen();
+    }
+  };
+
+  // Hide cursor after inactivity
+  useEffect(() => {
+    let timeout: NodeJS.Timeout;
+    const hideCursor = () => {
+      document.body.style.cursor = "none";
+    };
+    const showCursor = () => {
+      document.body.style.cursor = "default";
+      clearTimeout(timeout);
+      timeout = setTimeout(hideCursor, 3000);
+    };
+
+    document.addEventListener("mousemove", showCursor);
+    timeout = setTimeout(hideCursor, 3000);
+
+    return () => {
+      document.removeEventListener("mousemove", showCursor);
+      clearTimeout(timeout);
+      document.body.style.cursor = "default";
+    };
+  }, []);
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <div className="animate-pulse text-2xl text-foreground">Carregando Totem...</div>
+      </div>
+    );
+  }
+
+  if (!authorized) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <div className="text-center">
+          <h1 className="text-4xl font-bold text-foreground mb-4">Acesso Restrito</h1>
+          <p className="text-muted-foreground">
+            Adicione ?key=SUACHAVE na URL para acessar
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!config?.is_active) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <div className="text-center">
+          <h1 className="text-4xl font-bold text-foreground mb-4">Totem Desativado</h1>
+          <p className="text-muted-foreground">
+            O totem está temporariamente desativado
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  const currentSlide = activeSlides[currentSlideIndex];
+  const SlideComponent = currentSlide ? slideComponents[currentSlide.type] : null;
+
+  return (
+    <div
+      onClick={handleFullscreen}
+      className={`min-h-screen flex flex-col ${
+        config.theme === "dark" ? "dark bg-background" : "bg-white"
+      }`}
+    >
+      <TotemHeader qrCodeUrl={config.qr_code_url} />
+
+      {/* Main Content Area */}
+      <main className="flex-1 flex items-center justify-center p-8 overflow-hidden">
+        <div className="w-full h-full max-w-[1800px] animate-fade-in">
+          {SlideComponent && (
+            <SlideComponent 
+              key={`${currentSlide.type}-${currentSlideIndex}`} 
+              isActive={true} 
+            />
+          )}
+        </div>
+      </main>
+
+      {/* Slide Indicators */}
+      <footer className="pb-6 flex justify-center gap-3">
+        {activeSlides.map((slide, index) => (
+          <button
+            key={slide.type}
+            onClick={(e) => {
+              e.stopPropagation();
+              setCurrentSlideIndex(index);
+            }}
+            className={`w-3 h-3 rounded-full transition-all duration-300 ${
+              index === currentSlideIndex
+                ? "bg-primary w-8"
+                : "bg-muted-foreground/30 hover:bg-muted-foreground/50"
+            }`}
+            aria-label={`Ir para slide ${slide.type}`}
+          />
+        ))}
+      </footer>
+    </div>
+  );
+};
+
+export default Totem;

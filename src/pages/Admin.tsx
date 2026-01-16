@@ -23,6 +23,7 @@ import { WeatherLocationManager } from "@/components/admin/WeatherLocationManage
 import GamificationManager from "@/components/admin/GamificationManager";
 import { StatisticsManager } from "@/components/admin/StatisticsManager";
 import { PwaIconManager } from "@/components/admin/PwaIconManager";
+import TotemManager from "@/components/admin/TotemManager";
 import { useUserRole } from "@/hooks/useUserRole";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Card } from "@/components/ui/card";
