@@ -22,6 +22,7 @@ import {
   QrCode,
   GripVertical,
   ExternalLink,
+  Sparkles,
 } from "lucide-react";
 
 interface SlideConfig {
@@ -47,6 +48,7 @@ const slideTypes = [
   { type: "announcements", label: "Anúncios", icon: Megaphone },
   { type: "weather", label: "Clima", icon: Cloud },
   { type: "qrcode", label: "QR Code", icon: QrCode },
+  { type: "nextactivity", label: "Próxima Atividade", icon: Sparkles },
 ];
 
 const TotemManager = () => {
