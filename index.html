@@ -5,6 +5,25 @@
     <link rel="icon" type="image/png" href="/favicon.png" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <meta name="theme-color" content="#00BCD4" />
+
+    <!-- SPA deep-link fallback (for TVs/browsers that don't support route rewrites) -->
+    <script>
+      (function () {
+        try {
+          var url = new URL(window.location.href);
+          var redirect = url.searchParams.get("redirect");
+          if (!redirect) return;
+
+          url.searchParams.delete("redirect");
+          var rest = url.searchParams.toString();
+          var target = redirect + (rest ? (redirect.indexOf("?") >= 0 ? "&" : "?") + rest : "");
+          window.history.replaceState(null, "", target);
+        } catch (e) {
+          // noop
+        }
+      })();
+    </script>
+
     <title>Programação HFSB</title>
     <meta name="description" content="App de programação de atividades HFSB" />
     <meta name="author" content="Lovable" />
