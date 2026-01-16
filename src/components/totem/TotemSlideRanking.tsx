@@ -98,33 +98,33 @@ export const TotemSlideRanking = ({ isActive }: TotemSlideRankingProps) => {
   }
 
   return (
-    <div className="h-full flex flex-col">
+    <div className="h-full flex flex-col overflow-hidden">
       {/* Header */}
-      <div className="text-center mb-8">
-        <div className="inline-flex items-center gap-3 mb-4">
-          <Trophy className="w-12 h-12 text-primary" />
-          <h2 className="text-5xl font-bold text-foreground">
+      <div className="text-center mb-4 md:mb-6 flex-shrink-0">
+        <div className="inline-flex items-center gap-2 md:gap-3 mb-2 md:mb-3">
+          <Trophy className="w-8 h-8 md:w-10 md:h-10 lg:w-12 lg:h-12 text-primary" />
+          <h2 className="text-2xl md:text-3xl lg:text-4xl xl:text-5xl font-bold text-foreground">
             Ranking Semanal
           </h2>
-          <Trophy className="w-12 h-12 text-primary" />
+          <Trophy className="w-8 h-8 md:w-10 md:h-10 lg:w-12 lg:h-12 text-primary" />
         </div>
-        <p className="text-2xl text-muted-foreground">
+        <p className="text-lg md:text-xl lg:text-2xl text-muted-foreground">
           Top 10 hóspedes mais participativos
         </p>
       </div>
 
       {/* Podium for Top 3 */}
       {guests.length >= 3 && (
-        <div className="flex justify-center items-end gap-4 mb-8">
+        <div className="flex justify-center items-end gap-2 md:gap-3 lg:gap-4 mb-4 md:mb-6 flex-shrink-0">
           {/* 2nd Place */}
           <div className="flex flex-col items-center">
-            <div className="text-6xl mb-2">🥈</div>
-            <div className="bg-gradient-to-br from-gray-300 to-gray-400 rounded-t-2xl p-6 w-48 h-32 flex flex-col items-center justify-center">
-              <p className="font-bold text-gray-800 text-xl truncate max-w-full">
+            <div className="text-4xl md:text-5xl lg:text-6xl mb-1 md:mb-2">🥈</div>
+            <div className="bg-gradient-to-br from-gray-300 to-gray-400 rounded-t-xl md:rounded-t-2xl p-3 md:p-4 lg:p-5 w-32 md:w-40 lg:w-48 h-24 md:h-28 lg:h-32 flex flex-col items-center justify-center">
+              <p className="font-bold text-gray-800 text-base md:text-lg lg:text-xl truncate max-w-full">
                 {guests[1].name}
               </p>
-              <p className="text-gray-600 text-sm">Quarto {guests[1].room_number}</p>
-              <p className="text-2xl font-bold text-gray-800 mt-2">
+              <p className="text-gray-600 text-xs md:text-sm">Quarto {guests[1].room_number}</p>
+              <p className="text-lg md:text-xl lg:text-2xl font-bold text-gray-800 mt-1 md:mt-2">
                 {guests[1].total_points} pts
               </p>
             </div>
@@ -132,13 +132,13 @@ export const TotemSlideRanking = ({ isActive }: TotemSlideRankingProps) => {
 
           {/* 1st Place */}
           <div className="flex flex-col items-center">
-            <div className="text-8xl mb-2 animate-bounce">🥇</div>
-            <div className="bg-gradient-to-br from-yellow-400 to-amber-500 rounded-t-2xl p-6 w-56 h-40 flex flex-col items-center justify-center shadow-lg shadow-yellow-400/50">
-              <p className="font-bold text-amber-900 text-2xl truncate max-w-full">
+            <div className="text-5xl md:text-6xl lg:text-7xl mb-1 md:mb-2 animate-bounce">🥇</div>
+            <div className="bg-gradient-to-br from-yellow-400 to-amber-500 rounded-t-xl md:rounded-t-2xl p-3 md:p-4 lg:p-5 w-36 md:w-48 lg:w-56 h-28 md:h-32 lg:h-36 flex flex-col items-center justify-center shadow-lg shadow-yellow-400/50">
+              <p className="font-bold text-amber-900 text-lg md:text-xl lg:text-2xl truncate max-w-full">
                 {guests[0].name}
               </p>
-              <p className="text-amber-700 text-sm">Quarto {guests[0].room_number}</p>
-              <p className="text-3xl font-bold text-amber-900 mt-2">
+              <p className="text-amber-700 text-xs md:text-sm">Quarto {guests[0].room_number}</p>
+              <p className="text-xl md:text-2xl lg:text-3xl font-bold text-amber-900 mt-1 md:mt-2">
                 {guests[0].total_points} pts
               </p>
             </div>
@@ -146,13 +146,13 @@ export const TotemSlideRanking = ({ isActive }: TotemSlideRankingProps) => {
 
           {/* 3rd Place */}
           <div className="flex flex-col items-center">
-            <div className="text-5xl mb-2">🥉</div>
-            <div className="bg-gradient-to-br from-amber-600 to-amber-700 rounded-t-2xl p-6 w-44 h-28 flex flex-col items-center justify-center">
-              <p className="font-bold text-amber-100 text-lg truncate max-w-full">
+            <div className="text-3xl md:text-4xl lg:text-5xl mb-1 md:mb-2">🥉</div>
+            <div className="bg-gradient-to-br from-amber-600 to-amber-700 rounded-t-xl md:rounded-t-2xl p-3 md:p-4 lg:p-5 w-28 md:w-36 lg:w-44 h-20 md:h-24 lg:h-28 flex flex-col items-center justify-center">
+              <p className="font-bold text-amber-100 text-sm md:text-base lg:text-lg truncate max-w-full">
                 {guests[2].name}
               </p>
-              <p className="text-amber-200 text-sm">Quarto {guests[2].room_number}</p>
-              <p className="text-xl font-bold text-amber-100 mt-2">
+              <p className="text-amber-200 text-xs md:text-sm">Quarto {guests[2].room_number}</p>
+              <p className="text-base md:text-lg lg:text-xl font-bold text-amber-100 mt-1">
                 {guests[2].total_points} pts
               </p>
             </div>
@@ -161,8 +161,8 @@ export const TotemSlideRanking = ({ isActive }: TotemSlideRankingProps) => {
       )}
 
       {/* Rest of ranking */}
-      <div className="flex-1 overflow-hidden">
-        <div className="grid grid-cols-2 gap-3 max-h-full overflow-y-auto pr-2">
+      <div className="flex-1 min-h-0 overflow-hidden">
+        <div className="grid grid-cols-2 gap-2 md:gap-3 h-full overflow-y-auto pr-1 md:pr-2">
           {guests.slice(3).map((guest, index) => {
             const level = getLevelInfo(guest.current_level);
             const position = index + 4;
@@ -170,22 +170,22 @@ export const TotemSlideRanking = ({ isActive }: TotemSlideRankingProps) => {
             return (
               <div
                 key={guest.id}
-                className="flex items-center gap-4 p-4 bg-card rounded-xl border border-border"
+                className="flex items-center gap-2 md:gap-3 lg:gap-4 p-2 md:p-3 lg:p-4 bg-card rounded-lg md:rounded-xl border border-border"
               >
-                <div className="flex-shrink-0 w-12 h-12 rounded-full bg-muted flex items-center justify-center text-2xl font-bold text-muted-foreground">
+                <div className="flex-shrink-0 w-8 h-8 md:w-10 md:h-10 lg:w-12 lg:h-12 rounded-full bg-muted flex items-center justify-center text-lg md:text-xl lg:text-2xl font-bold text-muted-foreground">
                   {position}º
                 </div>
                 <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2">
-                    {level && <span className="text-xl">{level.badge_emoji}</span>}
-                    <p className="font-bold text-foreground truncate">{guest.name}</p>
+                  <div className="flex items-center gap-1 md:gap-2">
+                    {level && <span className="text-base md:text-lg lg:text-xl">{level.badge_emoji}</span>}
+                    <p className="font-bold text-foreground truncate text-sm md:text-base">{guest.name}</p>
                   </div>
-                  <p className="text-sm text-muted-foreground">
+                  <p className="text-xs md:text-sm text-muted-foreground">
                     Quarto {guest.room_number}
                   </p>
                 </div>
                 <div className="text-right">
-                  <p className="text-2xl font-bold text-primary">
+                  <p className="text-lg md:text-xl lg:text-2xl font-bold text-primary">
                     {guest.total_points}
                   </p>
                   <p className="text-xs text-muted-foreground">pontos</p>
@@ -197,11 +197,11 @@ export const TotemSlideRanking = ({ isActive }: TotemSlideRankingProps) => {
       </div>
 
       {/* Call to action */}
-      <div className="mt-6 text-center">
-        <p className="text-xl text-muted-foreground">
-          <Star className="inline w-5 h-5 text-primary mr-2" />
+      <div className="mt-3 md:mt-4 text-center flex-shrink-0">
+        <p className="text-base md:text-lg lg:text-xl text-muted-foreground">
+          <Star className="inline w-4 h-4 md:w-5 md:h-5 text-primary mr-1 md:mr-2" />
           Participe das atividades e ganhe pontos!
-          <Star className="inline w-5 h-5 text-primary ml-2" />
+          <Star className="inline w-4 h-4 md:w-5 md:h-5 text-primary ml-1 md:ml-2" />
         </p>
       </div>
     </div>

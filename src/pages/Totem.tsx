@@ -209,17 +209,18 @@ const Totem = () => {
   return (
     <div
       onClick={handleFullscreen}
-      className={`min-h-screen flex flex-col ${
+      className={`h-screen w-screen overflow-hidden flex flex-col ${
         config.theme === "dark" ? "dark bg-background" : "bg-white"
       }`}
+      style={{ maxHeight: '100vh', maxWidth: '100vw' }}
     >
       <TotemHeader qrCodeUrl={config.qr_code_url} />
 
-      {/* Main Content Area */}
-      <main className="flex-1 flex items-center justify-center p-8 overflow-hidden relative">
+      {/* Main Content Area - flex-1 with min-h-0 to prevent overflow */}
+      <main className="flex-1 min-h-0 flex items-center justify-center p-4 md:p-6 lg:p-8 overflow-hidden relative">
         <div 
           className={cn(
-            "w-full h-full max-w-[1800px] transition-all duration-500 ease-in-out",
+            "w-full h-full max-w-full transition-all duration-500 ease-in-out",
             isTransitioning ? "opacity-0 scale-95 blur-sm" : "opacity-100 scale-100 blur-0"
           )}
         >
@@ -233,7 +234,7 @@ const Totem = () => {
       </main>
 
       {/* Slide Indicators */}
-      <footer className="pb-6 flex justify-center gap-3">
+      <footer className="py-3 flex-shrink-0 flex justify-center gap-2">
         {activeSlides.map((slide, index) => (
           <button
             key={slide.type}
@@ -241,9 +242,9 @@ const Totem = () => {
               e.stopPropagation();
               setCurrentSlideIndex(index);
             }}
-            className={`w-3 h-3 rounded-full transition-all duration-300 ${
+            className={`w-2 h-2 md:w-3 md:h-3 rounded-full transition-all duration-300 ${
               index === currentSlideIndex
-                ? "bg-primary w-8"
+                ? "bg-primary w-6 md:w-8"
                 : "bg-muted-foreground/30 hover:bg-muted-foreground/50"
             }`}
             aria-label={`Ir para slide ${slide.type}`}
