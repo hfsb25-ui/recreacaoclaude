@@ -632,6 +632,42 @@ export type Database = {
           },
         ]
       }
+      totem_config: {
+        Row: {
+          access_key: string | null
+          created_at: string
+          id: string
+          is_active: boolean
+          qr_code_url: string | null
+          refresh_interval: number
+          slides_config: Json
+          theme: string
+          updated_at: string
+        }
+        Insert: {
+          access_key?: string | null
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          qr_code_url?: string | null
+          refresh_interval?: number
+          slides_config?: Json
+          theme?: string
+          updated_at?: string
+        }
+        Update: {
+          access_key?: string | null
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          qr_code_url?: string | null
+          refresh_interval?: number
+          slides_config?: Json
+          theme?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       user_roles: {
         Row: {
           created_at: string
