@@ -6,6 +6,7 @@ import { TotemSlideRanking } from "@/components/totem/TotemSlideRanking";
 import { TotemSlideAnnouncements } from "@/components/totem/TotemSlideAnnouncements";
 import { TotemSlideWeather } from "@/components/totem/TotemSlideWeather";
 import { TotemSlideQRCode } from "@/components/totem/TotemSlideQRCode";
+import { TotemSlideNextActivity } from "@/components/totem/TotemSlideNextActivity";
 import { TotemHeader } from "@/components/totem/TotemHeader";
 import { cn } from "@/lib/utils";
 
@@ -31,6 +32,7 @@ const slideComponents: Record<string, React.ComponentType<{ isActive: boolean }>
   announcements: TotemSlideAnnouncements,
   weather: TotemSlideWeather,
   qrcode: TotemSlideQRCode,
+  nextactivity: TotemSlideNextActivity,
 };
 
 const Totem = () => {
