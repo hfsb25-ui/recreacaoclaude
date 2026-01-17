@@ -110,50 +110,39 @@ export const TotemSlideSchedule = ({ isActive }: TotemSlideScheduleProps) => {
           </p>
         </div>
       ) : (
-        <div className="flex-1 min-h-0 overflow-hidden">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-2 md:gap-3 lg:gap-4 h-full overflow-y-auto pr-1 md:pr-2">
-            {activities.map((activity) => {
+        <div className="flex-1 min-h-0">
+          <div className="grid grid-cols-2 gap-3 md:gap-4 lg:gap-6 h-full">
+            {activities.slice(0, 4).map((activity) => {
               const current = isCurrentActivity(activity.start_time, activity.end_time);
-              const upcoming = isUpcoming(activity.start_time);
 
               return (
                 <div
                   key={activity.id}
-                  className={`p-3 md:p-4 lg:p-5 rounded-xl md:rounded-2xl border-2 transition-all duration-500 ${
-                    current
-                      ? "border-primary bg-primary/10 scale-[1.01] shadow-lg shadow-primary/20"
-                      : upcoming
-                      ? "border-border bg-card"
-                      : "border-border/50 bg-card/50 opacity-60"
-                  }`}
+                  className="p-4 md:p-5 lg:p-6 rounded-xl md:rounded-2xl border-2 transition-all duration-500 border-primary bg-primary/10 shadow-lg shadow-primary/20 flex flex-col"
                 >
-                  <div className="flex items-start gap-2 md:gap-3 lg:gap-4">
+                  <div className="flex items-start gap-3 md:gap-4 h-full">
                     {/* Time */}
                     <div className="flex-shrink-0 text-center">
-                      <div
-                        className={`w-14 h-14 md:w-16 md:h-16 lg:w-18 lg:h-18 rounded-lg md:rounded-xl flex flex-col items-center justify-center ${
-                          current ? "bg-primary text-primary-foreground" : "bg-muted"
-                        }`}
-                      >
-                        <Clock className="w-4 h-4 md:w-5 md:h-5 mb-0.5" />
-                        <span className="text-sm md:text-base lg:text-lg font-bold">
+                      <div className="w-16 h-16 md:w-20 md:h-20 lg:w-24 lg:h-24 rounded-xl flex flex-col items-center justify-center bg-primary text-primary-foreground">
+                        <Clock className="w-5 h-5 md:w-6 md:h-6 lg:w-7 lg:h-7 mb-1" />
+                        <span className="text-lg md:text-xl lg:text-2xl font-bold">
                           {activity.start_time.slice(0, 5)}
                         </span>
                       </div>
-                      <p className="text-xs md:text-sm text-muted-foreground mt-1">
+                      <p className="text-sm md:text-base lg:text-lg text-muted-foreground mt-1">
                         até {activity.end_time.slice(0, 5)}
                       </p>
                     </div>
 
                     {/* Content */}
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-1 md:gap-2 mb-1 md:mb-2 flex-wrap">
+                    <div className="flex-1 min-w-0 flex flex-col">
+                      <div className="flex items-center gap-2 mb-2 flex-wrap">
                         <div
-                          className="w-3 h-3 md:w-4 md:h-4 rounded-full flex-shrink-0"
+                          className="w-4 h-4 md:w-5 md:h-5 rounded-full flex-shrink-0"
                           style={{ backgroundColor: activity.age_group.color }}
                         />
                         <span
-                          className="text-xs md:text-sm font-medium px-1.5 md:px-2 py-0.5 rounded-full"
+                          className="text-sm md:text-base lg:text-lg font-medium px-2 md:px-3 py-0.5 md:py-1 rounded-full"
                           style={{
                             backgroundColor: `${activity.age_group.color}20`,
                             color: activity.age_group.color,
@@ -161,17 +150,15 @@ export const TotemSlideSchedule = ({ isActive }: TotemSlideScheduleProps) => {
                         >
                           {activity.age_group.name}
                         </span>
-                        {current && (
-                          <span className="ml-auto px-2 md:px-3 py-0.5 md:py-1 bg-primary text-primary-foreground text-xs font-bold rounded-full animate-pulse">
-                            AGORA
-                          </span>
-                        )}
+                        <span className="ml-auto px-3 md:px-4 py-1 bg-primary text-primary-foreground text-sm md:text-base font-bold rounded-full animate-pulse">
+                          AGORA
+                        </span>
                       </div>
-                      <h3 className="text-lg md:text-xl lg:text-2xl font-bold text-foreground truncate">
+                      <h3 className="text-xl md:text-2xl lg:text-3xl font-bold text-foreground line-clamp-2">
                         {activity.name}
                       </h3>
                       {activity.description && (
-                        <p className="text-muted-foreground text-sm md:text-base lg:text-lg mt-0.5 md:mt-1 line-clamp-1 md:line-clamp-2">
+                        <p className="text-muted-foreground text-base md:text-lg lg:text-xl mt-1 md:mt-2 line-clamp-2">
                           {activity.description}
                         </p>
                       )}
