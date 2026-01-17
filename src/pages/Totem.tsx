@@ -210,8 +210,8 @@ const Totem = () => {
     <div
       onClick={handleFullscreen}
       className={`h-screen w-screen overflow-hidden flex flex-col ${
-        config.theme === "dark" ? "dark bg-background" : "bg-white"
-      }`}
+        config.theme === "dark" ? "dark" : ""
+      } bg-background text-foreground`}
       style={{ maxHeight: '100vh', maxWidth: '100vw' }}
     >
       <TotemHeader qrCodeUrl={config.qr_code_url} />
