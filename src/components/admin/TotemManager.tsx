@@ -40,7 +40,18 @@ interface TotemConfig {
   qr_code_url: string | null;
   refresh_interval: number;
   access_key: string | null;
+  resolution: string;
 }
+
+const resolutionOptions = [
+  { value: "1920x1080", label: "Full HD (1920×1080)" },
+  { value: "1280x720", label: "HD (1280×720)" },
+  { value: "1366x768", label: "HD+ (1366×768)" },
+  { value: "2560x1440", label: "2K QHD (2560×1440)" },
+  { value: "3840x2160", label: "4K UHD (3840×2160)" },
+  { value: "1024x768", label: "XGA (1024×768)" },
+  { value: "auto", label: "Automático (tela cheia)" },
+];
 
 const slideTypes = [
   { type: "schedule", label: "Programação", icon: Calendar },
@@ -75,6 +86,7 @@ const TotemManager = () => {
         qr_code_url: data.qr_code_url,
         refresh_interval: data.refresh_interval,
         access_key: data.access_key,
+        resolution: (data as any).resolution || "1920x1080",
       });
     }
     setLoading(false);
@@ -93,7 +105,8 @@ const TotemManager = () => {
         qr_code_url: config.qr_code_url,
         refresh_interval: config.refresh_interval,
         access_key: config.access_key,
-      })
+        resolution: config.resolution,
+      } as any)
       .eq("id", config.id);
 
     if (error) {
@@ -183,7 +196,7 @@ const TotemManager = () => {
       {/* Configurações Gerais */}
       <Card className="p-6">
         <h3 className="font-semibold text-lg mb-4">Configurações Gerais</h3>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
           <div>
             <Label>Tema</Label>
             <Select
@@ -196,6 +209,25 @@ const TotemManager = () => {
               <SelectContent>
                 <SelectItem value="dark">Escuro</SelectItem>
                 <SelectItem value="light">Claro</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div>
+            <Label>Resolução</Label>
+            <Select
+              value={config.resolution}
+              onValueChange={(value) => setConfig({ ...config, resolution: value })}
+            >
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {resolutionOptions.map((option) => (
+                  <SelectItem key={option.value} value={option.value}>
+                    {option.label}
+                  </SelectItem>
+                ))}
               </SelectContent>
             </Select>
           </div>
