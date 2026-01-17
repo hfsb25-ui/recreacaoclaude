@@ -10,31 +10,91 @@ import { TotemSlideNextActivity } from "@/components/totem/TotemSlideNextActivit
 import { TotemHeader } from "@/components/totem/TotemHeader";
 import { cn } from "@/lib/utils";
 
-// Hook to keep the screen awake using Wake Lock API
+// Hook to keep the screen awake using Wake Lock API with video fallback for Silk Browser
 const useWakeLock = () => {
   const wakeLockRef = useRef<WakeLockSentinel | null>(null);
+  const videoRef = useRef<HTMLVideoElement | null>(null);
+  const [useVideoFallback, setUseVideoFallback] = useState(false);
+
+  // Create invisible video element for fallback
+  const createVideoFallback = useCallback(() => {
+    if (videoRef.current) return;
+
+    // Create a tiny video that plays in loop to prevent screen sleep
+    const video = document.createElement("video");
+    video.setAttribute("playsinline", "");
+    video.setAttribute("muted", "");
+    video.setAttribute("loop", "");
+    video.style.cssText = "position:fixed;top:-1px;left:-1px;width:1px;height:1px;opacity:0.01;pointer-events:none;z-index:-1;";
+    
+    // Create a minimal video blob (1x1 pixel, transparent, 1 second)
+    // This is a base64-encoded minimal MP4 video
+    const base64Video = "AAAAIGZ0eXBpc29tAAACAGlzb21pc28yYXZjMW1wNDEAAAAIZnJlZQAAAAhtZGF0AAAA1m1vb3YAAABsbXZoZAAAAAAAAAAAAAAAAAAAA+gAAAAAAAEAAAEAAAAAAAAAAAAAAAABAAAAAAAAAAAAAAAAAAAAAQAAAAAAAAAAAAAAAAAAQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAIAAABidWR0YQAAAFptZXRhAAAAAAAAACFoZGxyAAAAAAAAAABtZGlyYXBwbAAAAAAAAAAAAAAAAC1pbHN0AAAAJal0b28AAAAdZGF0YQAAAAEAAAAATGF2ZjU4Ljc2LjEwMA==";
+    
+    try {
+      const byteCharacters = atob(base64Video);
+      const byteNumbers = new Array(byteCharacters.length);
+      for (let i = 0; i < byteCharacters.length; i++) {
+        byteNumbers[i] = byteCharacters.charCodeAt(i);
+      }
+      const byteArray = new Uint8Array(byteNumbers);
+      const blob = new Blob([byteArray], { type: "video/mp4" });
+      video.src = URL.createObjectURL(blob);
+    } catch {
+      // Fallback: use a data URL for an empty video
+      video.src = "data:video/mp4;base64," + base64Video;
+    }
+
+    document.body.appendChild(video);
+    videoRef.current = video;
+
+    // Play the video
+    video.play().then(() => {
+      console.log("Video fallback ativo - tela não vai suspender (Silk Browser compatível)");
+    }).catch((err) => {
+      console.log("Video fallback falhou:", err);
+    });
+  }, []);
+
+  const removeVideoFallback = useCallback(() => {
+    if (videoRef.current) {
+      videoRef.current.pause();
+      videoRef.current.src = "";
+      videoRef.current.remove();
+      videoRef.current = null;
+    }
+  }, []);
 
   const requestWakeLock = useCallback(async () => {
     try {
       if ("wakeLock" in navigator) {
         wakeLockRef.current = await navigator.wakeLock.request("screen");
         console.log("Wake Lock ativo - tela não vai suspender");
+        setUseVideoFallback(false);
         
         wakeLockRef.current.addEventListener("release", () => {
           console.log("Wake Lock liberado");
         });
+      } else {
+        // Wake Lock not supported, use video fallback
+        console.log("Wake Lock não suportado, usando fallback de vídeo");
+        setUseVideoFallback(true);
+        createVideoFallback();
       }
     } catch (err) {
-      console.log("Wake Lock não suportado ou erro:", err);
+      console.log("Wake Lock erro, usando fallback de vídeo:", err);
+      setUseVideoFallback(true);
+      createVideoFallback();
     }
-  }, []);
+  }, [createVideoFallback]);
 
   const releaseWakeLock = useCallback(async () => {
     if (wakeLockRef.current) {
       await wakeLockRef.current.release();
       wakeLockRef.current = null;
     }
-  }, []);
+    removeVideoFallback();
+  }, [removeVideoFallback]);
 
   useEffect(() => {
     requestWakeLock();
@@ -54,7 +114,7 @@ const useWakeLock = () => {
     };
   }, [requestWakeLock, releaseWakeLock]);
 
-  return { requestWakeLock, releaseWakeLock };
+  return { requestWakeLock, releaseWakeLock, useVideoFallback };
 };
 
 interface SlideConfig {
