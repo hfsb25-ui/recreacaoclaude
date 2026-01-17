@@ -9,12 +9,14 @@ import { TotemSlideQRCode } from "@/components/totem/TotemSlideQRCode";
 import { TotemSlideNextActivity } from "@/components/totem/TotemSlideNextActivity";
 import { TotemHeader } from "@/components/totem/TotemHeader";
 import { cn } from "@/lib/utils";
+import { Shield, Play } from "lucide-react";
 
 // Hook to keep the screen awake using Wake Lock API with video fallback for Silk Browser
 const useWakeLock = () => {
   const wakeLockRef = useRef<WakeLockSentinel | null>(null);
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const [useVideoFallback, setUseVideoFallback] = useState(false);
+  const [isActive, setIsActive] = useState(false);
 
   // Create invisible video element for fallback
   const createVideoFallback = useCallback(() => {
@@ -51,8 +53,10 @@ const useWakeLock = () => {
     // Play the video
     video.play().then(() => {
       console.log("Video fallback ativo - tela não vai suspender (Silk Browser compatível)");
+      setIsActive(true);
     }).catch((err) => {
       console.log("Video fallback falhou:", err);
+      setIsActive(false);
     });
   }, []);
 
@@ -63,6 +67,7 @@ const useWakeLock = () => {
       videoRef.current.remove();
       videoRef.current = null;
     }
+    setIsActive(false);
   }, []);
 
   const requestWakeLock = useCallback(async () => {
@@ -71,9 +76,11 @@ const useWakeLock = () => {
         wakeLockRef.current = await navigator.wakeLock.request("screen");
         console.log("Wake Lock ativo - tela não vai suspender");
         setUseVideoFallback(false);
+        setIsActive(true);
         
         wakeLockRef.current.addEventListener("release", () => {
           console.log("Wake Lock liberado");
+          setIsActive(false);
         });
       } else {
         // Wake Lock not supported, use video fallback
@@ -114,7 +121,7 @@ const useWakeLock = () => {
     };
   }, [requestWakeLock, releaseWakeLock]);
 
-  return { requestWakeLock, releaseWakeLock, useVideoFallback };
+  return { requestWakeLock, releaseWakeLock, useVideoFallback, isActive };
 };
 
 interface SlideConfig {
@@ -155,7 +162,7 @@ const Totem = () => {
   const [activeSlides, setActiveSlides] = useState<SlideConfig[]>([]);
 
   // Keep screen awake
-  useWakeLock();
+  const { useVideoFallback, isActive: wakeLockActive } = useWakeLock();
 
   const fetchConfig = useCallback(async () => {
     try {
@@ -376,6 +383,33 @@ const Totem = () => {
           />
         ))}
       </footer>
+
+      {/* Wake Lock Status Indicator */}
+      {wakeLockActive && (
+        <div 
+          className="fixed bottom-4 right-4 opacity-20 hover:opacity-80 transition-opacity duration-300 cursor-default"
+          title={useVideoFallback ? "Video Fallback (Silk Browser)" : "Wake Lock API"}
+        >
+          <div className={cn(
+            "flex items-center gap-1.5 px-2 py-1 rounded-full text-xs font-medium backdrop-blur-sm",
+            useVideoFallback 
+              ? "bg-yellow-500/20 text-yellow-500" 
+              : "bg-green-500/20 text-green-500"
+          )}>
+            {useVideoFallback ? (
+              <>
+                <Play className="w-3 h-3" />
+                <span className="hidden sm:inline">Video</span>
+              </>
+            ) : (
+              <>
+                <Shield className="w-3 h-3" />
+                <span className="hidden sm:inline">Wake Lock</span>
+              </>
+            )}
+          </div>
+        </div>
+      )}
       </div>
     </div>
   );
