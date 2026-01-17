@@ -51,15 +51,21 @@ export const TotemSlideSchedule = ({ isActive }: TotemSlideScheduleProps) => {
         .order("start_time", { ascending: true });
 
       if (data) {
-        setActivities(data as unknown as Activity[]);
+        // Filter only current activities
+        const now = format(new Date(), "HH:mm:ss");
+        const currentActivities = (data as unknown as Activity[]).filter(
+          (activity) => now >= activity.start_time && now <= activity.end_time
+        );
+        setActivities(currentActivities);
       }
       setLoading(false);
     };
 
     fetchActivities();
-    const interval = setInterval(fetchActivities, 300000);
+    // Check more frequently to update when activities change
+    const interval = setInterval(fetchActivities, 60000);
     return () => clearInterval(interval);
-  }, []);
+  }, [currentTime]);
 
   const isCurrentActivity = (start: string, end: string) => {
     const now = format(currentTime, "HH:mm:ss");
@@ -88,7 +94,7 @@ export const TotemSlideSchedule = ({ isActive }: TotemSlideScheduleProps) => {
         <div className="inline-flex items-center gap-2 md:gap-3 mb-2 md:mb-3">
           <Calendar className="w-8 h-8 md:w-10 md:h-10 lg:w-12 lg:h-12 text-primary" />
           <h2 className="text-2xl md:text-3xl lg:text-4xl xl:text-5xl font-bold text-foreground">
-            Programação de Hoje
+            Acontecendo Agora
           </h2>
         </div>
         <p className="text-lg md:text-xl lg:text-2xl text-muted-foreground capitalize">
@@ -100,7 +106,7 @@ export const TotemSlideSchedule = ({ isActive }: TotemSlideScheduleProps) => {
       {activities.length === 0 ? (
         <div className="flex-1 flex items-center justify-center">
           <p className="text-xl md:text-2xl lg:text-3xl text-muted-foreground">
-            Nenhuma atividade programada para hoje
+            Nenhuma atividade acontecendo agora
           </p>
         </div>
       ) : (
