@@ -10,6 +10,53 @@ import { TotemSlideNextActivity } from "@/components/totem/TotemSlideNextActivit
 import { TotemHeader } from "@/components/totem/TotemHeader";
 import { cn } from "@/lib/utils";
 
+// Hook to keep the screen awake using Wake Lock API
+const useWakeLock = () => {
+  const wakeLockRef = useRef<WakeLockSentinel | null>(null);
+
+  const requestWakeLock = useCallback(async () => {
+    try {
+      if ("wakeLock" in navigator) {
+        wakeLockRef.current = await navigator.wakeLock.request("screen");
+        console.log("Wake Lock ativo - tela não vai suspender");
+        
+        wakeLockRef.current.addEventListener("release", () => {
+          console.log("Wake Lock liberado");
+        });
+      }
+    } catch (err) {
+      console.log("Wake Lock não suportado ou erro:", err);
+    }
+  }, []);
+
+  const releaseWakeLock = useCallback(async () => {
+    if (wakeLockRef.current) {
+      await wakeLockRef.current.release();
+      wakeLockRef.current = null;
+    }
+  }, []);
+
+  useEffect(() => {
+    requestWakeLock();
+
+    // Re-acquire wake lock when page becomes visible again
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === "visible") {
+        requestWakeLock();
+      }
+    };
+
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+
+    return () => {
+      releaseWakeLock();
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+    };
+  }, [requestWakeLock, releaseWakeLock]);
+
+  return { requestWakeLock, releaseWakeLock };
+};
+
 interface SlideConfig {
   type: string;
   order: number;
@@ -46,6 +93,9 @@ const Totem = () => {
   const [authorized, setAuthorized] = useState(false);
   const transitionTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const [activeSlides, setActiveSlides] = useState<SlideConfig[]>([]);
+
+  // Keep screen awake
+  useWakeLock();
 
   const fetchConfig = useCallback(async () => {
     try {
