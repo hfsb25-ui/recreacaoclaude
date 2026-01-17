@@ -640,6 +640,7 @@ export type Database = {
           is_active: boolean
           qr_code_url: string | null
           refresh_interval: number
+          resolution: string | null
           slides_config: Json
           theme: string
           updated_at: string
@@ -651,6 +652,7 @@ export type Database = {
           is_active?: boolean
           qr_code_url?: string | null
           refresh_interval?: number
+          resolution?: string | null
           slides_config?: Json
           theme?: string
           updated_at?: string
@@ -662,6 +664,7 @@ export type Database = {
           is_active?: boolean
           qr_code_url?: string | null
           refresh_interval?: number
+          resolution?: string | null
           slides_config?: Json
           theme?: string
           updated_at?: string

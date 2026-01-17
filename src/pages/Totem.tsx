@@ -24,6 +24,7 @@ interface TotemConfig {
   qr_code_url: string | null;
   refresh_interval: number;
   access_key: string | null;
+  resolution: string;
 }
 
 const slideComponents: Record<string, React.ComponentType<{ isActive: boolean }>> = {
@@ -62,6 +63,7 @@ const Totem = () => {
           qr_code_url: data.qr_code_url,
           refresh_interval: data.refresh_interval,
           access_key: data.access_key,
+          resolution: (data as any).resolution || "1920x1080",
         });
         
         const active = slidesConfig
@@ -206,14 +208,27 @@ const Totem = () => {
   const currentSlide = activeSlides[currentSlideIndex];
   const SlideComponent = currentSlide ? slideComponents[currentSlide.type] : null;
 
+  // Parse resolution
+  const getResolutionStyle = () => {
+    if (!config.resolution || config.resolution === "auto") {
+      return { width: "100vw", height: "100vh" };
+    }
+    const [width, height] = config.resolution.split("x").map(Number);
+    return { width: `${width}px`, height: `${height}px` };
+  };
+
+  const resolutionStyle = getResolutionStyle();
+  const isFixedResolution = config.resolution && config.resolution !== "auto";
+
   return (
-    <div
-      onClick={handleFullscreen}
-      className={`h-screen w-screen overflow-hidden flex flex-col ${
-        config.theme === "dark" ? "dark" : ""
-      } bg-background text-foreground`}
-      style={{ maxHeight: '100vh', maxWidth: '100vw' }}
-    >
+    <div className="min-h-screen min-w-screen flex items-center justify-center bg-black">
+      <div
+        onClick={handleFullscreen}
+        className={`overflow-hidden flex flex-col ${
+          config.theme === "dark" ? "dark" : ""
+        } bg-background text-foreground`}
+        style={isFixedResolution ? resolutionStyle : { width: '100vw', height: '100vh' }}
+      >
       <TotemHeader qrCodeUrl={config.qr_code_url} />
 
       {/* Main Content Area - flex-1 with min-h-0 to prevent overflow */}
@@ -251,6 +266,7 @@ const Totem = () => {
           />
         ))}
       </footer>
+      </div>
     </div>
   );
 };
