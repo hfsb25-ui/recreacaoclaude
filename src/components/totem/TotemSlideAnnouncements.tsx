@@ -96,24 +96,23 @@ export const TotemSlideAnnouncements = ({ isActive }: TotemSlideAnnouncementsPro
           className="w-full max-w-4xl animate-fade-in"
         >
           {currentAnnouncement.image_url ? (
-            <div className="grid grid-cols-2 gap-8 items-center">
-              {/* Image */}
-              <div className="relative rounded-3xl overflow-hidden shadow-2xl">
+            <div className="flex flex-col items-center gap-8">
+              {/* Banner Image - Full Width on Top */}
+              <div className="relative w-full rounded-3xl overflow-hidden shadow-2xl">
                 <img
                   src={getImageUrl(currentAnnouncement.image_url)}
                   alt={currentAnnouncement.title}
-                  className="w-full h-auto object-cover aspect-[4/3]"
+                  className="w-full h-auto object-contain"
                 />
-                <div className="absolute inset-0 bg-gradient-to-t from-black/30 to-transparent" />
               </div>
 
-              {/* Content */}
-              <div className="space-y-6">
+              {/* Content Below */}
+              <div className="text-center space-y-4">
                 <h3 className="text-5xl font-bold text-foreground leading-tight">
                   {currentAnnouncement.title}
                 </h3>
                 {currentAnnouncement.description && (
-                  <p className="text-2xl text-muted-foreground leading-relaxed">
+                  <p className="text-2xl text-muted-foreground leading-relaxed max-w-3xl">
                     {currentAnnouncement.description}
                   </p>
                 )}
