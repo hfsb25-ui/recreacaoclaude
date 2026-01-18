@@ -102,8 +102,10 @@ export type Database = {
           activity_id: string
           comment: string | null
           created_at: string
+          guest_id: string | null
           guest_name: string
           id: string
+          points_earned: number | null
           rating: number
           room_number: string | null
         }
@@ -111,8 +113,10 @@ export type Database = {
           activity_id: string
           comment?: string | null
           created_at?: string
+          guest_id?: string | null
           guest_name: string
           id?: string
+          points_earned?: number | null
           rating: number
           room_number?: string | null
         }
@@ -120,8 +124,10 @@ export type Database = {
           activity_id?: string
           comment?: string | null
           created_at?: string
+          guest_id?: string | null
           guest_name?: string
           id?: string
+          points_earned?: number | null
           rating?: number
           room_number?: string | null
         }
@@ -131,6 +137,13 @@ export type Database = {
             columns: ["activity_id"]
             isOneToOne: false
             referencedRelation: "activities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "activity_ratings_guest_id_fkey"
+            columns: ["guest_id"]
+            isOneToOne: false
+            referencedRelation: "guests"
             referencedColumns: ["id"]
           },
         ]
