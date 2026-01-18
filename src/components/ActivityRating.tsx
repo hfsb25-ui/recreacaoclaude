@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { Star, Gift } from "lucide-react";
+import { useState, useEffect } from "react";
+import { Star, Gift, CheckCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
@@ -26,6 +26,43 @@ export const ActivityRating = ({ activityId, activityName, onSuccess }: Activity
   const [roomNumber, setRoomNumber] = useState("");
   const [pin, setPin] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [hasAlreadyRated, setHasAlreadyRated] = useState(false);
+  const [existingRating, setExistingRating] = useState<number | null>(null);
+  const [isCheckingRating, setIsCheckingRating] = useState(false);
+
+  // Check if the logged-in guest has already rated this activity
+  useEffect(() => {
+    const checkExistingRating = async () => {
+      if (!guest?.id) {
+        setHasAlreadyRated(false);
+        setExistingRating(null);
+        return;
+      }
+
+      setIsCheckingRating(true);
+      try {
+        const { data, error } = await supabase
+          .from("activity_ratings")
+          .select("rating")
+          .eq("guest_id", guest.id)
+          .eq("activity_id", activityId)
+          .maybeSingle();
+
+        if (!error && data) {
+          setHasAlreadyRated(true);
+          setExistingRating(data.rating);
+        } else {
+          setHasAlreadyRated(false);
+          setExistingRating(null);
+        }
+      } catch (err) {
+        console.error("Error checking existing rating:", err);
+      }
+      setIsCheckingRating(false);
+    };
+
+    checkExistingRating();
+  }, [guest?.id, activityId]);
 
   const handleSubmit = async () => {
     if (rating === 0) {
@@ -106,10 +143,19 @@ export const ActivityRating = ({ activityId, activityName, onSuccess }: Activity
 
       if (error) {
         console.error("Error submitting rating:", error);
-        toast({
-          title: "Erro ao enviar avaliação",
-          variant: "destructive",
-        });
+        if (error.code === "23505") {
+          toast({
+            title: "Você já avaliou esta atividade",
+            description: "Cada hóspede pode avaliar uma atividade apenas uma vez.",
+            variant: "destructive",
+          });
+          setHasAlreadyRated(true);
+        } else {
+          toast({
+            title: "Erro ao enviar avaliação",
+            variant: "destructive",
+          });
+        }
       } else {
         // Refresh guest data to get updated points
         await refreshGuest();
@@ -138,6 +184,46 @@ export const ActivityRating = ({ activityId, activityName, onSuccess }: Activity
 
     setIsSubmitting(false);
   };
+
+  // If the guest has already rated this activity, show a message
+  if (hasAlreadyRated && guest) {
+    return (
+      <Card className="p-6 space-y-4">
+        <div className="flex items-center gap-3">
+          <CheckCircle className="h-8 w-8 text-green-500" />
+          <div>
+            <h3 className="text-lg font-semibold">Você já avaliou esta atividade</h3>
+            <p className="text-sm text-muted-foreground">{activityName}</p>
+          </div>
+        </div>
+        <div className="flex items-center gap-2 p-3 bg-muted/50 rounded-lg">
+          <span className="text-sm text-muted-foreground">Sua avaliação:</span>
+          <div className="flex gap-1">
+            {[1, 2, 3, 4, 5].map((star) => (
+              <Star
+                key={star}
+                className={`h-5 w-5 ${
+                  star <= (existingRating || 0)
+                    ? "fill-yellow-400 text-yellow-400"
+                    : "text-gray-300"
+                }`}
+              />
+            ))}
+          </div>
+        </div>
+      </Card>
+    );
+  }
+
+  if (isCheckingRating) {
+    return (
+      <Card className="p-6">
+        <div className="flex items-center justify-center">
+          <span className="text-muted-foreground">Verificando...</span>
+        </div>
+      </Card>
+    );
+  }
 
   return (
     <Card className="p-6 space-y-4">
