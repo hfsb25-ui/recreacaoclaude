@@ -132,7 +132,7 @@ Deno.serve(async (req) => {
       .update({ is_active: false })
       .eq("id", activePeriod.id);
 
-    // Set guest_id to null in activity_ratings to preserve ratings but remove FK constraint
+    // Use direct SQL update via service role to detach ratings from guests (preserves ratings)
     await supabase
       .from("activity_ratings")
       .update({ guest_id: null })

@@ -164,14 +164,12 @@ const GamificationManager = () => {
         .update({ is_active: false })
         .eq("id", activePeriod.id);
 
-      // Set guest_id to null in activity_ratings to preserve ratings but remove FK constraint
-      const { error: ratingsError } = await supabase
-        .from("activity_ratings")
-        .update({ guest_id: null })
-        .not("guest_id", "is", null);
+      // Use admin function to detach ratings from guests (preserves ratings, removes FK constraint)
+      const { error: ratingsError } = await supabase.rpc("admin_detach_activity_ratings_guest_ids");
 
       if (ratingsError) {
         console.error("Error updating ratings:", ratingsError);
+        throw new Error(`Erro ao desvincular avaliações: ${ratingsError.message}`);
       }
 
       // Delete all check-ins
