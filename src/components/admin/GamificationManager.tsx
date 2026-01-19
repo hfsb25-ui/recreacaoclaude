@@ -164,14 +164,14 @@ const GamificationManager = () => {
         .update({ is_active: false })
         .eq("id", activePeriod.id);
 
-      // Delete all activity ratings with guest_id (FK to guests)
+      // Set guest_id to null in activity_ratings to preserve ratings but remove FK constraint
       const { error: ratingsError } = await supabase
         .from("activity_ratings")
-        .delete()
+        .update({ guest_id: null })
         .not("guest_id", "is", null);
 
       if (ratingsError) {
-        console.error("Error deleting ratings:", ratingsError);
+        console.error("Error updating ratings:", ratingsError);
       }
 
       // Delete all check-ins
