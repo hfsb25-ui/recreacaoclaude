@@ -132,6 +132,12 @@ Deno.serve(async (req) => {
       .update({ is_active: false })
       .eq("id", activePeriod.id);
 
+    // Delete all activity ratings with guest_id (FK to guests)
+    await supabase
+      .from("activity_ratings")
+      .delete()
+      .not("guest_id", "is", null);
+
     // Delete all check-ins
     await supabase
       .from("activity_checkins")

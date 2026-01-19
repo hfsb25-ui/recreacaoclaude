@@ -164,17 +164,36 @@ const GamificationManager = () => {
         .update({ is_active: false })
         .eq("id", activePeriod.id);
 
+      // Delete all activity ratings with guest_id (FK to guests)
+      const { error: ratingsError } = await supabase
+        .from("activity_ratings")
+        .delete()
+        .not("guest_id", "is", null);
+
+      if (ratingsError) {
+        console.error("Error deleting ratings:", ratingsError);
+      }
+
       // Delete all check-ins
-      await supabase
+      const { error: checkinsError } = await supabase
         .from("activity_checkins")
         .delete()
         .neq("id", "00000000-0000-0000-0000-000000000000");
 
+      if (checkinsError) {
+        console.error("Error deleting checkins:", checkinsError);
+      }
+
       // Delete all guests
-      await supabase
+      const { error: guestsError } = await supabase
         .from("guests")
         .delete()
         .neq("id", "00000000-0000-0000-0000-000000000000");
+
+      if (guestsError) {
+        console.error("Error deleting guests:", guestsError);
+        throw new Error(`Erro ao deletar hóspedes: ${guestsError.message}`);
+      }
 
       // Create new period
       const newPeriodNumber = activePeriod.period_number + 1;
