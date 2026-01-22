@@ -22,6 +22,7 @@ import { SplashScreenManager } from "@/components/admin/SplashScreenManager";
 import { WeatherLocationManager } from "@/components/admin/WeatherLocationManager";
 import GamificationManager from "@/components/admin/GamificationManager";
 import { StatisticsManager } from "@/components/admin/StatisticsManager";
+import { KPIDashboard } from "@/components/admin/KPIDashboard";
 import { PwaIconManager } from "@/components/admin/PwaIconManager";
 import TotemManager from "@/components/admin/TotemManager";
 import { useUserRole } from "@/hooks/useUserRole";
@@ -463,6 +464,7 @@ const Admin = () => {
                   <TabsTrigger value="ratings" className="whitespace-nowrap text-xs sm:text-sm px-2 sm:px-3">Avaliações</TabsTrigger>
                   <TabsTrigger value="gamification" className="whitespace-nowrap text-xs sm:text-sm px-2 sm:px-3">Gamificação</TabsTrigger>
                   <TabsTrigger value="statistics" className="whitespace-nowrap text-xs sm:text-sm px-2 sm:px-3">Estatísticas</TabsTrigger>
+                  <TabsTrigger value="kpis" className="whitespace-nowrap text-xs sm:text-sm px-2 sm:px-3">KPIs</TabsTrigger>
                   <TabsTrigger value="announcements" className="whitespace-nowrap text-xs sm:text-sm px-2 sm:px-3">Anúncios</TabsTrigger>
                   <TabsTrigger value="menu" className="whitespace-nowrap text-xs sm:text-sm px-2 sm:px-3">Menu</TabsTrigger>
                   <TabsTrigger value="totem" className="whitespace-nowrap text-xs sm:text-sm px-2 sm:px-3">Totem</TabsTrigger>
@@ -501,6 +503,10 @@ const Admin = () => {
 
               <TabsContent value="statistics" className="space-y-4">
                 <StatisticsManager />
+              </TabsContent>
+
+              <TabsContent value="kpis" className="space-y-4">
+                <KPIDashboard />
               </TabsContent>
 
               <TabsContent value="announcements" className="space-y-4">
