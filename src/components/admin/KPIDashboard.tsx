@@ -154,18 +154,18 @@ export const KPIDashboard = () => {
   };
 
   const fetchHeatmapData = async () => {
-    const { data: checkins } = await supabase
-      .from("activity_checkins")
-      .select("checked_in_at");
+    const { data: visits } = await supabase
+      .from("site_visits")
+      .select("created_at");
 
-    if (!checkins) return;
+    if (!visits) return;
 
     const heatmap: Record<string, number> = {};
     let maxVal = 0;
 
-    checkins.forEach(c => {
-      if (c.checked_in_at) {
-        const date = new Date(c.checked_in_at);
+    visits.forEach(v => {
+      if (v.created_at) {
+        const date = new Date(v.created_at);
         const day = date.getDay();
         const hour = date.getHours();
         const key = `${day}-${hour}`;

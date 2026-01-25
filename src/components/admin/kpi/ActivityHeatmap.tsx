@@ -36,9 +36,9 @@ export const ActivityHeatmap = ({ data, maxValue }: ActivityHeatmapProps) => {
 
   return (
     <Card className="p-4">
-      <h3 className="text-lg font-semibold mb-4">Heatmap de Participação por Horário</h3>
+      <h3 className="text-lg font-semibold mb-4">Heatmap de Acessos por Horário</h3>
       <p className="text-sm text-muted-foreground mb-4">
-        Intensidade de check-ins por dia da semana e hora
+        Intensidade de acessos ao site por dia da semana e hora
       </p>
       
       <div className="overflow-x-auto">
@@ -71,7 +71,7 @@ export const ActivityHeatmap = ({ data, maxValue }: ActivityHeatmapProps) => {
                       </TooltipTrigger>
                       <TooltipContent>
                         <p className="font-medium">{day} às {hour}:00</p>
-                        <p className="text-sm">{value} check-ins</p>
+                        <p className="text-sm">{value} acessos</p>
                       </TooltipContent>
                     </Tooltip>
                   );
