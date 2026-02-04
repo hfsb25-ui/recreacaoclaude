@@ -11,14 +11,17 @@ import { TotemHeader } from "@/components/totem/TotemHeader";
 import { cn } from "@/lib/utils";
 import { Shield, Play } from "lucide-react";
 
-// Hook to keep the screen awake using Wake Lock API with video fallback for Silk Browser
+// Hook to keep the screen awake using multiple strategies for Fire TV Stick / Silk Browser
 const useWakeLock = () => {
   const wakeLockRef = useRef<WakeLockSentinel | null>(null);
   const videoRef = useRef<HTMLVideoElement | null>(null);
+  const audioContextRef = useRef<AudioContext | null>(null);
+  const noSleepIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const [useVideoFallback, setUseVideoFallback] = useState(false);
   const [isActive, setIsActive] = useState(false);
+  const [activeMethod, setActiveMethod] = useState<string>("none");
 
-  // Create invisible video element for fallback
+  // Strategy 1: Create invisible video element for fallback
   const createVideoFallback = useCallback(() => {
     if (videoRef.current) return;
 
@@ -27,10 +30,10 @@ const useWakeLock = () => {
     video.setAttribute("playsinline", "");
     video.setAttribute("muted", "");
     video.setAttribute("loop", "");
+    video.setAttribute("autoplay", "");
     video.style.cssText = "position:fixed;top:-1px;left:-1px;width:1px;height:1px;opacity:0.01;pointer-events:none;z-index:-1;";
     
     // Create a minimal video blob (1x1 pixel, transparent, 1 second)
-    // This is a base64-encoded minimal MP4 video
     const base64Video = "AAAAIGZ0eXBpc29tAAACAGlzb21pc28yYXZjMW1wNDEAAAAIZnJlZQAAAAhtZGF0AAAA1m1vb3YAAABsbXZoZAAAAAAAAAAAAAAAAAAAA+gAAAAAAAEAAAEAAAAAAAAAAAAAAAABAAAAAAAAAAAAAAAAAAAAAQAAAAAAAAAAAAAAAAAAQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAIAAABidWR0YQAAAFptZXRhAAAAAAAAACFoZGxyAAAAAAAAAABtZGlyYXBwbAAAAAAAAAAAAAAAAC1pbHN0AAAAJal0b28AAAAdZGF0YQAAAAEAAAAATGF2ZjU4Ljc2LjEwMA==";
     
     try {
@@ -43,21 +46,75 @@ const useWakeLock = () => {
       const blob = new Blob([byteArray], { type: "video/mp4" });
       video.src = URL.createObjectURL(blob);
     } catch {
-      // Fallback: use a data URL for an empty video
       video.src = "data:video/mp4;base64," + base64Video;
     }
 
     document.body.appendChild(video);
     videoRef.current = video;
 
-    // Play the video
     video.play().then(() => {
-      console.log("Video fallback ativo - tela não vai suspender (Silk Browser compatível)");
+      console.log("[NoSleep] Video fallback ativo");
       setIsActive(true);
+      setActiveMethod("video");
     }).catch((err) => {
-      console.log("Video fallback falhou:", err);
-      setIsActive(false);
+      console.log("[NoSleep] Video fallback falhou:", err);
     });
+  }, []);
+
+  // Strategy 2: Silent audio context (keeps device active on some browsers)
+  const createAudioContext = useCallback(() => {
+    try {
+      const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
+      if (!AudioContextClass) return;
+
+      const audioCtx = new AudioContextClass();
+      const oscillator = audioCtx.createOscillator();
+      const gainNode = audioCtx.createGain();
+      
+      oscillator.connect(gainNode);
+      gainNode.connect(audioCtx.destination);
+      
+      // Silent (volume 0)
+      gainNode.gain.value = 0;
+      oscillator.frequency.value = 1;
+      oscillator.start();
+      
+      audioContextRef.current = audioCtx;
+      console.log("[NoSleep] Audio context ativo");
+    } catch (err) {
+      console.log("[NoSleep] Audio context falhou:", err);
+    }
+  }, []);
+
+  // Strategy 3: DOM activity simulation (prevents idle detection)
+  const startNoSleepInterval = useCallback(() => {
+    if (noSleepIntervalRef.current) return;
+
+    noSleepIntervalRef.current = setInterval(() => {
+      // Simulate minimal activity every 30 seconds
+      const event = new MouseEvent("mousemove", {
+        bubbles: true,
+        cancelable: true,
+        clientX: Math.random(),
+        clientY: Math.random(),
+      });
+      document.dispatchEvent(event);
+
+      // Touch scroll prevention workaround
+      window.scrollTo(0, 0);
+
+      // Force video to keep playing if it stopped
+      if (videoRef.current && videoRef.current.paused) {
+        videoRef.current.play().catch(() => {});
+      }
+
+      // Resume audio context if suspended
+      if (audioContextRef.current && audioContextRef.current.state === "suspended") {
+        audioContextRef.current.resume().catch(() => {});
+      }
+    }, 30000); // Every 30 seconds
+
+    console.log("[NoSleep] Intervalo de atividade ativo");
   }, []);
 
   const removeVideoFallback = useCallback(() => {
@@ -67,41 +124,63 @@ const useWakeLock = () => {
       videoRef.current.remove();
       videoRef.current = null;
     }
-    setIsActive(false);
   }, []);
+
+  const cleanup = useCallback(() => {
+    removeVideoFallback();
+    
+    if (audioContextRef.current) {
+      audioContextRef.current.close().catch(() => {});
+      audioContextRef.current = null;
+    }
+    
+    if (noSleepIntervalRef.current) {
+      clearInterval(noSleepIntervalRef.current);
+      noSleepIntervalRef.current = null;
+    }
+    
+    setIsActive(false);
+    setActiveMethod("none");
+  }, [removeVideoFallback]);
 
   const requestWakeLock = useCallback(async () => {
     try {
       if ("wakeLock" in navigator) {
         wakeLockRef.current = await navigator.wakeLock.request("screen");
-        console.log("Wake Lock ativo - tela não vai suspender");
+        console.log("[NoSleep] Wake Lock API ativo");
         setUseVideoFallback(false);
         setIsActive(true);
+        setActiveMethod("wakeLock");
         
         wakeLockRef.current.addEventListener("release", () => {
-          console.log("Wake Lock liberado");
+          console.log("[NoSleep] Wake Lock liberado, reativando fallbacks");
           setIsActive(false);
+          // Auto re-enable fallbacks if wake lock is released
+          createVideoFallback();
+          createAudioContext();
+          startNoSleepInterval();
         });
       } else {
-        // Wake Lock not supported, use video fallback
-        console.log("Wake Lock não suportado, usando fallback de vídeo");
-        setUseVideoFallback(true);
-        createVideoFallback();
+        throw new Error("Wake Lock not supported");
       }
     } catch (err) {
-      console.log("Wake Lock erro, usando fallback de vídeo:", err);
+      console.log("[NoSleep] Wake Lock não disponível, usando fallbacks:", err);
       setUseVideoFallback(true);
+      // Enable ALL fallback strategies for maximum compatibility
       createVideoFallback();
+      createAudioContext();
+      startNoSleepInterval();
+      setIsActive(true);
     }
-  }, [createVideoFallback]);
+  }, [createVideoFallback, createAudioContext, startNoSleepInterval]);
 
   const releaseWakeLock = useCallback(async () => {
     if (wakeLockRef.current) {
       await wakeLockRef.current.release();
       wakeLockRef.current = null;
     }
-    removeVideoFallback();
-  }, [removeVideoFallback]);
+    cleanup();
+  }, [cleanup]);
 
   useEffect(() => {
     requestWakeLock();
@@ -109,19 +188,41 @@ const useWakeLock = () => {
     // Re-acquire wake lock when page becomes visible again
     const handleVisibilityChange = () => {
       if (document.visibilityState === "visible") {
+        console.log("[NoSleep] Página visível, reativando proteção");
+        requestWakeLock();
+      }
+    };
+
+    // Also listen for focus events (Fire TV specific)
+    const handleFocus = () => {
+      console.log("[NoSleep] Foco recuperado, reativando proteção");
+      requestWakeLock();
+    };
+
+    // Prevent screen saver on user interaction
+    const handleUserInteraction = () => {
+      if (!isActive) {
         requestWakeLock();
       }
     };
 
     document.addEventListener("visibilitychange", handleVisibilityChange);
+    window.addEventListener("focus", handleFocus);
+    document.addEventListener("click", handleUserInteraction);
+    document.addEventListener("touchstart", handleUserInteraction);
+    document.addEventListener("keydown", handleUserInteraction);
 
     return () => {
       releaseWakeLock();
       document.removeEventListener("visibilitychange", handleVisibilityChange);
+      window.removeEventListener("focus", handleFocus);
+      document.removeEventListener("click", handleUserInteraction);
+      document.removeEventListener("touchstart", handleUserInteraction);
+      document.removeEventListener("keydown", handleUserInteraction);
     };
-  }, [requestWakeLock, releaseWakeLock]);
+  }, [requestWakeLock, releaseWakeLock, isActive]);
 
-  return { requestWakeLock, releaseWakeLock, useVideoFallback, isActive };
+  return { requestWakeLock, releaseWakeLock, useVideoFallback, isActive, activeMethod };
 };
 
 interface SlideConfig {
@@ -162,7 +263,7 @@ const Totem = () => {
   const [activeSlides, setActiveSlides] = useState<SlideConfig[]>([]);
 
   // Keep screen awake
-  const { useVideoFallback, isActive: wakeLockActive } = useWakeLock();
+  const { useVideoFallback, isActive: wakeLockActive, activeMethod } = useWakeLock();
 
   const fetchConfig = useCallback(async () => {
     try {
@@ -387,24 +488,28 @@ const Totem = () => {
       {/* Wake Lock Status Indicator */}
       {wakeLockActive && (
         <div 
-          className="fixed bottom-4 right-4 opacity-20 hover:opacity-80 transition-opacity duration-300 cursor-default"
-          title={useVideoFallback ? "Video Fallback (Silk Browser)" : "Wake Lock API"}
+          className="fixed bottom-4 right-4 opacity-30 hover:opacity-90 transition-opacity duration-300 cursor-default"
+          title={
+            activeMethod === "wakeLock" 
+              ? "Wake Lock API - Proteção nativa" 
+              : "Fallback Multi-camada (Video + Audio + Activity)"
+          }
         >
           <div className={cn(
-            "flex items-center gap-1.5 px-2 py-1 rounded-full text-xs font-medium backdrop-blur-sm",
-            useVideoFallback 
-              ? "bg-yellow-500/20 text-yellow-500" 
-              : "bg-green-500/20 text-green-500"
+            "flex items-center gap-1.5 px-2 py-1 rounded-full text-xs font-medium backdrop-blur-sm border",
+            activeMethod === "wakeLock"
+              ? "bg-primary/20 text-primary border-primary/30" 
+              : "bg-accent/20 text-accent-foreground border-accent/30"
           )}>
-            {useVideoFallback ? (
-              <>
-                <Play className="w-3 h-3" />
-                <span className="hidden sm:inline">Video</span>
-              </>
-            ) : (
+            {activeMethod === "wakeLock" ? (
               <>
                 <Shield className="w-3 h-3" />
                 <span className="hidden sm:inline">Wake Lock</span>
+              </>
+            ) : (
+              <>
+                <Play className="w-3 h-3 animate-pulse" />
+                <span className="hidden sm:inline">NoSleep</span>
               </>
             )}
           </div>
