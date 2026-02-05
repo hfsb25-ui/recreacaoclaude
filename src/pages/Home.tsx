@@ -413,11 +413,11 @@ const Home = () => {
                   className="overflow-hidden shadow-[var(--shadow-soft)] hover:shadow-[var(--shadow-hover)] transition-[var(--transition-smooth)]"
                 >
                   {announcement.image_url && (
-                    <div className="w-full h-[120px] sm:h-[160px] md:h-[200px] overflow-hidden bg-muted">
+                    <div className="w-full overflow-hidden bg-muted">
                       <img
                         src={getImageUrl(announcement.image_url) || ""}
                         alt={announcement.title}
-                        className="w-full h-full object-cover"
+                        className="w-full h-auto object-contain"
                       />
                     </div>
                   )}
