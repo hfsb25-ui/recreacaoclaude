@@ -1,272 +1,111 @@
 
-# Roda da Sorte e Mini-Games
 
-## Objetivo
-Criar um sistema de jogos interativos onde os hospedes podem girar uma roleta ou jogar mini-games para ganhar pontos bonus, incentivando ainda mais a participacao nas atividades.
+# Quiz da Recreacao com Perguntas Cadastradas pelo Admin
 
----
+## Resumo
 
-## 1. Conceito Geral
-
-### 1.1 Quando o Hospede Pode Jogar?
-- **Apos Check-in**: Ao fazer check-in em uma atividade, o hospede ganha 1 "giro" na roda
-- **Apos Avaliacao**: Ao avaliar uma atividade, ganha 1 giro bonus
-- **Bonus Diario**: 1 giro gratis por dia ao acessar o app (incentiva retorno)
-
-### 1.2 Premios Disponiveis na Roda
-| Setor | Cor | Premio | Chance |
-|-------|-----|--------|--------|
-| +5 pts | Verde | 5 pontos bonus | 25% |
-| +10 pts | Azul | 10 pontos bonus | 20% |
-| +20 pts | Roxo | 20 pontos bonus | 10% |
-| +50 pts | Dourado | 50 pontos (raro!) | 5% |
-| Tente Novamente | Cinza | Sem premio | 20% |
-| Mini-Game | Laranja | Acesso a mini-game | 20% |
+Criar um sistema completo de Quiz onde o administrador cadastra perguntas personalizadas sobre o hotel, e os hospedes jogam respondendo essas perguntas para ganhar pontos.
 
 ---
 
-## 2. Mini-Games Disponiveis
+## O que sera desenvolvido
 
-### 2.1 Jogo da Memoria
-- Grade 4x4 com 8 pares de cartas
-- Cartas com emojis tematicos (praia, sol, piscina, etc.)
-- Premio: +5 pts por par encontrado
-- Bonus: +20 pts extra se completar em menos de 60 segundos
+### 1. Painel Admin - Gerenciador de Perguntas do Quiz
 
-### 2.2 Quiz da Recreacao
-- 5 perguntas aleatorias sobre o hotel/atividades
-- Perguntas como: "Qual atividade acontece as 15h?" ou "Quantas faixas etarias existem?"
-- Premio: +10 pts por resposta correta
+Um novo componente no painel administrativo (dentro da aba "Gamificacao" ou como nova aba) onde o gestor pode:
 
-### 2.3 Caca-Palavras Rapido
-- Encontrar 5 palavras em 30 segundos
-- Palavras tematicas: PISCINA, PRAIA, SOL, FESTA, RECREACAO
-- Premio: +5 pts por palavra encontrada
+- Cadastrar perguntas com:
+  - Texto da pergunta
+  - 4 opcoes de resposta (A, B, C, D)
+  - Indicar qual e a resposta correta
+  - Ativar/desativar perguntas
+- Editar perguntas existentes
+- Excluir perguntas
+- Ver lista de todas as perguntas cadastradas
+
+### 2. Jogo do Quiz para Hospedes
+
+- O hospede clica em "Quiz da Recreacao" na pagina de jogos
+- Recebe 5 perguntas aleatorias do banco de perguntas cadastradas pelo admin
+- Cada pergunta tem 4 opcoes de resposta
+- Timer de 15 segundos por pergunta
+- Feedback visual imediato (verde para certo, vermelho para errado)
+- Pontuacao:
+  - +10 pontos por resposta correta
+  - +20 pontos de bonus se acertar todas as 5
+  - Maximo possivel: 70 pontos por partida
+- Tela final com resumo de acertos e pontos ganhos
+
+### 3. Integracao com o sistema existente
+
+- Resultados salvos na tabela `minigame_results` (ja existente) com `game_type = 'quiz'`
+- Pontos somados automaticamente ao hospede
+- Botao do Quiz ativado na pagina de Jogos (removendo o "Em breve...")
 
 ---
 
-## 3. Estrutura do Banco de Dados
+## Detalhes Tecnicos
 
-### 3.1 Tabela `guest_spins` (Giros do Hospede)
+### Nova Tabela no Banco de Dados
+
+**quiz_questions**
+
+| Coluna | Tipo | Descricao |
+|--------|------|-----------|
+| id | uuid | Chave primaria |
+| question | text | Texto da pergunta |
+| option_a | text | Opcao A |
+| option_b | text | Opcao B |
+| option_c | text | Opcao C |
+| option_d | text | Opcao D |
+| correct_option | text | Letra da resposta correta (a, b, c ou d) |
+| is_active | boolean | Se a pergunta esta ativa (default: true) |
+| created_at | timestamptz | Data de criacao |
+
+**Politicas RLS:**
+- SELECT: qualquer pessoa pode ver perguntas ativas
+- INSERT/UPDATE/DELETE: somente usuarios autenticados (gestores)
+
+### Novos Arquivos
+
 ```text
-+------------------+------------------------+---------------------+
-| Coluna           | Tipo                   | Descricao          |
-+------------------+------------------------+---------------------+
-| id               | uuid                   | Identificador      |
-| guest_id         | uuid (FK guests)       | Hospede            |
-| source           | text                   | checkin/rating/    |
-|                  |                        | daily              |
-| used             | boolean                | Se ja foi usado    |
-| created_at       | timestamp              | Data de ganho      |
-| used_at          | timestamp              | Data de uso        |
-+------------------+------------------------+---------------------+
+src/components/admin/QuizQuestionsManager.tsx  - CRUD de perguntas no admin
+src/components/games/QuizGame.tsx              - Componente do jogo de quiz
 ```
 
-### 3.2 Tabela `spin_results` (Resultados)
+### Arquivos Modificados
+
 ```text
-+------------------+------------------------+---------------------+
-| Coluna           | Tipo                   | Descricao          |
-+------------------+------------------------+---------------------+
-| id               | uuid                   | Identificador      |
-| guest_id         | uuid (FK guests)       | Hospede            |
-| spin_id          | uuid (FK guest_spins)  | Giro utilizado     |
-| result_type      | text                   | points/minigame/   |
-|                  |                        | nothing            |
-| points_won       | integer                | Pontos ganhos      |
-| minigame_type    | text                   | Tipo do mini-game  |
-| created_at       | timestamp              | Data do resultado  |
-+------------------+------------------------+---------------------+
+src/pages/Games.tsx                            - Ativar botao do Quiz e mostrar QuizGame
+src/components/admin/GamificationManager.tsx   - Adicionar secao de gerenciamento do Quiz
 ```
 
-### 3.3 Tabela `minigame_results` (Resultados Mini-Games)
-```text
-+------------------+------------------------+---------------------+
-| Coluna           | Tipo                   | Descricao          |
-+------------------+------------------------+---------------------+
-| id               | uuid                   | Identificador      |
-| guest_id         | uuid (FK guests)       | Hospede            |
-| game_type        | text                   | memory/quiz/words  |
-| score            | integer                | Pontuacao          |
-| points_earned    | integer                | Pontos ganhos      |
-| completed_in_ms  | integer                | Tempo em ms        |
-| created_at       | timestamp              | Data              |
-+------------------+------------------------+---------------------+
-```
+### Fluxo do Jogo
 
----
+1. Hospede clica no botao "Quiz da Recreacao"
+2. Sistema busca perguntas ativas da tabela `quiz_questions`
+3. Seleciona 5 aleatorias (ou todas se houver menos de 5)
+4. Embaralha a ordem das opcoes em cada pergunta
+5. Apresenta uma pergunta por vez com timer de 15s
+6. Ao responder, mostra feedback e avanca para proxima
+7. Se o timer acabar, conta como erro
+8. Ao final, calcula pontos e salva em `minigame_results`
+9. Atualiza pontos do hospede na tabela `guests`
 
-## 4. Interface do Hospede
+### QuizGame - Interface
 
-### 4.1 Nova Pagina `/games` (Central de Jogos)
-- Header com saldo de giros disponiveis
-- Botao grande "GIRAR A RODA" (se tiver giros)
-- Secao de mini-games desbloqueados
-- Historico de premios recentes
+- Barra de progresso (pergunta 1/5)
+- Timer circular decrescente
+- Texto da pergunta centralizado
+- 4 botoes com as opcoes (layout vertical para mobile)
+- Animacao de acerto (verde) e erro (vermelho)
+- Tela final com estrelas, total de acertos e pontos
 
-### 4.2 Componente da Roda da Sorte
-- Roda colorida com 8 setores
-- Animacao de rotacao suave (3-5 segundos)
-- Efeito sonoro ao girar (opcional)
-- Celebracao animada ao ganhar
+### Admin - Interface do Gerenciador
 
-### 4.3 Fluxo de Uso
-```text
-Hospede clica "Girar"
-      |
-      v
-Animacao da roda (3-5s)
-      |
-      v
-Roda para em setor aleatorio
-      |
-      +--> Pontos: Adiciona ao total + celebracao
-      |
-      +--> Mini-Game: Modal abre com o jogo
-      |
-      +--> Tente Novamente: Mensagem de incentivo
-```
+- Lista de perguntas em cards com preview da pergunta e resposta correta
+- Botao "Nova Pergunta" abre formulario
+- Formulario com campos para pergunta, 4 opcoes e select da resposta correta
+- Toggle para ativar/desativar cada pergunta
+- Botao de excluir com confirmacao
 
----
-
-## 5. Integracao com Sistema Existente
-
-### 5.1 Apos Check-in (CheckInButton.tsx)
-- Adicionar giro automatico apos check-in bem-sucedido
-- Toast: "Check-in realizado! Voce ganhou 1 giro na Roda da Sorte!"
-
-### 5.2 Apos Avaliacao (ActivityRating.tsx)
-- Adicionar giro automatico apos avaliacao
-- Toast: "Avaliacao enviada! +1 giro na Roda da Sorte!"
-
-### 5.3 Bonus Diario
-- Verificar ultimo acesso ao abrir /games
-- Se passou mais de 24h: conceder 1 giro gratis
-- Banner: "Voce ganhou seu giro diario!"
-
----
-
-## 6. Navegacao e Acesso
-
-### 6.1 Botao na Home
-- Card destacado "Roda da Sorte" abaixo do ranking
-- Mostra quantidade de giros disponiveis
-- Icone de roleta animado
-
-### 6.2 Botao no Perfil do Hospede
-- Novo botao "Mini-Games" junto aos outros atalhos
-- Badge com numero de giros disponiveis
-
-### 6.3 Protecao de Rota
-- Apenas hospedes logados podem acessar /games
-- Redirecionamento para login se nao autenticado
-
----
-
-## 7. Arquivos a Criar
-
-### Novos Arquivos:
-```text
-src/pages/Games.tsx                    - Pagina principal dos jogos
-src/components/games/
-  LuckyWheel.tsx                       - Componente da roda da sorte
-  WheelAnimation.tsx                   - Animacao CSS da roda
-  MemoryGame.tsx                       - Jogo da memoria
-  QuizGame.tsx                         - Quiz da recreacao
-  WordSearchGame.tsx                   - Caca-palavras
-  GameResult.tsx                       - Modal de resultado
-  SpinCounter.tsx                      - Contador de giros
-  RecentPrizes.tsx                     - Historico de premios
-src/hooks/useGameSpins.tsx             - Hook para gerenciar giros
-```
-
-### Arquivos a Modificar:
-```text
-src/App.tsx                            - Adicionar rota /games
-src/pages/Home.tsx                     - Adicionar card de acesso
-src/pages/GuestProfile.tsx             - Adicionar botao de acesso
-src/components/CheckInButton.tsx       - Conceder giro apos check-in
-src/components/ActivityRating.tsx      - Conceder giro apos avaliacao
-src/index.css                          - Adicionar animacoes da roda
-```
-
----
-
-## 8. Animacoes e Visual
-
-### 8.1 Animacao da Roda
-- Rotacao com easing "ease-out" (desacelera no final)
-- Duracao: 4-6 segundos aleatorios
-- Rotacoes: 5-8 voltas completas + angulo final
-
-### 8.2 Celebracao de Premio
-- Confetes caindo (reutilizar animacao existente)
-- Numero de pontos subindo animado
-- Som de vitoria (opcional)
-
-### 8.3 Cores dos Setores
-```text
-+5 pts    -> Verde (#22C55E)
-+10 pts   -> Azul (#3B82F6)
-+20 pts   -> Roxo (#A855F7)
-+50 pts   -> Dourado (#EAB308)
-Nada      -> Cinza (#9CA3AF)
-Mini-Game -> Laranja (#F97316)
-```
-
----
-
-## 9. Politicas de Seguranca (RLS)
-
-### Tabela `guest_spins`:
-- SELECT: Hospede ve apenas seus giros
-- INSERT: Sistema pode inserir (via trigger)
-- UPDATE: Hospede pode marcar como usado
-
-### Tabela `spin_results`:
-- SELECT: Hospede ve apenas seus resultados
-- INSERT: Sistema pode inserir
-
-### Tabela `minigame_results`:
-- SELECT: Hospede ve apenas seus resultados
-- INSERT: Hospede pode inserir seus resultados
-
----
-
-## 10. Logica de Sorteio
-
-### Probabilidades Ponderadas:
-```text
-Total de pesos: 100
-- +5 pts: peso 25
-- +10 pts: peso 20
-- +20 pts: peso 10
-- +50 pts: peso 5
-- Nada: peso 20
-- Mini-Game: peso 20
-```
-
-### Prevencao de Fraude:
-- Sorteio calculado no backend (edge function) para resultados valiosos
-- Validacao de que hospede possui giro disponivel antes de sortear
-- Rate limiting: maximo 10 giros por hora por hospede
-
----
-
-## 11. Admin (Futuro)
-
-### Painel de Configuracao:
-- Ajustar probabilidades dos premios
-- Ver estatisticas de premios distribuidos
-- Ativar/desativar tipos de premio
-- Adicionar premios especiais temporarios
-
----
-
-## Resultado Esperado
-
-Um sistema de mini-games divertido que:
-1. Aumenta o engajamento dos hospedes
-2. Incentiva check-ins e avaliacoes
-3. Cria momentos de surpresa e celebracao
-4. Adiciona elemento de sorte ao sistema de pontos
-5. Traz hospedes de volta diariamente (giro gratis)
