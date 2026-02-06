@@ -7,6 +7,7 @@ import { Card } from "@/components/ui/card";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 import { useGuestAuth } from "@/hooks/useGuestAuth";
+import { useGameSpins } from "@/hooks/useGameSpins";
 
 interface ActivityRatingProps {
   activityId: string;
@@ -18,6 +19,7 @@ const POINTS_PER_RATING = 5;
 
 export const ActivityRating = ({ activityId, activityName, onSuccess }: ActivityRatingProps) => {
   const { guest, register, refreshGuest } = useGuestAuth();
+  const { grantSpin } = useGameSpins();
   
   const [rating, setRating] = useState(0);
   const [hoverRating, setHoverRating] = useState(0);
@@ -160,8 +162,11 @@ export const ActivityRating = ({ activityId, activityName, onSuccess }: Activity
         // Refresh guest data to get updated points
         await refreshGuest();
         
+        // Grant a spin for the rating
+        await grantSpin("rating");
+        
         toast({
-          title: `Avaliação enviada! +${POINTS_PER_RATING} pontos!`,
+          title: `Avaliação enviada! +${POINTS_PER_RATING} pts + 1 giro! 🎰`,
           description: "Obrigado pelo seu feedback!",
         });
         

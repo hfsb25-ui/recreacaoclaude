@@ -267,6 +267,41 @@ export type Database = {
         }
         Relationships: []
       }
+      guest_spins: {
+        Row: {
+          created_at: string
+          guest_id: string
+          id: string
+          source: string
+          used: boolean
+          used_at: string | null
+        }
+        Insert: {
+          created_at?: string
+          guest_id: string
+          id?: string
+          source: string
+          used?: boolean
+          used_at?: string | null
+        }
+        Update: {
+          created_at?: string
+          guest_id?: string
+          id?: string
+          source?: string
+          used?: boolean
+          used_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "guest_spins_guest_id_fkey"
+            columns: ["guest_id"]
+            isOneToOne: false
+            referencedRelation: "guests"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       guests: {
         Row: {
           created_at: string | null
@@ -356,6 +391,44 @@ export type Database = {
           url?: string
         }
         Relationships: []
+      }
+      minigame_results: {
+        Row: {
+          completed_in_ms: number | null
+          created_at: string
+          game_type: string
+          guest_id: string
+          id: string
+          points_earned: number
+          score: number
+        }
+        Insert: {
+          completed_in_ms?: number | null
+          created_at?: string
+          game_type: string
+          guest_id: string
+          id?: string
+          points_earned?: number
+          score?: number
+        }
+        Update: {
+          completed_in_ms?: number | null
+          created_at?: string
+          game_type?: string
+          guest_id?: string
+          id?: string
+          points_earned?: number
+          score?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "minigame_results_guest_id_fkey"
+            columns: ["guest_id"]
+            isOneToOne: false
+            referencedRelation: "guests"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       notification_preferences: {
         Row: {
@@ -641,6 +714,51 @@ export type Database = {
             columns: ["guest_id"]
             isOneToOne: false
             referencedRelation: "guests"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      spin_results: {
+        Row: {
+          created_at: string
+          guest_id: string
+          id: string
+          minigame_type: string | null
+          points_won: number | null
+          result_type: string
+          spin_id: string
+        }
+        Insert: {
+          created_at?: string
+          guest_id: string
+          id?: string
+          minigame_type?: string | null
+          points_won?: number | null
+          result_type: string
+          spin_id: string
+        }
+        Update: {
+          created_at?: string
+          guest_id?: string
+          id?: string
+          minigame_type?: string | null
+          points_won?: number | null
+          result_type?: string
+          spin_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "spin_results_guest_id_fkey"
+            columns: ["guest_id"]
+            isOneToOne: false
+            referencedRelation: "guests"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "spin_results_spin_id_fkey"
+            columns: ["spin_id"]
+            isOneToOne: false
+            referencedRelation: "guest_spins"
             referencedColumns: ["id"]
           },
         ]

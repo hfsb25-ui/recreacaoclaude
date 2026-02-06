@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { Calendar, Settings, Waves, Menu, User, Trophy, Star, ChevronRight, ExternalLink } from "lucide-react";
+import { Calendar, Settings, Waves, Menu, User, Trophy, Star, ChevronRight, ExternalLink, Gamepad2 } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -53,6 +53,7 @@ const Home = () => {
   const [weatherLng, setWeatherLng] = useState<number | null>(null);
   const [weatherCity, setWeatherCity] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [spinCount, setSpinCount] = useState(0);
   const [topGuest, setTopGuest] = useState<TopGuest | null>(null);
 
   useEffect(() => {
@@ -60,7 +61,24 @@ const Home = () => {
     fetchMenuItems();
     fetchLogo();
     fetchTopGuest();
-  }, []);
+    if (guest?.id) {
+      fetchSpinCount();
+    }
+  }, [guest?.id]);
+
+  const fetchSpinCount = async () => {
+    if (!guest?.id) return;
+    try {
+      const { count } = await supabase
+        .from("guest_spins")
+        .select("*", { count: "exact", head: true })
+        .eq("guest_id", guest.id)
+        .eq("used", false);
+      setSpinCount(count || 0);
+    } catch (error) {
+      console.error("Error fetching spin count:", error);
+    }
+  };
 
   const fetchAnnouncements = async () => {
     try {
@@ -403,6 +421,40 @@ const Home = () => {
               </div>
             )}
           </Card>
+
+          {/* Lucky Wheel Card */}
+          {guest && (
+            <Card 
+              className="mb-6 overflow-hidden bg-gradient-to-r from-purple-500/10 via-pink-500/10 to-orange-500/10 border-purple-500/30 cursor-pointer hover:shadow-lg transition-all"
+              onClick={() => navigate("/games")}
+            >
+              <div className="p-4">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="p-2 bg-gradient-to-r from-purple-500 to-orange-500 rounded-full">
+                      <Gamepad2 className="h-5 w-5 text-white" />
+                    </div>
+                    <div>
+                      <h3 className="text-base font-bold text-foreground">
+                        🎰 Roda da Sorte
+                      </h3>
+                      <p className="text-sm text-muted-foreground">
+                        Gire e ganhe pontos bônus!
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    {spinCount > 0 && (
+                      <span className="px-3 py-1 bg-orange-500 text-white text-sm font-bold rounded-full animate-pulse">
+                        {spinCount} giro{spinCount !== 1 ? "s" : ""}
+                      </span>
+                    )}
+                    <ChevronRight className="h-5 w-5 text-muted-foreground" />
+                  </div>
+                </div>
+              </div>
+            </Card>
+          )}
 
           {/* Announcements */}
           {announcements.length > 0 ? (

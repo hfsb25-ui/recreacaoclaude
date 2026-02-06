@@ -5,7 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
-import { ArrowLeft, Trophy, LogOut, Calendar } from "lucide-react";
+import { ArrowLeft, Trophy, LogOut, Calendar, Gamepad2 } from "lucide-react";
 import { toast } from "sonner";
 import { NotificationSettings } from "@/components/NotificationSettings";
 
@@ -124,20 +124,27 @@ const GuestProfile = () => {
               </div>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-4">
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 pt-4">
               <Button
                 onClick={() => navigate("/programacao")}
                 className="w-full bg-orange-500 hover:bg-orange-600"
               >
                 <Calendar className="h-4 w-4 mr-2" />
-                Acessar Programação
+                Programação
+              </Button>
+              <Button
+                onClick={() => navigate("/games")}
+                className="w-full bg-gradient-to-r from-purple-500 to-orange-500 hover:from-purple-600 hover:to-orange-600"
+              >
+                <Gamepad2 className="h-4 w-4 mr-2" />
+                Mini-Games
               </Button>
               <Button
                 onClick={() => navigate("/ranking")}
                 className="w-full"
               >
                 <Trophy className="h-4 w-4 mr-2" />
-                Ver Ranking
+                Ranking
               </Button>
               <Button
                 onClick={() => navigate("/hall-of-fame")}
