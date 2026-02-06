@@ -10,6 +10,7 @@ import { SpinCounter } from "@/components/games/SpinCounter";
 import { RecentPrizes } from "@/components/games/RecentPrizes";
 import { GameResult } from "@/components/games/GameResult";
 import { MemoryGame } from "@/components/games/MemoryGame";
+import { QuizGame } from "@/components/games/QuizGame";
 import { toast } from "sonner";
 
 const Games = () => {
@@ -28,6 +29,7 @@ const Games = () => {
   const [currentResult, setCurrentResult] = useState<SpinResult | null>(null);
   const [showResult, setShowResult] = useState(false);
   const [showMiniGame, setShowMiniGame] = useState(false);
+  const [showQuiz, setShowQuiz] = useState(false);
   const [dailySpinChecked, setDailySpinChecked] = useState(false);
 
   // Redirect if not logged in
@@ -88,6 +90,11 @@ const Games = () => {
     refreshSpins();
   };
 
+  const handleQuizComplete = (points: number) => {
+    setShowQuiz(false);
+    refreshSpins();
+  };
+
   if (guestLoading || spinsLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-[var(--gradient-bg)]">
@@ -130,6 +137,11 @@ const Games = () => {
             onComplete={handleMiniGameComplete}
             onClose={() => setShowMiniGame(false)}
           />
+        ) : showQuiz ? (
+          <QuizGame
+            onComplete={handleQuizComplete}
+            onClose={() => setShowQuiz(false)}
+          />
         ) : (
           <>
             {/* Lucky Wheel */}
@@ -163,13 +175,15 @@ const Games = () => {
                 </Button>
                 <Button
                   variant="outline"
-                  className="w-full justify-start h-auto py-4 opacity-50"
-                  disabled
+                  className="w-full justify-start h-auto py-4"
+                  onClick={() => setShowQuiz(true)}
                 >
                   <span className="text-2xl mr-3">📝</span>
                   <div className="text-left">
                     <p className="font-medium">Quiz da Recreação</p>
-                    <p className="text-xs text-muted-foreground">Em breve...</p>
+                    <p className="text-xs text-muted-foreground">
+                      Responda perguntas sobre o hotel e ganhe pontos
+                    </p>
                   </div>
                 </Button>
                 <Button
