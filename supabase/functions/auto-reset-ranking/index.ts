@@ -20,7 +20,7 @@ Deno.serve(async (req) => {
     const { data: resetConfig, error: configError } = await supabase
       .from("reset_config")
       .select("*")
-      .single();
+      .maybeSingle();
 
     if (configError || !resetConfig) {
       console.log("No reset config found");
@@ -63,17 +63,46 @@ Deno.serve(async (req) => {
       );
     }
 
+    // CRITICAL: Check if a reset already happened today to prevent multiple resets
+    const todayStr = brazilTime.toISOString().split("T")[0];
+    const { data: recentPeriods } = await supabase
+      .from("ranking_periods")
+      .select("id, created_at")
+      .gte("created_at", `${todayStr}T00:00:00Z`)
+      .order("created_at", { ascending: false })
+      .limit(2);
+
+    // If there are 2+ periods created today, a reset already happened (one was closed, one was created)
+    if (recentPeriods && recentPeriods.length >= 2) {
+      console.log("Reset already happened today, skipping");
+      return new Response(
+        JSON.stringify({ message: "Reset already completed today", periodsToday: recentPeriods.length }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
     // Get active period
     const { data: activePeriod, error: periodError } = await supabase
       .from("ranking_periods")
       .select("*")
       .eq("is_active", true)
-      .single();
+      .maybeSingle();
 
     if (periodError || !activePeriod) {
       console.log("No active period found");
       return new Response(
         JSON.stringify({ message: "No active period found" }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // Additional guard: check if the active period was created today (meaning it was just reset)
+    const periodCreatedAt = new Date(activePeriod.created_at);
+    const periodCreatedDate = periodCreatedAt.toISOString().split("T")[0];
+    if (periodCreatedDate === todayStr && activePeriod.period_number > 1) {
+      console.log("Active period was already created today, skipping reset");
+      return new Response(
+        JSON.stringify({ message: "Active period already created today", periodNumber: activePeriod.period_number }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
@@ -132,7 +161,7 @@ Deno.serve(async (req) => {
       .update({ is_active: false })
       .eq("id", activePeriod.id);
 
-    // Use direct SQL update via service role to detach ratings from guests (preserves ratings)
+    // Detach ratings from guests (preserves ratings but removes guest association)
     await supabase
       .from("activity_ratings")
       .update({ guest_id: null })
