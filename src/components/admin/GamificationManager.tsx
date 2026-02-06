@@ -19,6 +19,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
+import { QuizQuestionsManager } from "@/components/admin/QuizQuestionsManager";
 
 interface RankingGuest {
   id: string;
@@ -458,6 +459,10 @@ const GamificationManager = () => {
             </AlertDialogFooter>
           </AlertDialogContent>
         </AlertDialog>
+      </Card>
+
+      <Card className="p-6">
+        <QuizQuestionsManager />
       </Card>
 
       <Card className="p-6">
