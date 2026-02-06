@@ -150,3 +150,17 @@ All colors MUST be HSL.
   animation: confetti-fall 2s ease-out forwards;
   font-size: 1.5rem;
 }
+
+/* Lucky Wheel spin animation */
+@keyframes wheel-glow {
+  0%, 100% {
+    box-shadow: 0 0 20px hsla(195, 100%, 50%, 0.4);
+  }
+  50% {
+    box-shadow: 0 0 40px hsla(195, 100%, 50%, 0.8);
+  }
+}
+
+.wheel-glow {
+  animation: wheel-glow 2s ease-in-out infinite;
+}

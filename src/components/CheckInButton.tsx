@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { Check } from "lucide-react";
 import { getLocalDateString } from "@/lib/utils";
+import { useGameSpins } from "@/hooks/useGameSpins";
 
 interface CheckInButtonProps {
   activityId: string;
@@ -22,6 +23,7 @@ const CheckInButton = ({
 }: CheckInButtonProps) => {
   const navigate = useNavigate();
   const { guest, refreshGuest } = useGuestAuth();
+  const { grantSpin } = useGameSpins();
   const [hasCheckedIn, setHasCheckedIn] = useState(false);
   const [isActivityTime, setIsActivityTime] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -91,8 +93,11 @@ const CheckInButton = ({
       setHasCheckedIn(true);
       await refreshGuest();
       
+      // Grant a spin for the check-in
+      await grantSpin("checkin");
+      
       // Show animated toast
-      toast.success("Check-in realizado! +10 pontos! 🎉", {
+      toast.success("Check-in realizado! +10 pontos + 1 giro! 🎰", {
         duration: 3000,
       });
     } catch (error: any) {
