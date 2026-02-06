@@ -6,7 +6,8 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Card } from "@/components/ui/card";
 import { toast } from "sonner";
-import { Plus, Trash2, Edit, Clock, Calendar as CalendarIcon, Download, Check, ChevronsUpDown, Eye, Import, AlertTriangle, Crown } from "lucide-react";
+import { Plus, Trash2, Edit, Clock, Calendar as CalendarIcon, Download, Check, ChevronsUpDown, Eye, Import, AlertTriangle, Crown, FileText } from "lucide-react";
+import BulkImportActivities from "./BulkImportActivities";
 import {
   Dialog,
   DialogContent,
@@ -77,6 +78,7 @@ const ActivitiesManager = () => {
   const [filterAgeGroup, setFilterAgeGroup] = useState<string>("");
   const [importing, setImporting] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
+  const [bulkImportOpen, setBulkImportOpen] = useState(false);
   
   // Import dialog state
   const [importDialogOpen, setImportDialogOpen] = useState(false);
@@ -381,14 +383,24 @@ const ActivitiesManager = () => {
         </div>
         
         {filterDate && (
-          <Button
-            variant="outline"
-            onClick={handleOpenImportDialog}
-            className="hover:bg-primary/10 hover:text-primary transition-[var(--transition-smooth)] mt-8"
-          >
-            <Import className="mr-2 h-4 w-4" />
-            Importar de Outra Data
-          </Button>
+          <div className="flex gap-2 mt-8">
+            <Button
+              variant="outline"
+              onClick={handleOpenImportDialog}
+              className="hover:bg-primary/10 hover:text-primary transition-[var(--transition-smooth)]"
+            >
+              <Import className="mr-2 h-4 w-4" />
+              Importar de Outra Data
+            </Button>
+            <Button
+              variant="outline"
+              onClick={() => setBulkImportOpen(true)}
+              className="hover:bg-primary/10 hover:text-primary transition-[var(--transition-smooth)]"
+            >
+              <FileText className="mr-2 h-4 w-4" />
+              Importar em Lote
+            </Button>
+          </div>
         )}
       </div>
 
@@ -774,6 +786,15 @@ const ActivitiesManager = () => {
           </Card>
         ))}
       </div>
+      {filterDate && (
+        <BulkImportActivities
+          open={bulkImportOpen}
+          onOpenChange={setBulkImportOpen}
+          ageGroups={ageGroups}
+          targetDate={formatDateLocal(filterDate)}
+          onImportComplete={fetchActivities}
+        />
+      )}
     </div>
   );
 };
