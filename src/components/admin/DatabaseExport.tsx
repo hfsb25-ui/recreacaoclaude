@@ -6,33 +6,7 @@ import { Database, Download, Loader2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { format } from "date-fns";
-
-const ALL_TABLES = [
-  { key: "guests", label: "Hóspedes" },
-  { key: "activities", label: "Atividades" },
-  { key: "activity_checkins", label: "Check-ins" },
-  { key: "activity_ratings", label: "Avaliações" },
-  { key: "activity_templates", label: "Catálogo de Atividades" },
-  { key: "age_groups", label: "Faixas Etárias" },
-  { key: "age_group_recreadores", label: "Recreadores por Faixa" },
-  { key: "announcements", label: "Anúncios" },
-  { key: "guest_spins", label: "Giros dos Hóspedes" },
-  { key: "spin_results", label: "Resultados dos Giros" },
-  { key: "minigame_results", label: "Resultados dos Minigames" },
-  { key: "quiz_questions", label: "Perguntas do Quiz" },
-  { key: "levels", label: "Níveis" },
-  { key: "menu_items", label: "Itens do Menu" },
-  { key: "ranking_periods", label: "Períodos do Ranking" },
-  { key: "ranking_winners", label: "Vencedores do Ranking" },
-  { key: "site_settings", label: "Configurações do Site" },
-  { key: "site_visits", label: "Visitas ao Site" },
-  { key: "totem_config", label: "Configuração do Totem" },
-  { key: "reset_config", label: "Configuração de Reset" },
-  { key: "notification_preferences", label: "Preferências de Notificação" },
-  { key: "push_subscriptions", label: "Assinaturas Push" },
-] as const;
-
-type TableKey = (typeof ALL_TABLES)[number]["key"];
+import { ALL_TABLES } from "./database/tables-config";
 
 export const DatabaseExport = () => {
   const [isOpen, setIsOpen] = useState(false);

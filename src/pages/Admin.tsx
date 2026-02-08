@@ -35,6 +35,7 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/component
 import { cn } from "@/lib/utils";
 import { PdfSettingsManager, PdfSettings, loadPdfSettings, savePdfSettings, getDefaultPdfSettings } from "@/components/admin/PdfSettingsManager";
 import { DatabaseExport } from "@/components/admin/DatabaseExport";
+import { DatabaseImport } from "@/components/admin/database/DatabaseImport";
 
 const Admin = () => {
   const navigate = useNavigate();
@@ -353,6 +354,7 @@ const Admin = () => {
             <p className="text-muted-foreground">Gerencie a programação de recreação</p>
           </div>
           <div className="flex gap-2">
+            {isGestor && <DatabaseImport />}
             {isGestor && <DatabaseExport />}
             <Dialog open={exportDialogOpen} onOpenChange={setExportDialogOpen}>
               <DialogTrigger asChild>
