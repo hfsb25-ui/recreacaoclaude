@@ -1,111 +1,150 @@
 
-
-# Quiz da Recreacao com Perguntas Cadastradas pelo Admin
+# Lembrete de Atividades via WhatsApp (Evolution API)
 
 ## Resumo
 
-Criar um sistema completo de Quiz onde o administrador cadastra perguntas personalizadas sobre o hotel, e os hospedes jogam respondendo essas perguntas para ganhar pontos.
+Implementar um sistema onde hospedes cadastrados podem optar por receber lembretes de atividades via WhatsApp, 10 minutos antes do inicio. A integracao sera feita com a Evolution API, configurada pelo administrador.
 
 ---
 
 ## O que sera desenvolvido
 
-### 1. Painel Admin - Gerenciador de Perguntas do Quiz
+### 1. Alteracoes no Banco de Dados
 
-Um novo componente no painel administrativo (dentro da aba "Gamificacao" ou como nova aba) onde o gestor pode:
+**Adicionar coluna `phone` na tabela `guests`:**
+- Campo de telefone (texto, nullable) para armazenar o numero do hospede com DDI
 
-- Cadastrar perguntas com:
-  - Texto da pergunta
-  - 4 opcoes de resposta (A, B, C, D)
-  - Indicar qual e a resposta correta
-  - Ativar/desativar perguntas
-- Editar perguntas existentes
-- Excluir perguntas
-- Ver lista de todas as perguntas cadastradas
+**Nova tabela `whatsapp_config`:**
+- Armazena as configuracoes da Evolution API (URL da instancia, API key, nome da instancia)
+- Apenas gestores podem gerenciar
 
-### 2. Jogo do Quiz para Hospedes
+**Nova tabela `whatsapp_reminders`:**
+- Registra os lembretes solicitados pelos hospedes
+- Colunas: guest_id, activity_id, status (pending/sent/failed), sent_at
+- Evita envio duplicado
 
-- O hospede clica em "Quiz da Recreacao" na pagina de jogos
-- Recebe 5 perguntas aleatorias do banco de perguntas cadastradas pelo admin
-- Cada pergunta tem 4 opcoes de resposta
-- Timer de 15 segundos por pergunta
-- Feedback visual imediato (verde para certo, vermelho para errado)
-- Pontuacao:
-  - +10 pontos por resposta correta
-  - +20 pontos de bonus se acertar todas as 5
-  - Maximo possivel: 70 pontos por partida
-- Tela final com resumo de acertos e pontos ganhos
+### 2. Cadastro do Hospede - Campo Telefone
 
-### 3. Integracao com o sistema existente
+- Adicionar campo "Telefone (WhatsApp)" no formulario de cadastro (`GuestAuth.tsx`)
+- Formato com DDI: ex. 5511999998888
+- Campo opcional no cadastro, mas obrigatorio para ativar lembretes
+- Tambem adicionar no perfil do hospede para atualizar depois
 
-- Resultados salvos na tabela `minigame_results` (ja existente) com `game_type = 'quiz'`
-- Pontos somados automaticamente ao hospede
-- Botao do Quiz ativado na pagina de Jogos (removendo o "Em breve...")
+### 3. Botao "Lembrar no WhatsApp" nas Atividades
+
+- Na pagina de atividades (`Activities.tsx`), ao lado de cada atividade futura, exibir um botao "Lembrar no WhatsApp"
+- Somente visivel para hospedes logados que possuem telefone cadastrado
+- Ao clicar, registra o lembrete na tabela `whatsapp_reminders`
+- Feedback visual: botao muda para "Lembrete ativado" apos clicar
+
+### 4. Painel Admin - Configuracao da Evolution API
+
+- Novo componente `WhatsAppManager.tsx` dentro da aba Configuracoes do admin
+- Campos:
+  - URL da Evolution API (ex: https://api.evolution.com.br)
+  - API Key da instancia
+  - Nome da instancia
+- Botao para testar conexao
+- Status da integracao (conectado/desconectado)
+
+### 5. Edge Function - Envio de Lembretes
+
+- Nova edge function `send-whatsapp-reminder` que:
+  1. Busca lembretes pendentes cujas atividades comecam em ~10 minutos
+  2. Envia mensagem via Evolution API para cada hospede
+  3. Atualiza status do lembrete para "sent" ou "failed"
+- Sera chamada via cron job a cada minuto
+
+### 6. Cron Job
+
+- Agendar execucao da edge function a cada minuto usando pg_cron + pg_net
+- A funcao verifica se ha lembretes pendentes para atividades que comecam nos proximos 10-11 minutos
 
 ---
 
 ## Detalhes Tecnicos
 
-### Nova Tabela no Banco de Dados
+### Novas Tabelas
 
-**quiz_questions**
+**whatsapp_config**
 
 | Coluna | Tipo | Descricao |
 |--------|------|-----------|
 | id | uuid | Chave primaria |
-| question | text | Texto da pergunta |
-| option_a | text | Opcao A |
-| option_b | text | Opcao B |
-| option_c | text | Opcao C |
-| option_d | text | Opcao D |
-| correct_option | text | Letra da resposta correta (a, b, c ou d) |
-| is_active | boolean | Se a pergunta esta ativa (default: true) |
+| instance_url | text | URL base da Evolution API |
+| api_key | text | API Key da instancia |
+| instance_name | text | Nome da instancia |
+| is_active | boolean | Se a integracao esta ativa |
+| created_at | timestamptz | Data de criacao |
+| updated_at | timestamptz | Data de atualizacao |
+
+**whatsapp_reminders**
+
+| Coluna | Tipo | Descricao |
+|--------|------|-----------|
+| id | uuid | Chave primaria |
+| guest_id | uuid | FK para guests |
+| activity_id | uuid | FK para activities |
+| status | text | pending, sent, failed |
+| sent_at | timestamptz | Quando foi enviado |
 | created_at | timestamptz | Data de criacao |
 
-**Politicas RLS:**
-- SELECT: qualquer pessoa pode ver perguntas ativas
-- INSERT/UPDATE/DELETE: somente usuarios autenticados (gestores)
+### Alteracao na tabela `guests`
+
+| Coluna | Tipo | Descricao |
+|--------|------|-----------|
+| phone | text (nullable) | Numero WhatsApp com DDI |
+
+### Politicas RLS
+
+- `whatsapp_config`: SELECT para todos, ALL para gestores autenticados
+- `whatsapp_reminders`: INSERT/SELECT para todos (hospedes nao autenticados via Supabase Auth), DELETE para autenticados
+
+### Edge Function: `send-whatsapp-reminder`
+
+```text
+1. Buscar configuracao ativa da whatsapp_config
+2. Buscar lembretes com status = 'pending'
+3. Para cada lembrete:
+   a. Buscar dados da atividade (nome, horario)
+   b. Buscar telefone do hospede
+   c. Enviar via Evolution API: POST {instance_url}/message/sendText/{instance_name}
+   d. Atualizar status do lembrete
+```
+
+### Mensagem enviada ao hospede
+
+```text
+Oi, {nome}! Lembrete: a atividade "{nome_atividade}" comeca em 10 minutos (as {horario}). Nos vemos la!
+```
 
 ### Novos Arquivos
 
 ```text
-src/components/admin/QuizQuestionsManager.tsx  - CRUD de perguntas no admin
-src/components/games/QuizGame.tsx              - Componente do jogo de quiz
+src/components/admin/WhatsAppManager.tsx       - Config da Evolution API no admin
+src/components/WhatsAppReminderButton.tsx       - Botao de lembrete nas atividades
+supabase/functions/send-whatsapp-reminder/index.ts - Edge function de envio
 ```
 
 ### Arquivos Modificados
 
 ```text
-src/pages/Games.tsx                            - Ativar botao do Quiz e mostrar QuizGame
-src/components/admin/GamificationManager.tsx   - Adicionar secao de gerenciamento do Quiz
+src/pages/GuestAuth.tsx        - Campo de telefone no cadastro
+src/pages/GuestProfile.tsx     - Exibir/editar telefone no perfil
+src/pages/Activities.tsx       - Botao de lembrete WhatsApp
+src/pages/Admin.tsx            - Aba de configuracao WhatsApp
+src/hooks/useGuestAuth.tsx     - Incluir phone no tipo Guest
 ```
 
-### Fluxo do Jogo
+### Fluxo Completo
 
-1. Hospede clica no botao "Quiz da Recreacao"
-2. Sistema busca perguntas ativas da tabela `quiz_questions`
-3. Seleciona 5 aleatorias (ou todas se houver menos de 5)
-4. Embaralha a ordem das opcoes em cada pergunta
-5. Apresenta uma pergunta por vez com timer de 15s
-6. Ao responder, mostra feedback e avanca para proxima
-7. Se o timer acabar, conta como erro
-8. Ao final, calcula pontos e salva em `minigame_results`
-9. Atualiza pontos do hospede na tabela `guests`
-
-### QuizGame - Interface
-
-- Barra de progresso (pergunta 1/5)
-- Timer circular decrescente
-- Texto da pergunta centralizado
-- 4 botoes com as opcoes (layout vertical para mobile)
-- Animacao de acerto (verde) e erro (vermelho)
-- Tela final com estrelas, total de acertos e pontos
-
-### Admin - Interface do Gerenciador
-
-- Lista de perguntas em cards com preview da pergunta e resposta correta
-- Botao "Nova Pergunta" abre formulario
-- Formulario com campos para pergunta, 4 opcoes e select da resposta correta
-- Toggle para ativar/desativar cada pergunta
-- Botao de excluir com confirmacao
-
+```text
+1. Admin configura Evolution API nas Configuracoes
+2. Hospede se cadastra com telefone (ou atualiza no perfil)
+3. Hospede abre programacao e clica "Lembrar no WhatsApp" em uma atividade
+4. Sistema salva lembrete com status "pending"
+5. Cron job roda a cada minuto
+6. Edge function verifica lembretes pendentes para atividades que comecam em ~10 min
+7. Envia mensagem via Evolution API
+8. Atualiza status para "sent"
+```
