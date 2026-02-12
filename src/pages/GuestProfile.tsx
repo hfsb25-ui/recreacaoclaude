@@ -4,8 +4,10 @@ import { useGuestAuth } from "@/hooks/useGuestAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Progress } from "@/components/ui/progress";
-import { ArrowLeft, Trophy, LogOut, Calendar, Gamepad2 } from "lucide-react";
+import { ArrowLeft, Trophy, LogOut, Calendar, Gamepad2, MessageSquare, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { NotificationSettings } from "@/components/NotificationSettings";
 
@@ -23,6 +25,8 @@ const GuestProfile = () => {
   const { guest, currentLevel, nextLevel, logout, refreshGuest, loading: guestLoading } = useGuestAuth();
   const [checkins, setCheckins] = useState<CheckIn[]>([]);
   const [loading, setLoading] = useState(true);
+  const [phone, setPhone] = useState("");
+  const [savingPhone, setSavingPhone] = useState(false);
 
   useEffect(() => {
     // Wait for guest data to load before checking
@@ -34,6 +38,7 @@ const GuestProfile = () => {
     }
 
     fetchCheckins();
+    setPhone(guest.phone || "");
   }, [guest, guestLoading, navigate]);
 
   const fetchCheckins = async () => {
@@ -154,6 +159,45 @@ const GuestProfile = () => {
                 🏆 Hall da Fama
               </Button>
             </div>
+          </div>
+        </Card>
+
+        <Card className="p-6">
+          <h2 className="text-xl font-bold mb-4 flex items-center gap-2">
+            <MessageSquare className="h-5 w-5 text-green-500" />
+            Telefone WhatsApp
+          </h2>
+          <p className="text-sm text-muted-foreground mb-4">
+            Cadastre seu número para receber lembretes de atividades via WhatsApp.
+          </p>
+          <div className="flex gap-3">
+            <Input
+              placeholder="5511999998888"
+              value={phone}
+              onChange={(e) => setPhone(e.target.value.replace(/\D/g, ""))}
+            />
+            <Button
+              disabled={savingPhone}
+              onClick={async () => {
+                if (!guest) return;
+                setSavingPhone(true);
+                try {
+                  const { error } = await supabase
+                    .from("guests")
+                    .update({ phone: phone || null })
+                    .eq("id", guest.id);
+                  if (error) throw error;
+                  await refreshGuest();
+                  toast.success("Telefone atualizado!");
+                } catch (err: any) {
+                  toast.error(err.message || "Erro ao salvar");
+                } finally {
+                  setSavingPhone(false);
+                }
+              }}
+            >
+              {savingPhone ? <Loader2 className="h-4 w-4 animate-spin" /> : "Salvar"}
+            </Button>
           </div>
         </Card>
 

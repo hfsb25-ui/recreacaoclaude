@@ -5,6 +5,7 @@ interface Guest {
   id: string;
   name: string;
   room_number: string;
+  phone: string | null;
   total_points: number;
   current_level: number;
   created_at: string;
@@ -68,7 +69,7 @@ export const useGuestAuth = () => {
     return data;
   };
 
-  const register = async (name: string, roomNumber: string, pin: string) => {
+  const register = async (name: string, roomNumber: string, pin: string, phone?: string) => {
     if (pin.length !== 4 || !/^\d+$/.test(pin)) {
       throw new Error("PIN deve ter exatamente 4 dígitos numéricos");
     }
@@ -80,6 +81,7 @@ export const useGuestAuth = () => {
         room_number: roomNumber,
         pin_code: pin,
         total_points: 50, // Welcome bonus!
+        ...(phone ? { phone } : {}),
       })
       .select()
       .single();

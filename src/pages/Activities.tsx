@@ -9,6 +9,7 @@ import { ptBR } from "date-fns/locale";
 import { ActivityRating } from "@/components/ActivityRating";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import CheckInButton from "@/components/CheckInButton";
+import WhatsAppReminderButton from "@/components/WhatsAppReminderButton";
 import { useGuestAuth } from "@/hooks/useGuestAuth";
 import { getLocalDateString } from "@/lib/utils";
 import {
@@ -325,6 +326,11 @@ const Activities = () => {
                         activityId={activity.id}
                         activityStartTime={activity.start_time}
                         activityEndTime={activity.end_time}
+                        activityDate={activity.activity_date}
+                      />
+                      <WhatsAppReminderButton
+                        activityId={activity.id}
+                        activityStartTime={activity.start_time}
                         activityDate={activity.activity_date}
                       />
                       <Dialog open={selectedActivityForRating?.id === activity.id} onOpenChange={(open) => !open && setSelectedActivityForRating(null)}>

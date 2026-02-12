@@ -308,6 +308,7 @@ export type Database = {
           current_level: number | null
           id: string
           name: string
+          phone: string | null
           pin_code: string
           room_number: string
           total_points: number | null
@@ -318,6 +319,7 @@ export type Database = {
           current_level?: number | null
           id?: string
           name: string
+          phone?: string | null
           pin_code: string
           room_number: string
           total_points?: number | null
@@ -328,6 +330,7 @@ export type Database = {
           current_level?: number | null
           id?: string
           name?: string
+          phone?: string | null
           pin_code?: string
           room_number?: string
           total_points?: number | null
@@ -858,6 +861,78 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
+      }
+      whatsapp_config: {
+        Row: {
+          api_key: string
+          created_at: string
+          id: string
+          instance_name: string
+          instance_url: string
+          is_active: boolean
+          updated_at: string
+        }
+        Insert: {
+          api_key: string
+          created_at?: string
+          id?: string
+          instance_name: string
+          instance_url: string
+          is_active?: boolean
+          updated_at?: string
+        }
+        Update: {
+          api_key?: string
+          created_at?: string
+          id?: string
+          instance_name?: string
+          instance_url?: string
+          is_active?: boolean
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      whatsapp_reminders: {
+        Row: {
+          activity_id: string
+          created_at: string
+          guest_id: string
+          id: string
+          sent_at: string | null
+          status: string
+        }
+        Insert: {
+          activity_id: string
+          created_at?: string
+          guest_id: string
+          id?: string
+          sent_at?: string | null
+          status?: string
+        }
+        Update: {
+          activity_id?: string
+          created_at?: string
+          guest_id?: string
+          id?: string
+          sent_at?: string | null
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "whatsapp_reminders_activity_id_fkey"
+            columns: ["activity_id"]
+            isOneToOne: false
+            referencedRelation: "activities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "whatsapp_reminders_guest_id_fkey"
+            columns: ["guest_id"]
+            isOneToOne: false
+            referencedRelation: "guests"
+            referencedColumns: ["id"]
+          },
+        ]
       }
     }
     Views: {
