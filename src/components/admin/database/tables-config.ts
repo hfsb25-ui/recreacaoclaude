@@ -21,6 +21,8 @@ export const ALL_TABLES = [
   { key: "reset_config", label: "Configuração de Reset", deps: [] },
   { key: "notification_preferences", label: "Preferências de Notificação", deps: ["guests"] },
   { key: "push_subscriptions", label: "Assinaturas Push", deps: ["guests"] },
+  { key: "whatsapp_config", label: "Configuração WhatsApp", deps: [] },
+  { key: "whatsapp_reminders", label: "Lembretes WhatsApp", deps: ["guests", "activities"] },
 ] as const;
 
 export type TableKey = (typeof ALL_TABLES)[number]["key"];

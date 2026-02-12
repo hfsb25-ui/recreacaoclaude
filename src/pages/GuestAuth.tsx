@@ -17,6 +17,7 @@ const GuestAuth = () => {
   const [name, setName] = useState("");
   const [roomNumber, setRoomNumber] = useState("");
   const [pin, setPin] = useState("");
+  const [phone, setPhone] = useState("");
   const [showCelebration, setShowCelebration] = useState(false);
   const [registeredName, setRegisteredName] = useState("");
 
@@ -30,7 +31,7 @@ const GuestAuth = () => {
         toast.success("Login realizado com sucesso!");
         navigate("/guest-profile");
       } else {
-        await register(name, roomNumber, pin);
+        await register(name, roomNumber, pin, phone || undefined);
         setRegisteredName(name);
         setShowCelebration(true);
       }
@@ -79,6 +80,22 @@ const GuestAuth = () => {
                 onChange={(e) => setName(e.target.value)}
                 required
               />
+            </div>
+          )}
+
+          {!isLogin && (
+            <div className="space-y-2">
+              <Label htmlFor="phone">Telefone WhatsApp (opcional)</Label>
+              <Input
+                id="phone"
+                type="tel"
+                placeholder="5511999998888"
+                value={phone}
+                onChange={(e) => setPhone(e.target.value.replace(/\D/g, ""))}
+              />
+              <p className="text-xs text-muted-foreground">
+                Com DDI, ex: 5511999998888. Necessário para receber lembretes.
+              </p>
             </div>
           )}
 

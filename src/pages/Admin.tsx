@@ -36,6 +36,7 @@ import { cn } from "@/lib/utils";
 import { PdfSettingsManager, PdfSettings, loadPdfSettings, savePdfSettings, getDefaultPdfSettings } from "@/components/admin/PdfSettingsManager";
 import { DatabaseExport } from "@/components/admin/DatabaseExport";
 import { DatabaseImport } from "@/components/admin/database/DatabaseImport";
+import { WhatsAppManager } from "@/components/admin/WhatsAppManager";
 
 const Admin = () => {
   const navigate = useNavigate();
@@ -536,11 +537,12 @@ const Admin = () => {
               <TabsContent value="settings" className="space-y-4">
                 <Card className="p-4">
                   <Tabs defaultValue="logo" className="w-full">
-                    <TabsList className="grid w-full grid-cols-2 sm:grid-cols-4 gap-1 h-auto">
+                    <TabsList className="grid w-full grid-cols-2 sm:grid-cols-5 gap-1 h-auto">
                       <TabsTrigger value="logo" className="text-xs sm:text-sm">Logo</TabsTrigger>
                       <TabsTrigger value="pwa-icon" className="text-xs sm:text-sm">Ícone PWA</TabsTrigger>
                       <TabsTrigger value="theme" className="text-xs sm:text-sm">Cores</TabsTrigger>
                       <TabsTrigger value="weather" className="text-xs sm:text-sm">Clima</TabsTrigger>
+                      <TabsTrigger value="whatsapp" className="text-xs sm:text-sm">WhatsApp</TabsTrigger>
                     </TabsList>
                     <TabsContent value="logo" className="mt-4">
                       <LogoManager />
@@ -554,6 +556,9 @@ const Admin = () => {
                     </TabsContent>
                     <TabsContent value="weather" className="mt-4">
                       <WeatherLocationManager />
+                    </TabsContent>
+                    <TabsContent value="whatsapp" className="mt-4">
+                      <WhatsAppManager />
                     </TabsContent>
                   </Tabs>
                 </Card>
