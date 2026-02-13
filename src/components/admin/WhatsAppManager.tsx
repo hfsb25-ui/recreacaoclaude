@@ -5,8 +5,11 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
+import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
-import { MessageSquare, CheckCircle, XCircle, Loader2 } from "lucide-react";
+import { MessageSquare, CheckCircle, XCircle, Loader2, History, RefreshCw } from "lucide-react";
+import { format } from "date-fns";
+import { ptBR } from "date-fns/locale";
 
 interface WhatsAppConfig {
   id: string;
@@ -14,6 +17,17 @@ interface WhatsAppConfig {
   api_key: string;
   instance_name: string;
   is_active: boolean;
+}
+
+interface ReminderLog {
+  id: string;
+  status: string;
+  sent_at: string | null;
+  created_at: string;
+  guest_name: string;
+  guest_phone: string | null;
+  activity_name: string;
+  activity_time: string;
 }
 
 export const WhatsAppManager = () => {
@@ -26,9 +40,12 @@ export const WhatsAppManager = () => {
   const [saving, setSaving] = useState(false);
   const [testing, setTesting] = useState(false);
   const [connectionStatus, setConnectionStatus] = useState<"unknown" | "connected" | "error">("unknown");
+  const [reminders, setReminders] = useState<ReminderLog[]>([]);
+  const [loadingReminders, setLoadingReminders] = useState(false);
 
   useEffect(() => {
     fetchConfig();
+    fetchReminders();
   }, []);
 
   const fetchConfig = async () => {
@@ -46,6 +63,50 @@ export const WhatsAppManager = () => {
       setIsActive(data.is_active);
     }
     setLoading(false);
+  };
+
+  const fetchReminders = async () => {
+    setLoadingReminders(true);
+    const { data } = await supabase
+      .from("whatsapp_reminders")
+      .select("id, status, sent_at, created_at, guest_id, activity_id")
+      .order("created_at", { ascending: false })
+      .limit(50);
+
+    if (!data || data.length === 0) {
+      setReminders([]);
+      setLoadingReminders(false);
+      return;
+    }
+
+    const guestIds = [...new Set(data.map((r) => r.guest_id))];
+    const activityIds = [...new Set(data.map((r) => r.activity_id))];
+
+    const [{ data: guests }, { data: activities }] = await Promise.all([
+      supabase.from("guests").select("id, name, phone").in("id", guestIds),
+      supabase.from("activities").select("id, name, start_time").in("id", activityIds),
+    ]);
+
+    const guestMap = new Map(guests?.map((g) => [g.id, g]) || []);
+    const activityMap = new Map(activities?.map((a) => [a.id, a]) || []);
+
+    const logs: ReminderLog[] = data.map((r) => {
+      const guest = guestMap.get(r.guest_id);
+      const activity = activityMap.get(r.activity_id);
+      return {
+        id: r.id,
+        status: r.status,
+        sent_at: r.sent_at,
+        created_at: r.created_at,
+        guest_name: guest?.name || "Desconhecido",
+        guest_phone: guest?.phone || null,
+        activity_name: activity?.name || "Atividade removida",
+        activity_time: activity?.start_time?.substring(0, 5) || "--:--",
+      };
+    });
+
+    setReminders(logs);
+    setLoadingReminders(false);
   };
 
   const handleSave = async () => {
@@ -123,6 +184,17 @@ export const WhatsAppManager = () => {
       toast.error("Erro de conexão. Verifique a URL da instância.");
     } finally {
       setTesting(false);
+    }
+  };
+
+  const getStatusBadge = (status: string) => {
+    switch (status) {
+      case "sent":
+        return <Badge className="bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300 border-green-300 dark:border-green-700">Enviado</Badge>;
+      case "failed":
+        return <Badge variant="destructive">Falhou</Badge>;
+      default:
+        return <Badge variant="secondary">Pendente</Badge>;
     }
   };
 
@@ -209,6 +281,52 @@ export const WhatsAppManager = () => {
             Salvar Configuração
           </Button>
         </div>
+      </div>
+
+      {/* Histórico de Lembretes */}
+      <div className="border-t pt-6 space-y-4">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <History className="h-5 w-5 text-muted-foreground" />
+            <h3 className="text-lg font-semibold">Histórico de Lembretes</h3>
+          </div>
+          <Button variant="ghost" size="sm" onClick={fetchReminders} disabled={loadingReminders}>
+            <RefreshCw className={`h-4 w-4 mr-1 ${loadingReminders ? "animate-spin" : ""}`} />
+            Atualizar
+          </Button>
+        </div>
+
+        {loadingReminders ? (
+          <p className="text-muted-foreground text-sm">Carregando histórico...</p>
+        ) : reminders.length === 0 ? (
+          <p className="text-muted-foreground text-sm">Nenhum lembrete registrado ainda.</p>
+        ) : (
+          <div className="space-y-2 max-h-96 overflow-y-auto">
+            {reminders.map((r) => (
+              <Card key={r.id} className="p-3">
+                <div className="flex items-center justify-between gap-3 flex-wrap">
+                  <div className="flex-1 min-w-0">
+                    <p className="font-medium text-sm truncate">{r.guest_name}</p>
+                    <p className="text-xs text-muted-foreground truncate">
+                      {r.activity_name} às {r.activity_time}
+                    </p>
+                    {r.guest_phone && (
+                      <p className="text-xs text-muted-foreground">{r.guest_phone}</p>
+                    )}
+                  </div>
+                  <div className="flex flex-col items-end gap-1">
+                    {getStatusBadge(r.status)}
+                    <span className="text-xs text-muted-foreground">
+                      {r.sent_at
+                        ? format(new Date(r.sent_at), "dd/MM HH:mm", { locale: ptBR })
+                        : format(new Date(r.created_at), "dd/MM HH:mm", { locale: ptBR })}
+                    </span>
+                  </div>
+                </div>
+              </Card>
+            ))}
+          </div>
+        )}
       </div>
     </div>
   );
