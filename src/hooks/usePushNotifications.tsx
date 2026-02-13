@@ -63,7 +63,7 @@ export const usePushNotifications = () => {
 
   const subscribeToPush = async () => {
     try {
-      const registration = await navigator.serviceWorker.ready;
+      const registration = await navigator.serviceWorker.ready as ServiceWorkerRegistration & { pushManager: PushManager };
       
       // Check if already subscribed
       let sub = await registration.pushManager.getSubscription();
