@@ -37,6 +37,7 @@ import { PdfSettingsManager, PdfSettings, loadPdfSettings, savePdfSettings, getD
 import { DatabaseExport } from "@/components/admin/DatabaseExport";
 import { DatabaseImport } from "@/components/admin/database/DatabaseImport";
 import { WhatsAppManager } from "@/components/admin/WhatsAppManager";
+import { LeadsManager } from "@/components/admin/LeadsManager";
 
 const Admin = () => {
   const navigate = useNavigate();
@@ -475,6 +476,7 @@ const Admin = () => {
                   <TabsTrigger value="totem" className="whitespace-nowrap text-xs sm:text-sm px-2 sm:px-3">Totem</TabsTrigger>
                   <TabsTrigger value="site-name" className="whitespace-nowrap text-xs sm:text-sm px-2 sm:px-3">Nome</TabsTrigger>
                   <TabsTrigger value="users" className="whitespace-nowrap text-xs sm:text-sm px-2 sm:px-3">Usuários</TabsTrigger>
+                  <TabsTrigger value="leads" className="whitespace-nowrap text-xs sm:text-sm px-2 sm:px-3">Leads</TabsTrigger>
                   <TabsTrigger value="settings" className="whitespace-nowrap text-xs sm:text-sm px-2 sm:px-3 flex items-center gap-1">
                     <Settings2 className="h-3 w-3" />
                     Configurações
@@ -532,6 +534,10 @@ const Admin = () => {
 
               <TabsContent value="users" className="space-y-4">
                 <UsersManager />
+              </TabsContent>
+
+              <TabsContent value="leads" className="space-y-4">
+                <LeadsManager />
               </TabsContent>
 
               <TabsContent value="settings" className="space-y-4">
