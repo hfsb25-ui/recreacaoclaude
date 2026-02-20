@@ -169,6 +169,45 @@ export type Database = {
         }
         Relationships: []
       }
+      admin_login_history: {
+        Row: {
+          browser: string | null
+          created_at: string
+          device_type: string | null
+          id: string
+          ip_address: string | null
+          os: string | null
+          user_agent: string | null
+          user_email: string
+          user_id: string
+          user_role: string | null
+        }
+        Insert: {
+          browser?: string | null
+          created_at?: string
+          device_type?: string | null
+          id?: string
+          ip_address?: string | null
+          os?: string | null
+          user_agent?: string | null
+          user_email: string
+          user_id: string
+          user_role?: string | null
+        }
+        Update: {
+          browser?: string | null
+          created_at?: string
+          device_type?: string | null
+          id?: string
+          ip_address?: string | null
+          os?: string | null
+          user_agent?: string | null
+          user_email?: string
+          user_id?: string
+          user_role?: string | null
+        }
+        Relationships: []
+      }
       age_group_recreadores: {
         Row: {
           age_group_id: string
