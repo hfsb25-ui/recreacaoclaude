@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
+import { trackLogin } from "@/hooks/useLoginTracker";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
@@ -36,12 +37,18 @@ const Auth = () => {
     setLoading(true);
 
     try {
-      const { error } = await supabase.auth.signInWithPassword({
+      const { data, error } = await supabase.auth.signInWithPassword({
         email,
         password,
       });
 
       if (error) throw error;
+
+      // Track login
+      if (data.user) {
+        trackLogin(data.user.id, data.user.email || email);
+      }
+
       toast.success("Login realizado com sucesso!");
     } catch (error: any) {
       toast.error(error.message || "Erro ao fazer login");
