@@ -5,20 +5,30 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Download, RefreshCw, Search, Users, Phone, UserCheck } from "lucide-react";
+import { Download, RefreshCw, Search, Users, Phone, UserCheck, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 interface Lead {
   id: string;
-  name: string;
+  guest_name: string;
   room_number: string;
   phone: string | null;
-  total_points: number | null;
-  created_at: string | null;
-  checkin_count: number;
-  rating_count: number;
+  total_points: number;
+  total_checkins: number;
+  total_ratings: number;
+  imported_at: string;
 }
 
 export const LeadsManager = () => {
@@ -26,6 +36,7 @@ export const LeadsManager = () => {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [filterType, setFilterType] = useState<"all" | "with_phone" | "without_phone">("all");
+  const [deleteLeadId, setDeleteLeadId] = useState<string | null>(null);
 
   useEffect(() => {
     fetchLeads();
@@ -34,40 +45,13 @@ export const LeadsManager = () => {
   const fetchLeads = async () => {
     setLoading(true);
     try {
-      const { data: guests, error } = await supabase
-        .from("guests")
-        .select("id, name, room_number, phone, total_points, created_at")
-        .order("created_at", { ascending: false });
+      const { data, error } = await supabase
+        .from("leads")
+        .select("*")
+        .order("imported_at", { ascending: false });
 
       if (error) throw error;
-
-      // Fetch checkin and rating counts
-      const guestIds = (guests || []).map((g) => g.id);
-
-      const [checkinsRes, ratingsRes] = await Promise.all([
-        supabase.from("activity_checkins").select("guest_id").in("guest_id", guestIds),
-        supabase.from("activity_ratings").select("guest_id").in("guest_id", guestIds),
-      ]);
-
-      const checkinCounts: Record<string, number> = {};
-      (checkinsRes.data || []).forEach((c) => {
-        checkinCounts[c.guest_id] = (checkinCounts[c.guest_id] || 0) + 1;
-      });
-
-      const ratingCounts: Record<string, number> = {};
-      (ratingsRes.data || []).forEach((r) => {
-        if (r.guest_id) {
-          ratingCounts[r.guest_id] = (ratingCounts[r.guest_id] || 0) + 1;
-        }
-      });
-
-      const enriched: Lead[] = (guests || []).map((g) => ({
-        ...g,
-        checkin_count: checkinCounts[g.id] || 0,
-        rating_count: ratingCounts[g.id] || 0,
-      }));
-
-      setLeads(enriched);
+      setLeads((data as Lead[]) || []);
     } catch (err: any) {
       toast.error("Erro ao carregar leads");
     } finally {
@@ -75,10 +59,23 @@ export const LeadsManager = () => {
     }
   };
 
+  const handleDeleteLead = async () => {
+    if (!deleteLeadId) return;
+    try {
+      const { error } = await supabase.from("leads").delete().eq("id", deleteLeadId);
+      if (error) throw error;
+      toast.success("Lead removido!");
+      setDeleteLeadId(null);
+      fetchLeads();
+    } catch {
+      toast.error("Erro ao remover lead");
+    }
+  };
+
   const filtered = leads.filter((lead) => {
     const matchesSearch =
       !search ||
-      lead.name.toLowerCase().includes(search.toLowerCase()) ||
+      lead.guest_name.toLowerCase().includes(search.toLowerCase()) ||
       lead.room_number.toLowerCase().includes(search.toLowerCase()) ||
       (lead.phone && lead.phone.includes(search));
 
@@ -96,15 +93,15 @@ export const LeadsManager = () => {
       return;
     }
 
-    const headers = ["Nome", "Quarto", "Telefone", "Pontos", "Check-ins", "Avaliações", "Cadastro"];
+    const headers = ["Nome", "Quarto", "Telefone", "Pontos", "Check-ins", "Avaliações", "Data Import"];
     const rows = filtered.map((l) => [
-      l.name,
+      l.guest_name,
       l.room_number,
       l.phone || "",
       String(l.total_points || 0),
-      String(l.checkin_count),
-      String(l.rating_count),
-      l.created_at ? format(new Date(l.created_at), "dd/MM/yyyy HH:mm", { locale: ptBR }) : "",
+      String(l.total_checkins),
+      String(l.total_ratings),
+      format(new Date(l.imported_at), "dd/MM/yyyy HH:mm", { locale: ptBR }),
     ]);
 
     const csvContent = [headers, ...rows].map((r) => r.map((v) => `"${v}"`).join(",")).join("\n");
@@ -120,7 +117,6 @@ export const LeadsManager = () => {
   };
 
   const withPhone = leads.filter((l) => l.phone).length;
-  const withoutPhone = leads.length - withPhone;
 
   return (
     <div className="space-y-4">
@@ -144,7 +140,7 @@ export const LeadsManager = () => {
           <UserCheck className="h-8 w-8 text-blue-500" />
           <div>
             <p className="text-2xl font-bold text-foreground">
-              {leads.filter((l) => l.checkin_count > 0).length}
+              {leads.filter((l) => l.total_checkins > 0).length}
             </p>
             <p className="text-xs text-muted-foreground">Com Check-ins</p>
           </div>
@@ -165,25 +161,13 @@ export const LeadsManager = () => {
               />
             </div>
             <div className="flex gap-1">
-              <Button
-                variant={filterType === "all" ? "default" : "outline"}
-                size="sm"
-                onClick={() => setFilterType("all")}
-              >
+              <Button variant={filterType === "all" ? "default" : "outline"} size="sm" onClick={() => setFilterType("all")}>
                 Todos
               </Button>
-              <Button
-                variant={filterType === "with_phone" ? "default" : "outline"}
-                size="sm"
-                onClick={() => setFilterType("with_phone")}
-              >
+              <Button variant={filterType === "with_phone" ? "default" : "outline"} size="sm" onClick={() => setFilterType("with_phone")}>
                 Com Tel.
               </Button>
-              <Button
-                variant={filterType === "without_phone" ? "default" : "outline"}
-                size="sm"
-                onClick={() => setFilterType("without_phone")}
-              >
+              <Button variant={filterType === "without_phone" ? "default" : "outline"} size="sm" onClick={() => setFilterType("without_phone")}>
                 Sem Tel.
               </Button>
             </div>
@@ -213,26 +197,27 @@ export const LeadsManager = () => {
                 <TableHead className="text-center">Pontos</TableHead>
                 <TableHead className="text-center">Check-ins</TableHead>
                 <TableHead className="text-center">Avaliações</TableHead>
-                <TableHead>Cadastro</TableHead>
+                <TableHead>Importado em</TableHead>
+                <TableHead></TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {loading ? (
                 <TableRow>
-                  <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
+                  <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
                     Carregando...
                   </TableCell>
                 </TableRow>
               ) : filtered.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
-                    Nenhum lead encontrado
+                  <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
+                    Nenhum lead encontrado. Os leads são salvos automaticamente quando o ranking é resetado.
                   </TableCell>
                 </TableRow>
               ) : (
                 filtered.map((lead) => (
                   <TableRow key={lead.id}>
-                    <TableCell className="font-medium">{lead.name}</TableCell>
+                    <TableCell className="font-medium">{lead.guest_name}</TableCell>
                     <TableCell>{lead.room_number}</TableCell>
                     <TableCell>
                       {lead.phone ? (
@@ -243,13 +228,16 @@ export const LeadsManager = () => {
                         <span className="text-muted-foreground text-xs">—</span>
                       )}
                     </TableCell>
-                    <TableCell className="text-center">{lead.total_points || 0}</TableCell>
-                    <TableCell className="text-center">{lead.checkin_count}</TableCell>
-                    <TableCell className="text-center">{lead.rating_count}</TableCell>
+                    <TableCell className="text-center">{lead.total_points}</TableCell>
+                    <TableCell className="text-center">{lead.total_checkins}</TableCell>
+                    <TableCell className="text-center">{lead.total_ratings}</TableCell>
                     <TableCell className="text-xs text-muted-foreground">
-                      {lead.created_at
-                        ? format(new Date(lead.created_at), "dd/MM/yy HH:mm", { locale: ptBR })
-                        : "—"}
+                      {format(new Date(lead.imported_at), "dd/MM/yy HH:mm", { locale: ptBR })}
+                    </TableCell>
+                    <TableCell>
+                      <Button variant="ghost" size="icon" onClick={() => setDeleteLeadId(lead.id)}>
+                        <Trash2 className="h-4 w-4 text-destructive" />
+                      </Button>
                     </TableCell>
                   </TableRow>
                 ))
@@ -263,6 +251,27 @@ export const LeadsManager = () => {
           </div>
         )}
       </Card>
+
+      {/* Delete Lead Dialog */}
+      <AlertDialog open={!!deleteLeadId} onOpenChange={() => setDeleteLeadId(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Confirmar exclusão</AlertDialogTitle>
+            <AlertDialogDescription>
+              Tem certeza que deseja remover este lead? Esta ação não pode ser desfeita.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDeleteLead}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Remover
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };

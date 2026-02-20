@@ -173,6 +173,41 @@ Deno.serve(async (req) => {
       .delete()
       .neq("id", "00000000-0000-0000-0000-000000000000");
 
+    // Save guests as leads before deleting
+    const { data: allGuests } = await supabase
+      .from("guests")
+      .select("id, name, room_number, phone, total_points");
+
+    if (allGuests && allGuests.length > 0) {
+      const guestIds = allGuests.map(g => g.id);
+      const [checkinsData, ratingsData] = await Promise.all([
+        supabase.from("activity_checkins").select("guest_id").in("guest_id", guestIds),
+        supabase.from("activity_ratings").select("guest_id").in("guest_id", guestIds),
+      ]);
+
+      const checkinCounts: Record<string, number> = {};
+      (checkinsData.data || []).forEach((c: any) => {
+        checkinCounts[c.guest_id] = (checkinCounts[c.guest_id] || 0) + 1;
+      });
+      const ratingCounts: Record<string, number> = {};
+      (ratingsData.data || []).forEach((r: any) => {
+        if (r.guest_id) ratingCounts[r.guest_id] = (ratingCounts[r.guest_id] || 0) + 1;
+      });
+
+      const leadsToInsert = allGuests.map((g: any) => ({
+        guest_name: g.name,
+        room_number: g.room_number,
+        phone: g.phone,
+        total_points: g.total_points || 0,
+        total_checkins: checkinCounts[g.id] || 0,
+        total_ratings: ratingCounts[g.id] || 0,
+        source_guest_id: g.id,
+      }));
+
+      await supabase.from("leads").insert(leadsToInsert);
+      console.log(`Saved ${leadsToInsert.length} leads before deleting guests`);
+    }
+
     // Delete all guests
     await supabase
       .from("guests")

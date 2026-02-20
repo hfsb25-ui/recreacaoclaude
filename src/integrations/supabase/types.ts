@@ -338,6 +338,45 @@ export type Database = {
         }
         Relationships: []
       }
+      leads: {
+        Row: {
+          created_at: string
+          guest_name: string
+          id: string
+          imported_at: string
+          phone: string | null
+          room_number: string
+          source_guest_id: string | null
+          total_checkins: number | null
+          total_points: number | null
+          total_ratings: number | null
+        }
+        Insert: {
+          created_at?: string
+          guest_name: string
+          id?: string
+          imported_at?: string
+          phone?: string | null
+          room_number: string
+          source_guest_id?: string | null
+          total_checkins?: number | null
+          total_points?: number | null
+          total_ratings?: number | null
+        }
+        Update: {
+          created_at?: string
+          guest_name?: string
+          id?: string
+          imported_at?: string
+          phone?: string | null
+          room_number?: string
+          source_guest_id?: string | null
+          total_checkins?: number | null
+          total_points?: number | null
+          total_ratings?: number | null
+        }
+        Relationships: []
+      }
       levels: {
         Row: {
           badge_emoji: string
