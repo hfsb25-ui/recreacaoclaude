@@ -183,6 +183,41 @@ const GamificationManager = () => {
         console.error("Error deleting checkins:", checkinsError);
       }
 
+      // Save guests as leads before deleting
+      const { data: allGuests } = await supabase
+        .from("guests")
+        .select("id, name, room_number, phone, total_points");
+
+      if (allGuests && allGuests.length > 0) {
+        const checkinCountsMap: Record<string, number> = {};
+        const ratingCountsMap: Record<string, number> = {};
+        const guestIds = allGuests.map(g => g.id);
+
+        const [checkinsData, ratingsData] = await Promise.all([
+          supabase.from("activity_checkins").select("guest_id").in("guest_id", guestIds),
+          supabase.from("activity_ratings").select("guest_id").in("guest_id", guestIds),
+        ]);
+
+        (checkinsData.data || []).forEach(c => {
+          checkinCountsMap[c.guest_id] = (checkinCountsMap[c.guest_id] || 0) + 1;
+        });
+        (ratingsData.data || []).forEach(r => {
+          if (r.guest_id) ratingCountsMap[r.guest_id] = (ratingCountsMap[r.guest_id] || 0) + 1;
+        });
+
+        const leadsToInsert = allGuests.map(g => ({
+          guest_name: g.name,
+          room_number: g.room_number,
+          phone: g.phone,
+          total_points: g.total_points || 0,
+          total_checkins: checkinCountsMap[g.id] || 0,
+          total_ratings: ratingCountsMap[g.id] || 0,
+          source_guest_id: g.id,
+        }));
+
+        await supabase.from("leads").insert(leadsToInsert);
+      }
+
       // Delete all guests
       const { error: guestsError } = await supabase
         .from("guests")
