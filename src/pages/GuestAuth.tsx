@@ -31,7 +31,7 @@ const GuestAuth = () => {
         toast.success("Login realizado com sucesso!");
         navigate("/guest-profile");
       } else {
-        await register(name, roomNumber, pin, phone || undefined);
+        await register(name, roomNumber, pin, phone ? `55${phone}` : undefined);
         setRegisteredName(name);
         setShowCelebration(true);
       }
@@ -86,15 +86,19 @@ const GuestAuth = () => {
           {!isLogin && (
             <div className="space-y-2">
               <Label htmlFor="phone">Telefone WhatsApp (opcional)</Label>
-              <Input
-                id="phone"
-                type="tel"
-                placeholder="5511999998888"
-                value={phone}
-                onChange={(e) => setPhone(e.target.value.replace(/\D/g, ""))}
-              />
+              <div className="flex items-center gap-2">
+                <span className="text-sm font-medium text-muted-foreground bg-muted px-3 py-2 rounded-md border">+55</span>
+                <Input
+                  id="phone"
+                  type="tel"
+                  placeholder="11999998888"
+                  value={phone}
+                  onChange={(e) => setPhone(e.target.value.replace(/\D/g, ""))}
+                  className="flex-1"
+                />
+              </div>
               <p className="text-xs text-muted-foreground">
-                Com DDI, ex: 5511999998888. Necessário para receber lembretes.
+                Digite DDD + número. Ex: 11999998888
               </p>
             </div>
           )}
