@@ -68,6 +68,7 @@ const getDefaultFilters = (): FilterState => ({
 });
 
 export const KPIDashboard = () => {
+  const [currentTime, setCurrentTime] = useState(new Date());
   const [loading, setLoading] = useState(true);
   const [filters, setFilters] = useState<FilterState>(getDefaultFilters());
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
@@ -119,6 +120,11 @@ export const KPIDashboard = () => {
   // Site settings
   const [siteName, setSiteName] = useState("Hotel");
   const [logoUrl, setLogoUrl] = useState<string>();
+
+  useEffect(() => {
+    const timer = setInterval(() => setCurrentTime(new Date()), 1000);
+    return () => clearInterval(timer);
+  }, []);
 
   useEffect(() => {
     fetchAgeGroups();
@@ -629,6 +635,22 @@ export const KPIDashboard = () => {
 
   return (
     <div className="space-y-6">
+      {/* Clock and Title */}
+      <div className="flex justify-between items-end bg-card p-4 rounded-xl border shadow-sm">
+        <div>
+          <h2 className="text-2xl font-bold text-foreground">Dashboard Geral</h2>
+          <p className="text-sm text-muted-foreground">Visão analítica do sistema</p>
+        </div>
+        <div className="text-right">
+          <div className="text-3xl font-mono font-bold text-primary tabular-nums">
+            {format(currentTime, "HH:mm:ss")}
+          </div>
+          <div className="text-sm text-muted-foreground font-medium">
+            {format(currentTime, "EEEE, d 'de' MMMM", { locale: ptBR })}
+          </div>
+        </div>
+      </div>
+
       {/* Filters and Export */}
       <div className="flex items-start gap-4">
         <div className="flex-1">
