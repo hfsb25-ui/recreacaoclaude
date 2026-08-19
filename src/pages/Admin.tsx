@@ -43,6 +43,7 @@ import { LoginHistoryManager } from "@/components/admin/LoginHistoryManager";
 const Admin = () => {
   const navigate = useNavigate();
   const { role, loading: roleLoading, isGestor } = useUserRole();
+  const [currentTime, setCurrentTime] = useState(new Date());
   const [loading, setLoading] = useState(true);
   const [exportDialogOpen, setExportDialogOpen] = useState(false);
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
@@ -58,6 +59,11 @@ const Admin = () => {
     const day = String(date.getDate()).padStart(2, '0');
     return `${year}-${month}-${day}`;
   };
+
+  useEffect(() => {
+    const timer = setInterval(() => setCurrentTime(new Date()), 1000);
+    return () => clearInterval(timer);
+  }, []);
 
   useEffect(() => {
     checkAuth();
@@ -354,7 +360,15 @@ const Admin = () => {
             <h1 className="text-4xl font-bold bg-[var(--gradient-tropical)] bg-clip-text text-transparent mb-2">
               Painel Administrativo
             </h1>
-            <p className="text-muted-foreground">Gerencie a programação de recreação</p>
+            <div className="flex items-center gap-4">
+              <p className="text-muted-foreground">Gerencie a programação de recreação</p>
+              <div className="flex items-center gap-2 bg-card/50 px-3 py-1 rounded-full border border-primary/20 shadow-sm animate-in fade-in zoom-in duration-500">
+                <span className="text-xl font-mono font-bold text-primary tabular-nums">
+                  {format(currentTime, "HH:mm:ss")}
+                </span>
+                <span className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />
+              </div>
+            </div>
           </div>
           <div className="flex gap-2">
             {isGestor && <DatabaseImport />}
