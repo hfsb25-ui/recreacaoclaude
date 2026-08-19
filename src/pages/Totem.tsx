@@ -16,7 +16,7 @@ const useWakeLock = () => {
   const wakeLockRef = useRef<WakeLockSentinel | null>(null);
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const audioContextRef = useRef<AudioContext | null>(null);
-  const noSleepIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const noSleepIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const [useVideoFallback, setUseVideoFallback] = useState(false);
   const [isActive, setIsActive] = useState(false);
   const [activeMethod, setActiveMethod] = useState<string>("none");
@@ -259,7 +259,7 @@ const Totem = () => {
   const [isTransitioning, setIsTransitioning] = useState(false);
   const [loading, setLoading] = useState(true);
   const [authorized, setAuthorized] = useState(false);
-  const transitionTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const transitionTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [activeSlides, setActiveSlides] = useState<SlideConfig[]>([]);
 
   // Keep screen awake
@@ -369,7 +369,7 @@ const Totem = () => {
 
   // Hide cursor after inactivity
   useEffect(() => {
-    let timeout: NodeJS.Timeout;
+    let timeout: ReturnType<typeof setTimeout>;
     const hideCursor = () => {
       document.body.style.cursor = "none";
     };
