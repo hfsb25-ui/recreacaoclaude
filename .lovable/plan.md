@@ -1,42 +1,42 @@
-# Evolução do app: recursos de última geração
+# Totem: Comunicação em Tempo Real
 
-Melhorias de alto impacto aproveitando a base existente (gamificação, ranking, roda da sorte, quiz, PWA, WhatsApp, totem).
+## Objetivo
+Permitir que gestores e recreadores lancem avisos urgentes que aparecem imediatamente no totem do lobby, sobrepondo qualquer slide, com alerta visual opcional.
 
-## Fase 1 — Engajamento diário do hóspede
+## O que será entregue
 
-**Desafios diários e semanais**
-Missões automáticas como "Participe de 2 atividades hoje" ou "Complete 3 atividades aquáticas nesta semana". Ao concluir, o hóspede ganha pontos bônus e um giro extra na Roda da Sorte. Card de missões na Home e na Área do Hóspede, com barra de progresso.
+### 1. Avisos urgentes no banco
+- Nova tabela `totem_alerts` com: título, mensagem, cor do alerta, ícone, duração em segundos, som opcional, status ativo/inativo, data de expiração, quem criou.
+- RLS: apenas gestores e recreadores podem criar/editar; leitura aberta para o totem exibir.
+- Trigger `updated_at` padrão.
 
-**Passaporte digital de conquistas**
-Página visual estilo passaporte, onde cada atividade concluída vira um selo carimbado. Selos bloqueados aparecem em silhueta, incentivando completar a coleção.
+### 2. Entrega instantânea no totem
+- Ativar Realtime na tabela `totem_alerts`.
+- No `Totem.tsx`, escutar mudanças em `totem_alerts` e, quando houver um alerta ativo, exibir um overlay em tela cheia por cima do slide atual.
+- O alerta some automaticamente após a duração configurada ou ao tocar/clickar na tela.
 
-## Fase 2 — Concierge com IA
+### 3. Painel de avisos no Admin
+- Nova aba "Avisos do Totem" no painel administrativo.
+- Lista de avisos criados com status, expiração e botões de editar/ativar/desativar/excluir.
+- Formulário para criar novo aviso com campos: título, mensagem, cor, duração, som, expiração.
+- Botão "Disparar agora" que ativa um aviso imediatamente.
 
-Chat inteligente na Home que responde sobre programação, horários e faixas etárias, e recomenda atividades com base no histórico de check-ins do hóspede. Usa a IA já disponível na plataforma, sem chave externa.
+### 4. Configurações visuais e sonoras
+- Cores pré-definidas (vermelho, amarelo, azul, verde) para diferenciar gravidade.
+- Ícones por tipo de aviso (alerta, info, sucesso, perigo).
+- Som opcional ao exibir (beep suave via Web Audio API, respeitando autoplay).
 
-## Fase 3 — Notificações contextuais
-
-Substituir avisos genéricos por push inteligente:
-- "Faltam X pontos para o próximo nível"
-- "Sua atividade favorita começa em 30 min"
-- "Você ainda não experimentou [atividade]"
-- Alerta de clima integrado ao widget existente
-
-## Fase 4 — Painel do gestor
-
-**Insights com IA**: resumo diário automático no dashboard destacando atividades em alta/baixa e sugestões de ajuste de horário.
-
-**NPS pós-estadia**: envio automático via WhatsApp usando a integração já configurada, com cálculo de NPS e comentários no admin.
+### 5. Histórico
+- Avisos desativados/expirados permanecem no histórico por 7 dias para consulta.
 
 ## Detalhes técnicos
+- Tabela: `public.totem_alerts`.
+- Realtime: `ALTER PUBLICATION supabase_realtime ADD TABLE public.totem_alerts;`.
+- Componentes novos: `TotemAlertOverlay.tsx`, `TotemAlertsManager.tsx`.
+- Edição: `src/pages/Totem.tsx` e `src/pages/Admin.tsx`.
+- Sem alterações no fluxo de slides existente — o alerta é um overlay temporário.
 
-- Novas tabelas: `challenges`, `guest_challenges`, `passport_stamps`, `nps_responses` — todas com RLS e grants adequados.
-- Progresso de desafios atualizado por trigger em `activity_checkins`, no padrão de `add_points_on_checkin`.
-- Concierge: edge function nova consumindo o gateway de IA da plataforma, com contexto de `activities`, `age_groups` e histórico do hóspede.
-- Notificações reutilizam `send-push-notification` e `push_subscriptions`.
-- NPS reutiliza `send-whatsapp-reminder` e `whatsapp_config`.
-- Novas abas do admin seguem a regra atual de acesso por papel.
-
-## Ordem sugerida
-
-Fase 1 primeiro (maior impacto imediato, sem dependência de IA), depois 3, 2 e 4.
+## Critério de pronto
+- Admin consegue criar um aviso e clicar em "Disparar agora".
+- Totem aberto em outra aba/janela exibe o aviso em até 2 segundos.
+- O alerta some sozinho após o tempo configurado.
