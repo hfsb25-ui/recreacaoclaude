@@ -880,6 +880,48 @@ export type Database = {
           },
         ]
       }
+      totem_alerts: {
+        Row: {
+          alert_type: string
+          created_at: string
+          created_by: string | null
+          duration_seconds: number
+          expires_at: string | null
+          id: string
+          is_active: boolean
+          message: string | null
+          play_sound: boolean
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          alert_type?: string
+          created_at?: string
+          created_by?: string | null
+          duration_seconds?: number
+          expires_at?: string | null
+          id?: string
+          is_active?: boolean
+          message?: string | null
+          play_sound?: boolean
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          alert_type?: string
+          created_at?: string
+          created_by?: string | null
+          duration_seconds?: number
+          expires_at?: string | null
+          id?: string
+          is_active?: boolean
+          message?: string | null
+          play_sound?: boolean
+          title?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       totem_config: {
         Row: {
           access_key: string | null
