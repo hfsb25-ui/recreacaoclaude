@@ -1,3 +1,3 @@
 # Roadmap
 
-- [ ] Migrar o banco atual do Lovable Cloud para um projeto Supabase externo (aguardando definição do destino e do escopo).
+- [ ] Migrar banco, usuários, arquivos, funções e conexão para um projeto Supabase externo já criado (bloqueado pelas limitações de exportação e desvinculação do Lovable Cloud).
