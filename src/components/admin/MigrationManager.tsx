@@ -78,7 +78,7 @@ export function MigrationManager() {
 
       <div className="flex gap-3 rounded-md border border-warning/40 bg-warning/10 p-4 text-sm text-foreground">
         <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0 text-warning" />
-        <p>O JSON transfere os registros das tabelas, mas não inclui usuários de login nem arquivos. Não desconecte o Cloud antes de restaurar e testar tudo no destino.</p>
+        <p>O SQL de registros preserva os dados das tabelas, mas não inclui usuários de login nem arquivos. Aplique primeiro o SQL de estrutura e não desconecte o Cloud antes de testar tudo.</p>
       </div>
 
       <Tabs defaultValue="tables">
