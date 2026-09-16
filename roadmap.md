@@ -6,4 +6,4 @@
 - [ ] Conectar com segurança o projeto Supabase externo (bloqueado: este projeto Cloud não aceita conexão externa direta; credencial recebida e protegida).
 - [ ] Importar, validar e trocar a conexão do aplicativo.
 - [x] Criar página de migração para gestores com inventário e cópia de SQL/políticas.
-- [ ] Adicionar ao painel de migração a exportação de todos os registros para importação no Supabase.
+- [x] Adicionar ao painel de migração a exportação de todos os registros para importação no Supabase.

@@ -14,6 +14,7 @@ import {
   MIGRATION_FUNCTIONS,
   MIGRATION_TABLES,
 } from "./migration/migration-artifacts";
+import { MigrationDataExport } from "./migration/MigrationDataExport";
 
 type CopyKey = "full" | "security" | `structure:${string}` | `policy:${string}`;
 
@@ -59,7 +60,7 @@ export function MigrationManager() {
     <section className="space-y-6" aria-labelledby="migration-title">
       <div>
         <h2 id="migration-title" className="text-2xl font-bold text-foreground">Migração para Supabase</h2>
-        <p className="mt-1 text-sm text-muted-foreground">Inventário e SQL do Cloud atual, sem dados ou credenciais sensíveis.</p>
+        <p className="mt-1 text-sm text-muted-foreground">Inventário, SQL e exportação dos registros do Cloud atual, sem credenciais sensíveis.</p>
       </div>
 
       <div className="grid gap-3 sm:grid-cols-3">
@@ -72,11 +73,12 @@ export function MigrationManager() {
         <Button onClick={() => copySql("full", FULL_MIGRATION_SQL)}>{copyIcon("full")}<span className="ml-2">Copiar SQL completo</span></Button>
         <Button variant="outline" onClick={() => copySql("security", FULL_SECURITY_SQL)}>{copyIcon("security")}<span className="ml-2">Copiar todas as políticas</span></Button>
         <Button variant="outline" onClick={() => downloadSql(FULL_MIGRATION_SQL)}><Download className="mr-2 h-4 w-4" />Baixar SQL</Button>
+        <MigrationDataExport />
       </div>
 
       <div className="flex gap-3 rounded-md border border-warning/40 bg-warning/10 p-4 text-sm text-foreground">
         <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0 text-warning" />
-        <p>Copiar o SQL não transfere os registros nem os arquivos. Não desconecte o Cloud antes de restaurar e testar tudo no destino.</p>
+        <p>O JSON transfere os registros das tabelas, mas não inclui usuários de login nem arquivos. Não desconecte o Cloud antes de restaurar e testar tudo no destino.</p>
       </div>
 
       <Tabs defaultValue="tables">
