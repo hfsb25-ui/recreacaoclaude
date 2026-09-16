@@ -29,7 +29,7 @@ async function fetchAllRows(table: TableKey): Promise<Json[]> {
 }
 
 function quoteIdentifier(value: string): string {
-  return `"${value.replaceAll('"', '""')}"`;
+  return `"${value.replace(/"/g, '""')}"`;
 }
 
 function toSqlLiteral(value: Json | undefined): string {
@@ -40,7 +40,7 @@ function toSqlLiteral(value: Json | undefined): string {
     return String(value);
   }
   const serialized = typeof value === "string" ? value : JSON.stringify(value);
-  return `'${serialized.replaceAll("\u0000", "").replaceAll("'", "''")}'`;
+  return `'${serialized.replace(/\u0000/g, "").replace(/'/g, "''")}'`;
 }
 
 function rowsToSql(table: TableKey, rows: Json[]): string {
