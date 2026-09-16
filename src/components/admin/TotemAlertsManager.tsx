@@ -29,12 +29,15 @@ import {
 } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { cn } from "@/lib/utils";
+
+type AlertType = "info" | "warning" | "success" | "danger";
 
 interface TotemAlert {
   id: string;
   title: string;
   message: string | null;
-  alert_type: "info" | "warning" | "success" | "danger";
+  alert_type: AlertType;
   duration_seconds: number;
   play_sound: boolean;
   is_active: boolean;
@@ -42,17 +45,31 @@ interface TotemAlert {
   created_at: string;
 }
 
-const alertTypeOptions = [
-  { value: "info", label: "Informação", icon: Info, color: "text-blue-500" },
-  { value: "warning", label: "Atenção", icon: AlertTriangle, color: "text-amber-500" },
-  { value: "success", label: "Sucesso", icon: CheckCircle, color: "text-emerald-500" },
-  { value: "danger", label: "Urgente", icon: XCircle, color: "text-red-500" },
+interface AlertForm {
+  title: string;
+  message: string;
+  alert_type: AlertType;
+  duration_seconds: number;
+  play_sound: boolean;
+  expires_at: string;
+}
+
+const alertTypeOptions: ReadonlyArray<{
+  value: AlertType;
+  label: string;
+  icon: typeof Info;
+  color: string;
+}> = [
+  { value: "info", label: "Informação", icon: Info, color: "text-primary" },
+  { value: "warning", label: "Atenção", icon: AlertTriangle, color: "text-warning" },
+  { value: "success", label: "Sucesso", icon: CheckCircle, color: "text-success" },
+  { value: "danger", label: "Urgente", icon: XCircle, color: "text-destructive" },
 ];
 
-const defaultForm = {
+const defaultForm: AlertForm = {
   title: "",
   message: "",
-  alert_type: "info" as const,
+  alert_type: "info",
   duration_seconds: 15,
   play_sound: false,
   expires_at: "",
@@ -75,7 +92,14 @@ export const TotemAlertsManager = () => {
       toast.error("Erro ao carregar avisos");
       console.error(error);
     } else {
-      setAlerts(data || []);
+      setAlerts(
+        (data || []).map((alert) => ({
+          ...alert,
+          alert_type: alertTypeOptions.some((option) => option.value === alert.alert_type)
+            ? (alert.alert_type as AlertType)
+            : "info",
+        }))
+      );
     }
     setLoading(false);
   };
