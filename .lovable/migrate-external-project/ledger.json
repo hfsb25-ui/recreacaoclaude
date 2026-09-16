@@ -1,0 +1,18 @@
+{
+  "source": "Lovable Cloud atual",
+  "destination": "Projeto Supabase externo já criado pelo usuário",
+  "capabilities": [
+    {"capability":"Código e rotas","source":"Repositório atual","outcome":"preserve","status":"inventariado","next_action":"Manter o aplicativo e trocar a conexão somente após validação"},
+    {"capability":"Estrutura do banco","source":"35 migrations e 28 tabelas públicas","outcome":"preserve","status":"pronto_para_aplicar","next_action":"Aplicar migrations no destino em ordem"},
+    {"capability":"Registros","source":"106125 registros confirmados","outcome":"preserve","status":"bloqueado","next_action":"Obter exportação completa do Cloud e importar no destino"},
+    {"capability":"Usuários administrativos","source":"Auth e user_roles","outcome":"preserve_profiles_reset_passwords","status":"bloqueado","next_action":"Exportar identidades disponíveis e planejar redefinição de senha"},
+    {"capability":"Autenticação de hóspedes","source":"guests com quarto e PIN","outcome":"preserve","status":"inventariado","next_action":"Importar a tabela guests preservando IDs"},
+    {"capability":"Arquivos","source":"announcements, logos, pwa-icons, database_export_15_09_26","outcome":"preserve","status":"bloqueado","next_action":"Baixar e reenviar todos os objetos mantendo caminhos"},
+    {"capability":"Funções","source":"6 Edge Functions","outcome":"preserve","status":"inventariado","next_action":"Implantar no destino e configurar variáveis"},
+    {"capability":"Evolution API WhatsApp","source":"whatsapp_config e função de envio","outcome":"preserve","status":"inventariado","next_action":"Validar configuração no destino sem expor credenciais"},
+    {"capability":"Push notifications","source":"função e subscriptions","outcome":"preserve","status":"inventariado","next_action":"Implantar função e testar inscrição/disparo"},
+    {"capability":"Jobs agendados","source":"reset de ranking e lembretes","outcome":"preserve","status":"inventariado","next_action":"Recriar agendas e testar execução única"},
+    {"capability":"Troca da conexão do aplicativo","source":"Cliente gerado pelo Lovable Cloud","outcome":"cutover","status":"bloqueado","next_action":"Concluir backup, importar, validar e somente então desconectar/trocar"},
+    {"capability":"Verificação","source":"Fluxos críticos do app","outcome":"verify","status":"pendente","next_action":"Testar login, permissões, programação, avaliações, CRUD, arquivos e funções"}
+  ]
+}
