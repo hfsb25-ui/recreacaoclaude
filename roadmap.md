@@ -1,3 +1,7 @@
 # Roadmap
 
-- [ ] Migrar banco, usuários, arquivos, funções e conexão para um projeto Supabase externo já criado (bloqueado pelas limitações de exportação e desvinculação do Lovable Cloud).
+- [x] Inventariar banco, usuários, arquivos, funções e integrações para migração.
+- [x] Incluir todas as 28 tabelas públicas no backup JSON do painel.
+- [ ] Receber a exportação completa do Cloud e os arquivos dos quatro buckets (bloqueado: arquivos ainda não anexados).
+- [ ] Conectar com segurança o projeto Supabase externo (bloqueado: conexão ainda não disponível).
+- [ ] Importar, validar e trocar a conexão do aplicativo.
