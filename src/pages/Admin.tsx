@@ -39,6 +39,7 @@ import { DatabaseImport } from "@/components/admin/database/DatabaseImport";
 import { WhatsAppManager } from "@/components/admin/WhatsAppManager";
 import { LeadsManager } from "@/components/admin/LeadsManager";
 import { LoginHistoryManager } from "@/components/admin/LoginHistoryManager";
+import { MigrationManager } from "@/components/admin/MigrationManager";
 
 const Admin = () => {
   const navigate = useNavigate();
@@ -493,6 +494,7 @@ const Admin = () => {
                   <TabsTrigger value="users" className="whitespace-nowrap text-xs sm:text-sm px-2 sm:px-3">Usuários</TabsTrigger>
                   <TabsTrigger value="leads" className="whitespace-nowrap text-xs sm:text-sm px-2 sm:px-3">Leads</TabsTrigger>
                   <TabsTrigger value="login-history" className="whitespace-nowrap text-xs sm:text-sm px-2 sm:px-3">Logins</TabsTrigger>
+                  <TabsTrigger value="migration" className="whitespace-nowrap text-xs sm:text-sm px-2 sm:px-3">Migração</TabsTrigger>
                   <TabsTrigger value="settings" className="whitespace-nowrap text-xs sm:text-sm px-2 sm:px-3 flex items-center gap-1">
                     <Settings2 className="h-3 w-3" />
                     Configurações
@@ -558,6 +560,10 @@ const Admin = () => {
 
               <TabsContent value="login-history" className="space-y-4">
                 <LoginHistoryManager />
+              </TabsContent>
+
+              <TabsContent value="migration" className="space-y-4">
+                <MigrationManager />
               </TabsContent>
 
               <TabsContent value="settings" className="space-y-4">
