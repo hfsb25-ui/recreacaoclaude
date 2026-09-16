@@ -4,10 +4,10 @@
   "capabilities": [
     {"capability":"Código e rotas","source":"Repositório atual","outcome":"preserve","status":"inventariado","next_action":"Manter o aplicativo e trocar a conexão somente após validação"},
     {"capability":"Estrutura do banco","source":"35 migrations e 28 tabelas públicas","outcome":"preserve","status":"pronto_para_aplicar","next_action":"Aplicar migrations no destino em ordem"},
-    {"capability":"Registros","source":"106124 registros confirmados","outcome":"preserve","status":"bloqueado","next_action":"Obter exportação completa do Cloud e importar no destino"},
-    {"capability":"Usuários administrativos","source":"Auth e user_roles","outcome":"preserve_profiles_reset_passwords","status":"bloqueado","next_action":"Exportar identidades disponíveis e planejar redefinição de senha"},
+    {"capability":"Registros","source":"Backup PostgreSQL custom válido, criado em 2026-09-15, e 106124 registros confirmados","outcome":"preserve","status":"pronto_para_importar","next_action":"Importar no destino após conectar o projeto externo"},
+    {"capability":"Usuários administrativos","source":"Backup completo com Auth e user_roles","outcome":"preserve_profiles_reset_passwords","status":"pronto_para_importar","next_action":"Importar identidades no destino e validar necessidade de redefinição de senha"},
     {"capability":"Autenticação de hóspedes","source":"guests com quarto e PIN","outcome":"preserve","status":"inventariado","next_action":"Importar a tabela guests preservando IDs"},
-    {"capability":"Arquivos","source":"announcements, logos, pwa-icons, database_export_15_09_26","outcome":"preserve","status":"bloqueado","next_action":"Baixar e reenviar todos os objetos mantendo caminhos"},
+    {"capability":"Arquivos","source":"13 arquivos recebidos: announcements (10), logos (1), pwa-icons (1), database_export_15_09_26 (1)","outcome":"preserve","status":"pronto_para_importar","next_action":"Enviar ao destino mantendo buckets e caminhos"},
     {"capability":"Funções","source":"6 Edge Functions","outcome":"preserve","status":"inventariado","next_action":"Implantar no destino e configurar variáveis"},
     {"capability":"Evolution API WhatsApp","source":"whatsapp_config e função de envio","outcome":"preserve","status":"inventariado","next_action":"Validar configuração no destino sem expor credenciais"},
     {"capability":"Push notifications","source":"função e subscriptions","outcome":"preserve","status":"inventariado","next_action":"Implantar função e testar inscrição/disparo"},
