@@ -2,3 +2,5 @@ project_id = "exxcevxihbcgleopekvt"
 
 [functions.send-whatsapp-reminder]
 verify_jwt = false
+[functions.auto-reset-ranking]
+verify_jwt = false
