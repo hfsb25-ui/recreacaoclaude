@@ -1,18 +1,24 @@
-import { defineConfig } from "vite";
+import { defineConfig, loadEnv } from "vite";
 import react from "@vitejs/plugin-react-swc";
 import path from "path";
-import { componentTagger } from "lovable-tagger";
 import { VitePWA } from "vite-plugin-pwa";
 
 // https://vitejs.dev/config/
-export default defineConfig(({ mode }) => ({
+export default defineConfig(({ mode }) => {
+  const env = loadEnv(mode, process.cwd(), "");
+  // Endereço do projeto Supabase vem do .env (VITE_SUPABASE_URL)
+  const supabaseUrl = (env.VITE_SUPABASE_URL || "").replace(/\/+$/, "");
+  const escaped = supabaseUrl.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const restPattern = new RegExp(`^${escaped}/rest/v1/.*`, "i");
+  const storagePattern = new RegExp(`^${escaped}/storage/v1/.*`, "i");
+
+  return {
   server: {
     host: "::",
     port: 8080,
   },
   plugins: [
     react(),
-    mode === "development" && componentTagger(),
     VitePWA({
       registerType: 'autoUpdate',
       includeAssets: ['icon-192x192.png', 'icon-512x512.png', 'apple-touch-icon.png'],
@@ -46,7 +52,7 @@ export default defineConfig(({ mode }) => ({
         globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2}'],
         runtimeCaching: [
           {
-            urlPattern: /^https:\/\/yihurbdxwpesvlxhkveq\.supabase\.co\/rest\/v1\/.*/i,
+            urlPattern: restPattern,
             handler: 'NetworkFirst',
             options: {
               cacheName: 'api-cache',
@@ -60,7 +66,7 @@ export default defineConfig(({ mode }) => ({
             }
           },
           {
-            urlPattern: /^https:\/\/yihurbdxwpesvlxhkveq\.supabase\.co\/storage\/v1\/.*/i,
+            urlPattern: storagePattern,
             handler: 'CacheFirst',
             options: {
               cacheName: 'images-cache',
@@ -87,4 +93,5 @@ export default defineConfig(({ mode }) => ({
       target: "esnext",
     },
   },
-}));
+  };
+});

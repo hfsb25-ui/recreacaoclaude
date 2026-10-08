@@ -1,73 +1,46 @@
-# Welcome to your Lovable project
+# Recreação — Hotel Fazenda Santa Bárbara
 
-## Project info
+App de programação de recreação do hotel (React + Vite + Supabase), com totem, gamificação, avaliações e painel administrativo. Não depende mais do Lovable.
 
-**URL**: https://lovable.dev/projects/14b9eba4-4558-4daf-b17a-e67770d2ba87
+## Rodar no computador
 
-## How can I edit this code?
-
-There are several ways of editing your application.
-
-**Use Lovable**
-
-Simply visit the [Lovable Project](https://lovable.dev/projects/14b9eba4-4558-4daf-b17a-e67770d2ba87) and start prompting.
-
-Changes made via Lovable will be committed automatically to this repo.
-
-**Use your preferred IDE**
-
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
-
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
-
-Follow these steps:
+Precisa do Node.js 18 ou mais novo.
 
 ```sh
-# Step 1: Clone the repository using the project's Git URL.
-git clone <YOUR_GIT_URL>
-
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
-
-# Step 3: Install the necessary dependencies.
-npm i
-
-# Step 4: Start the development server with auto-reloading and an instant preview.
-npm run dev
+npm install
+npm run dev      # abre em http://localhost:8080
+npm run build    # gera a versão de produção na pasta dist/
 ```
 
-**Edit a file directly in GitHub**
+## Configuração (.env)
 
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
+O app lê a conexão com o banco do arquivo `.env`:
 
-**Use GitHub Codespaces**
+```
+VITE_SUPABASE_PROJECT_ID="id-do-projeto"
+VITE_SUPABASE_URL="https://id-do-projeto.supabase.co"
+VITE_SUPABASE_PUBLISHABLE_KEY="chave anon public"
+```
 
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
+Os valores ficam no painel do Supabase em **Project Settings → API**. Use só a chave **anon / public**. A `service_role` nunca vai no `.env` do app.
 
-## What technologies are used for this project?
+## Migrar para o Supabase próprio
 
-This project is built with:
+1. **Estrutura** — no projeto Supabase novo, abra o **SQL Editor**, cole o conteúdo de `supabase/setup/01_estrutura.sql` e clique em **Run**. Isso cria as tabelas, funções, permissões, os buckets e o realtime do totem.
+2. **Dados** — no mesmo SQL Editor, rode o SQL de dados exportado do painel antigo (aba Migração → exportação SQL dos registros).
+3. **Arquivos** — em **Storage**, envie os arquivos dos buckets `announcements`, `logos`, `pwa-icons` e `database_export_15_09_26`, mantendo as mesmas pastas.
+4. **Funções** — instale o Supabase CLI e rode, nesta pasta:
+   ```sh
+   npx supabase login
+   npx supabase link --project-ref ID_DO_PROJETO_NOVO
+   npx supabase functions deploy
+   ```
+   Se usar o lembrete por WhatsApp, cadastre os segredos da Evolution API em **Edge Functions → Secrets**.
+5. **Trocar a conexão** — atualize o `.env` (e as variáveis na hospedagem) com a URL e a chave anon do projeto novo.
+6. **Usuários do painel** — as senhas não vêm na exportação; recrie os gestores/recreadores ou peça redefinição de senha.
 
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
+## Publicar (Vercel)
 
-## How can I deploy this project?
-
-Simply open [Lovable](https://lovable.dev/projects/14b9eba4-4558-4daf-b17a-e67770d2ba87) and click on Share -> Publish.
-
-## Can I connect a custom domain to my Lovable project?
-
-Yes, you can!
-
-To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
-
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/features/custom-domain#custom-domain)
+1. Em vercel.com, **Add New → Project** e importe este repositório.
+2. Em **Environment Variables**, cadastre as três variáveis do `.env`.
+3. Clique em **Deploy**. O `vercel.json` já cuida das rotas do app.
