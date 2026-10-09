@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Star, Gift, CheckCircle } from "lucide-react";
+import { Star, Gift, CheckCircle, ExternalLink } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
@@ -17,6 +17,10 @@ interface ActivityRatingProps {
 
 const POINTS_PER_RATING = 5;
 
+// Página de avaliação do hotel no TripAdvisor (convite exibido após nota 5)
+const TRIPADVISOR_REVIEW_URL =
+  "https://www.tripadvisor.com.br/UserReviewEdit-g3842968-d4586015-Hotel_Fazenda_Santa_Barbara-Engenheiro_Paulo_de_Frontin_State_of_Rio_de_Janeiro.html";
+
 export const ActivityRating = ({ activityId, activityName, onSuccess }: ActivityRatingProps) => {
   const { guest, register, refreshGuest } = useGuestAuth();
   const { grantSpin } = useGameSpins();
@@ -31,6 +35,7 @@ export const ActivityRating = ({ activityId, activityName, onSuccess }: Activity
   const [hasAlreadyRated, setHasAlreadyRated] = useState(false);
   const [existingRating, setExistingRating] = useState<number | null>(null);
   const [isCheckingRating, setIsCheckingRating] = useState(false);
+  const [showTripAdvisorInvite, setShowTripAdvisorInvite] = useState(false);
 
   // Check if the logged-in guest has already rated this activity
   useEffect(() => {
@@ -170,6 +175,11 @@ export const ActivityRating = ({ activityId, activityName, onSuccess }: Activity
           description: "Obrigado pelo seu feedback!",
         });
         
+        // Nota máxima: convida para avaliar o hotel no TripAdvisor
+        if (rating === 5) {
+          setShowTripAdvisorInvite(true);
+        }
+
         // Reset form
         setRating(0);
         setComment("");
@@ -189,6 +199,28 @@ export const ActivityRating = ({ activityId, activityName, onSuccess }: Activity
 
     setIsSubmitting(false);
   };
+
+  if (showTripAdvisorInvite) {
+    return (
+      <Card className="p-6 space-y-4 text-center">
+        <div className="text-5xl">🎉</div>
+        <h3 className="text-xl font-bold">Que bom que você amou!</h3>
+        <p className="text-muted-foreground">
+          Sua opinião ajuda outras famílias a conhecerem o Hotel Fazenda Santa Bárbara.
+          Que tal contar como está sendo sua estadia no TripAdvisor? Leva só 1 minutinho.
+        </p>
+        <Button asChild size="lg" className="w-full bg-[#34E0A1] hover:bg-[#2bc78d] text-black font-semibold">
+          <a href={TRIPADVISOR_REVIEW_URL} target="_blank" rel="noopener noreferrer">
+            Avaliar no TripAdvisor
+            <ExternalLink className="ml-2 h-4 w-4" />
+          </a>
+        </Button>
+        <Button variant="ghost" className="w-full" onClick={() => setShowTripAdvisorInvite(false)}>
+          Agora não
+        </Button>
+      </Card>
+    );
+  }
 
   // If the guest has already rated this activity, show a message
   if (hasAlreadyRated && guest) {
