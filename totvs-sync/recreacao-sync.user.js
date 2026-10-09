@@ -1,8 +1,8 @@
 // ==UserScript==
 // @name         Recreação HFSB – Sincronizar hóspedes do PMS
 // @namespace    https://github.com/hfsb25-ui/recreacaoclaude
-// @version      1.0.0
-// @description  Envia a lista de hóspedes hospedados do TOTVS PMS SaaS para o app de Recreação, a cada 15 minutos, enquanto o PMS estiver aberto.
+// @version      1.1.0
+// @description  Envia a lista de hóspedes hospedados do TOTVS PMS SaaS para o app de Recreação, 1 vez por dia, na primeira abertura do PMS a partir do horário configurado.
 // @match        https://gestaopms.totvshospitalidade.com/*
 // @run-at       document-start
 // @grant        GM_xmlhttpRequest
@@ -19,7 +19,7 @@
   const SYNC_URL = "https://exxcevxihbcgleopekvt.supabase.co/functions/v1/pms-sync";
   const SYNC_KEY = "COLE_AQUI_A_CHAVE_SECRETA"; // a mesma do segredo PMS_SYNC_KEY no Supabase
   const DEFAULT_API = "https://group05.totvshospitalidade.com/pmsreport/api/reservationReport/4627";
-  const INTERVAL_MIN = 15; // de quantos em quantos minutos sincronizar
+  const SYNC_HOUR = 7; // a partir de que hora do dia faz a sincronização diária
   const DAYS_BACK = 15; // busca entradas dos últimos X dias para achar quem ainda está hospedado
   // =====================================
 
@@ -188,13 +188,21 @@
   };
 
   let running = false;
+  const todayKey = () => ymd(new Date());
   const run = async (force = false) => {
     if (running) return;
     const last = GM_getValue("lastSync", 0);
-    if (!force && Date.now() - last < (INTERVAL_MIN - 1) * 60000) {
-      const t = new Date(last).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
-      show(`✅ Recreação sincronizada às ${t}`, true);
-      return;
+    const lastDay = GM_getValue("lastSyncDay", "");
+    if (!force) {
+      if (lastDay === todayKey()) {
+        const t = new Date(last).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
+        show(`✅ Recreação sincronizada hoje às ${t}`, true);
+        return;
+      }
+      if (new Date().getHours() < SYNC_HOUR) {
+        show(`🕖 Recreação: sincroniza hoje a partir das ${SYNC_HOUR}h`, true);
+        return;
+      }
     }
     if (SYNC_KEY.startsWith("COLE_AQUI")) {
       show("⚠️ Recreação: falta configurar a chave no script", false);
@@ -211,8 +219,9 @@
       const stays = buildStays(items);
       const result = await send(stays);
       GM_setValue("lastSync", Date.now());
+      GM_setValue("lastSyncDay", todayKey());
       const t = new Date().toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
-      show(`✅ Recreação sincronizada às ${t} · ${result.rooms ?? stays.length} aptos`, true);
+      show(`✅ Recreação sincronizada hoje às ${t} · ${result.rooms ?? stays.length} aptos`, true);
     } catch (e) {
       console.warn("[Recreação]", e);
       show(`⚠️ Recreação: ${e.message} (clique para tentar de novo)`, false);
@@ -223,7 +232,7 @@
 
   const start = () => {
     setTimeout(() => run(), 20000); // espera o PMS carregar e fazer as primeiras chamadas
-    setInterval(() => run(), 60000); // confere a cada minuto se já passou o intervalo
+    setInterval(() => run(), 5 * 60000); // confere a cada 5 minutos se a sincronização do dia já foi feita
   };
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", start);
   else start();

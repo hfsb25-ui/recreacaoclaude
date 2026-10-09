@@ -62,8 +62,8 @@ export const PmsSummaryCards = () => {
       </div>
       {lastSync && (
         <p className="text-xs text-muted-foreground mt-2">
-          Hóspedes no hotel agora, segundo o TOTVS · atualizado às{" "}
-          {new Date(lastSync).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}
+          Hóspedes no hotel agora, segundo o TOTVS · atualizado em{" "}
+          {new Date(lastSync).toLocaleString("pt-BR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" })}
         </p>
       )}
     </div>

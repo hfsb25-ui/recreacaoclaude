@@ -33,7 +33,6 @@ const fmtDate = (iso: string | null) =>
 const fmtDateTime = (iso: string) =>
   new Date(iso).toLocaleString("pt-BR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" });
 
-const minutesAgo = (iso: string) => Math.round((Date.now() - new Date(iso).getTime()) / 60000);
 
 export const PmsStaysManager = () => {
   const [stays, setStays] = useState<Stay[]>([]);
@@ -93,7 +92,7 @@ export const PmsStaysManager = () => {
     );
   }
 
-  const stale = lastSync ? minutesAgo(lastSync.synced_at) > 60 : true;
+  const stale = lastSync ? new Date(lastSync.synced_at).toDateString() !== new Date().toDateString() : true;
 
   return (
     <div className="space-y-4">
@@ -104,7 +103,7 @@ export const PmsStaysManager = () => {
           </h2>
           <p className="text-sm text-muted-foreground">
             {lastSync
-              ? `Última sincronização: ${fmtDateTime(lastSync.synced_at)} (há ${minutesAgo(lastSync.synced_at)} min)`
+              ? `Última sincronização: ${fmtDateTime(lastSync.synced_at)} · atualiza 1 vez por dia`
               : "Ainda não houve sincronização com o PMS."}
           </p>
         </div>
@@ -117,8 +116,8 @@ export const PmsStaysManager = () => {
         <Card className="p-3 flex items-start gap-2 text-sm bg-amber-50 dark:bg-amber-900/20 border-amber-200 dark:border-amber-800">
           <AlertTriangle className="h-4 w-4 mt-0.5 text-amber-600 shrink-0" />
           <span>
-            Faz mais de 1 hora sem sincronizar. Verifique se o PMS está aberto em algum computador com o script da
-            Recreação ativo.
+            Ainda não houve sincronização hoje. Abra o PMS em um computador com o script da Recreação ativo (ou clique
+            no aviso do canto da tela do PMS para sincronizar).
           </span>
         </Card>
       )}
