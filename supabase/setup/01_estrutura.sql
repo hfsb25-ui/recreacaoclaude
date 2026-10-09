@@ -1266,22 +1266,34 @@ declare
   msg text;
   digits text;
   sent integer := 0;
+  has_cfg boolean := false;
+  has_act boolean := false;
 begin
-  select * into cfg
-  from public.whatsapp_config
-  where is_active = true
-  order by updated_at desc
-  limit 1;
+  for cfg in
+    select * from public.whatsapp_config
+    where is_active = true
+    order by updated_at desc
+    limit 1
+  loop
+    has_cfg := true;
+  end loop;
 
-  if not found or not cfg.rating_alert_enabled or new.rating > cfg.rating_alert_threshold then
+  if not has_cfg or not cfg.rating_alert_enabled or new.rating > cfg.rating_alert_threshold then
     return new;
   end if;
 
-  select a.name, a.activity_date, a.start_time, g.name as age_group
-    into act
-  from public.activities a
-  left join public.age_groups g on g.id = a.age_group_id
-  where a.id = new.activity_id;
+  for act in
+    select a.name, a.activity_date, a.start_time, g.name as age_group
+    from public.activities a
+    left join public.age_groups g on g.id = a.age_group_id
+    where a.id = new.activity_id
+  loop
+    has_act := true;
+  end loop;
+
+  if not has_act then
+    return new;
+  end if;
 
   msg := '⚠️ *Avaliação baixa na recreação*' || E'\n\n'
       || '*Atividade:* ' || coalesce(act.name, '—')
