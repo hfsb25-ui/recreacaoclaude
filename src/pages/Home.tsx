@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { Calendar, Settings, Waves, Menu, User, Trophy, Star, ChevronRight, ExternalLink, Gamepad2 } from "lucide-react";
+import { Calendar, Settings, Waves, Menu, User, Trophy, Star, ChevronRight, ExternalLink, Gamepad2, MapPin } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -352,6 +352,34 @@ const Home = () => {
               🎮 Área do Hóspede
             </Button>
           </div>
+
+          {/* Hotel Map */}
+          <Card
+            className="mb-6 overflow-hidden cursor-pointer hover:shadow-lg transition-all border-sky-500/30"
+            onClick={() => navigate("/mapa")}
+          >
+            <div className="relative h-28 sm:h-36">
+              <img
+                src="/mapa-hotel-mini.jpg"
+                alt=""
+                className="absolute inset-0 w-full h-full object-cover"
+                loading="lazy"
+              />
+              <div className="absolute inset-0 bg-gradient-to-r from-sky-900/85 via-sky-900/50 to-transparent" />
+              <div className="relative h-full flex items-center justify-between p-4">
+                <div className="flex items-center gap-3 min-w-0 pr-2">
+                  <div className="p-2 bg-white/90 rounded-full shrink-0">
+                    <MapPin className="h-5 w-5 text-sky-700" />
+                  </div>
+                  <div>
+                    <h3 className="text-base sm:text-lg font-bold text-white">Mapa do Hotel</h3>
+                    <p className="text-sm text-white/85">Lazer, piscinas e pontos de encontro</p>
+                  </div>
+                </div>
+                <ChevronRight className="h-6 w-6 text-white shrink-0" />
+              </div>
+            </div>
+          </Card>
 
           {/* Top Guest of the Week OR CTA */}
           <Card className="mb-6 overflow-hidden bg-gradient-to-r from-amber-500/10 via-yellow-500/10 to-orange-500/10 border-amber-500/30">
