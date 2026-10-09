@@ -7,7 +7,7 @@ import { Card } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
-import { MessageSquare, CheckCircle, XCircle, Loader2, History, RefreshCw } from "lucide-react";
+import { MessageSquare, CheckCircle, XCircle, Loader2, History, RefreshCw, Send } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
@@ -39,6 +39,8 @@ export const WhatsAppManager = () => {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [testing, setTesting] = useState(false);
+  const [testPhone, setTestPhone] = useState("");
+  const [sendingTest, setSendingTest] = useState(false);
   const [connectionStatus, setConnectionStatus] = useState<"unknown" | "connected" | "error">("unknown");
   const [reminders, setReminders] = useState<ReminderLog[]>([]);
   const [loadingReminders, setLoadingReminders] = useState(false);
@@ -187,6 +189,53 @@ export const WhatsAppManager = () => {
     }
   };
 
+  const handleSendTestMessage = async () => {
+    if (!instanceUrl || !apiKey || !instanceName) {
+      toast.error("Preencha a configuração da Evolution API antes de testar");
+      return;
+    }
+
+    let digits = testPhone.replace(/\D/g, "");
+    if (digits.length === 10 || digits.length === 11) digits = `55${digits}`;
+    if (digits.length < 12) {
+      toast.error("Informe o número com DDD. Ex.: (24) 99999-9999");
+      return;
+    }
+
+    setSendingTest(true);
+    try {
+      const url = `${instanceUrl.replace(/\/+$/, "")}/message/sendText/${instanceName}`;
+      const response = await fetch(url, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", apikey: apiKey },
+        body: JSON.stringify({
+          number: digits,
+          text: "✅ Teste do app de Recreação do Hotel Fazenda Santa Bárbara. Se você recebeu esta mensagem, a integração com o WhatsApp está funcionando! 🎉",
+        }),
+      });
+
+      if (response.ok) {
+        toast.success(`Mensagem de teste enviada para +${digits}`);
+      } else {
+        const body = await response.text().catch(() => "");
+        console.error("Falha no envio de teste:", response.status, body);
+        if (response.status === 401 || response.status === 403) {
+          toast.error("API Key recusada pela Evolution API");
+        } else if (response.status === 404) {
+          toast.error("Instância não encontrada. Confira o nome da instância");
+        } else if (body.includes("exists") || body.includes("not exist")) {
+          toast.error("Esse número não tem WhatsApp");
+        } else {
+          toast.error(`Erro ao enviar (código ${response.status}). Veja se a instância está conectada`);
+        }
+      }
+    } catch {
+      toast.error("Não foi possível falar com a Evolution API. Confira a URL e se a VPS está no ar");
+    } finally {
+      setSendingTest(false);
+    }
+  };
+
   const getStatusBadge = (status: string) => {
     switch (status) {
       case "sent":
@@ -279,6 +328,31 @@ export const WhatsAppManager = () => {
           <Button onClick={handleSave} disabled={saving}>
             {saving ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : null}
             Salvar Configuração
+          </Button>
+        </div>
+      </div>
+
+      {/* Mensagem de teste */}
+      <div className="border-t pt-6 space-y-3">
+        <div className="flex items-center gap-2">
+          <Send className="h-5 w-5 text-green-600" />
+          <h3 className="text-lg font-semibold">Enviar mensagem de teste</h3>
+        </div>
+        <p className="text-sm text-muted-foreground">
+          Envia uma mensagem para o número abaixo usando a configuração acima (não precisa salvar antes).
+        </p>
+        <div className="flex flex-col sm:flex-row gap-3">
+          <Input
+            type="tel"
+            inputMode="tel"
+            placeholder="(24) 99999-9999"
+            value={testPhone}
+            onChange={(e) => setTestPhone(e.target.value)}
+            className="sm:max-w-xs"
+          />
+          <Button onClick={handleSendTestMessage} disabled={sendingTest} className="bg-green-600 hover:bg-green-700 text-white">
+            {sendingTest ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Send className="h-4 w-4 mr-2" />}
+            Enviar teste
           </Button>
         </div>
       </div>
