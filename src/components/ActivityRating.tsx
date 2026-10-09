@@ -22,7 +22,10 @@ const TRIPADVISOR_REVIEW_URL =
   "https://www.tripadvisor.com.br/UserReviewEdit-g3842968-d4586015-Hotel_Fazenda_Santa_Barbara-Engenheiro_Paulo_de_Frontin_State_of_Rio_de_Janeiro.html";
 
 export const ActivityRating = ({ activityId, activityName, onSuccess }: ActivityRatingProps) => {
-  const { guest, register, refreshGuest } = useGuestAuth();
+  const { guest, register, refreshGuest, loginByStay } = useGuestAuth();
+  const [surname, setSurname] = useState("");
+  // Só pede nome + senha se a reserva não for encontrada na lista do TOTVS
+  const [useManualSignup, setUseManualSignup] = useState(false);
   const { grantSpin } = useGameSpins();
   
   const [rating, setRating] = useState(0);
@@ -81,7 +84,17 @@ export const ActivityRating = ({ activityId, activityName, onSuccess }: Activity
     }
 
     // Validations for non-logged users
-    if (!guest) {
+    if (!guest && !useManualSignup) {
+      if (!roomNumber.trim() || !surname.trim()) {
+        toast({
+          title: "Informe o apartamento e o sobrenome do titular da reserva",
+          variant: "destructive",
+        });
+        return;
+      }
+    }
+
+    if (!guest && useManualSignup) {
       if (!guestName.trim()) {
         toast({
           title: "Por favor, insira seu nome",
@@ -114,8 +127,32 @@ export const ActivityRating = ({ activityId, activityName, onSuccess }: Activity
       let currentGuestName = guest?.name || guestName.trim();
       let currentRoomNumber = guest?.room_number || roomNumber.trim();
 
-      // If not logged in, register the guest first
-      if (!guest) {
+      // Não logado: tenta entrar com apto + sobrenome (lista do TOTVS)
+      if (!guest && !useManualSignup) {
+        const result = await loginByStay(roomNumber, surname);
+        if (!result) {
+          setUseManualSignup(true);
+          toast({
+            title: "Não encontramos sua reserva",
+            description: "Confira o apartamento e o sobrenome, ou preencha seu nome e crie uma senha de 4 dígitos.",
+            variant: "destructive",
+          });
+          setIsSubmitting(false);
+          return;
+        }
+        currentGuestId = result.guest.id;
+        currentGuestName = result.guest.name;
+        currentRoomNumber = result.guest.room_number;
+        if (result.isNew) {
+          toast({
+            title: `Bem-vindo, ${result.guest.name.split(" ")[0]}!`,
+            description: "Você ganhou 50 pontos de boas-vindas!",
+          });
+        }
+      }
+
+      // Cadastro manual (quem não está na lista do TOTVS)
+      if (!guest && useManualSignup) {
         try {
           const newGuest = await register(guestName.trim(), roomNumber.trim(), pin);
           currentGuestId = newGuest.id;
@@ -186,6 +223,7 @@ export const ActivityRating = ({ activityId, activityName, onSuccess }: Activity
         setGuestName("");
         setRoomNumber("");
         setPin("");
+        setSurname("");
         
         onSuccess?.();
       }
@@ -308,7 +346,31 @@ export const ActivityRating = ({ activityId, activityName, onSuccess }: Activity
             </div>
           </div>
         ) : (
-          /* Guest is NOT logged in - show registration fields */
+          /* Não logado: apto + sobrenome; se não achar, nome + senha */
+          !useManualSignup ? (
+            <div className="space-y-2">
+              <Input
+                placeholder="Número do apartamento"
+                value={roomNumber}
+                onChange={(e) => setRoomNumber(e.target.value)}
+                type="text"
+                inputMode="numeric"
+              />
+              <Input
+                placeholder="Sobrenome do titular da reserva"
+                value={surname}
+                onChange={(e) => setSurname(e.target.value)}
+                autoCapitalize="words"
+              />
+              <button
+                type="button"
+                onClick={() => setUseManualSignup(true)}
+                className="text-xs text-muted-foreground hover:underline"
+              >
+                Não está hospedado? Cadastre-se com nome e senha
+              </button>
+            </div>
+          ) : (
           <>
             <Input
               placeholder="Seu nome"
@@ -338,8 +400,16 @@ export const ActivityRating = ({ activityId, activityName, onSuccess }: Activity
               <p className="text-xs text-muted-foreground">
                 Sua senha será usada para acessar sua conta e ver seus pontos
               </p>
+              <button
+                type="button"
+                onClick={() => setUseManualSignup(false)}
+                className="text-xs text-primary hover:underline"
+              >
+                Está hospedado? Entrar com apartamento e sobrenome
+              </button>
             </div>
           </>
+          )
         )}
 
         <Textarea
@@ -355,7 +425,7 @@ export const ActivityRating = ({ activityId, activityName, onSuccess }: Activity
           ) : (
             <>
               <Gift className="h-4 w-4 mr-2" />
-              {guest ? `Avaliar e Ganhar ${POINTS_PER_RATING} Pontos!` : `Criar Conta e Avaliar`}
+              {guest || !useManualSignup ? `Avaliar e Ganhar ${POINTS_PER_RATING} Pontos!` : `Criar Conta e Avaliar`}
             </>
           )}
         </Button>

@@ -69,6 +69,22 @@ export const useGuestAuth = () => {
     return data;
   };
 
+  // Entra com apartamento + sobrenome, conferindo a lista de hóspedes do TOTVS
+  const loginByStay = async (roomNumber: string, surname: string) => {
+    const { data, error } = await (supabase as any).rpc("guest_login_pms", {
+      p_uh: roomNumber.trim(),
+      p_surname: surname.trim(),
+    });
+    if (error) throw new Error("Não foi possível entrar agora. Tente novamente.");
+    if (!data) return null;
+
+    const { is_new, ...guestData } = data as Guest & { is_new?: boolean };
+    localStorage.setItem("guest", JSON.stringify(guestData));
+    setGuest(guestData);
+    await fetchLevelInfo(guestData.current_level, guestData.total_points);
+    return { guest: guestData as Guest, isNew: Boolean(is_new) };
+  };
+
   const register = async (name: string, roomNumber: string, pin: string, phone?: string) => {
     if (pin.length !== 4 || !/^\d+$/.test(pin)) {
       throw new Error("PIN deve ter exatamente 4 dígitos numéricos");
@@ -128,6 +144,7 @@ export const useGuestAuth = () => {
     nextLevel,
     loading,
     login,
+    loginByStay,
     register,
     logout,
     refreshGuest,

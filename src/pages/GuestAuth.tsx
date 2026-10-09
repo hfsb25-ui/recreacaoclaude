@@ -11,8 +11,12 @@ import { CelebrationModal } from "@/components/CelebrationModal";
 
 const GuestAuth = () => {
   const navigate = useNavigate();
-  const { login, register } = useGuestAuth();
-  const [isLogin, setIsLogin] = useState(true);
+  const { login, register, loginByStay } = useGuestAuth();
+  // "stay" = apto + sobrenome (TOTVS); "pin" = entrar com PIN; "register" = cadastro manual
+  const [mode, setMode] = useState<"stay" | "pin" | "register">("stay");
+  const isLogin = mode === "pin";
+  const [surname, setSurname] = useState("");
+  const [notFound, setNotFound] = useState(false);
   const [loading, setLoading] = useState(false);
   const [name, setName] = useState("");
   const [roomNumber, setRoomNumber] = useState("");
@@ -26,7 +30,21 @@ const GuestAuth = () => {
     setLoading(true);
 
     try {
-      if (isLogin) {
+      if (mode === "stay") {
+        const result = await loginByStay(roomNumber, surname);
+        if (!result) {
+          setNotFound(true);
+          toast.error("Não encontramos uma reserva com esse apartamento e sobrenome");
+          return;
+        }
+        if (result.isNew) {
+          setRegisteredName(result.guest.name);
+          setShowCelebration(true);
+        } else {
+          toast.success(`Bem-vindo de volta, ${result.guest.name.split(" ")[0]}!`);
+          navigate("/guest-profile");
+        }
+      } else if (isLogin) {
         await login(roomNumber, pin);
         toast.success("Login realizado com sucesso!");
         navigate("/guest-profile");
@@ -64,10 +82,65 @@ const GuestAuth = () => {
             🎮 Área do Hóspede
           </h1>
           <p className="text-muted-foreground">
-            {isLogin ? "Entre para acompanhar seus pontos" : "Cadastre-se e ganhe 50 pontos de boas-vindas! 🎁"}
+            {mode === "stay"
+              ? "Entre com o número do apartamento e o sobrenome do titular da reserva 🎁"
+              : isLogin
+              ? "Entre para acompanhar seus pontos"
+              : "Cadastre-se e ganhe 50 pontos de boas-vindas! 🎁"}
           </p>
         </div>
 
+        {mode === "stay" ? (
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="stay-room">Número do Apartamento</Label>
+              <Input
+                id="stay-room"
+                type="text"
+                inputMode="numeric"
+                placeholder="Ex: 305"
+                value={roomNumber}
+                onChange={(e) => {
+                  setRoomNumber(e.target.value);
+                  setNotFound(false);
+                }}
+                required
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="stay-surname">Sobrenome do titular da reserva</Label>
+              <Input
+                id="stay-surname"
+                type="text"
+                autoCapitalize="words"
+                placeholder="Ex: Silva"
+                value={surname}
+                onChange={(e) => {
+                  setSurname(e.target.value);
+                  setNotFound(false);
+                }}
+                required
+              />
+            </div>
+
+            {notFound && (
+              <p className="text-sm text-destructive">
+                Confira o número do apartamento e o sobrenome de quem fez a reserva. Se você acabou de chegar, aguarde
+                alguns minutos ou procure a recepção.
+              </p>
+            )}
+
+            <Button type="submit" className="w-full" disabled={loading}>
+              {loading ? "Entrando..." : "Entrar"}
+            </Button>
+
+            <div className="text-center">
+              <button type="button" onClick={() => setMode("pin")} className="text-sm text-primary hover:underline">
+                Já tem PIN ou não está hospedado? Clique aqui
+              </button>
+            </div>
+          </form>
+        ) : (
         <form onSubmit={handleSubmit} className="space-y-4">
           {!isLogin && (
             <div className="space-y-2">
@@ -136,15 +209,21 @@ const GuestAuth = () => {
             {loading ? "Processando..." : isLogin ? "Entrar" : "Cadastrar e Ganhar 50 Pontos! 🎉"}
           </Button>
         </form>
+        )}
 
-        <div className="mt-6 text-center">
-          <button
-            onClick={() => setIsLogin(!isLogin)}
-            className="text-sm text-primary hover:underline"
-          >
-            {isLogin ? "Não tem cadastro? Cadastre-se" : "Já tem cadastro? Entre"}
-          </button>
-        </div>
+        {mode !== "stay" && (
+          <div className="mt-6 text-center space-y-2">
+            <button
+              onClick={() => setMode(isLogin ? "register" : "pin")}
+              className="text-sm text-primary hover:underline block mx-auto"
+            >
+              {isLogin ? "Não tem cadastro? Cadastre-se" : "Já tem cadastro? Entre"}
+            </button>
+            <button onClick={() => setMode("stay")} className="text-sm text-muted-foreground hover:underline block mx-auto">
+              Entrar com apartamento e sobrenome
+            </button>
+          </div>
+        )}
       </Card>
 
       <CelebrationModal
