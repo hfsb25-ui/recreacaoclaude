@@ -38,6 +38,7 @@ import { DatabaseExport } from "@/components/admin/DatabaseExport";
 import { DatabaseImport } from "@/components/admin/database/DatabaseImport";
 import { WhatsAppManager } from "@/components/admin/WhatsAppManager";
 import { RatingAlertsManager } from "@/components/admin/RatingAlertsManager";
+import { RecreationReportManager } from "@/components/admin/RecreationReportManager";
 import { PmsStaysManager } from "@/components/admin/PmsStaysManager";
 import { PmsSummaryCards } from "@/components/admin/PmsSummaryCards";
 import { LeadsManager } from "@/components/admin/LeadsManager";
@@ -602,6 +603,7 @@ const Admin = () => {
                     <TabsContent value="whatsapp" className="mt-4">
                       <WhatsAppManager />
                       <RatingAlertsManager />
+                      <RecreationReportManager />
                     </TabsContent>
                   </Tabs>
                 </Card>
