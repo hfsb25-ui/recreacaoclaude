@@ -39,6 +39,7 @@ import { DatabaseImport } from "@/components/admin/database/DatabaseImport";
 import { WhatsAppManager } from "@/components/admin/WhatsAppManager";
 import { RatingAlertsManager } from "@/components/admin/RatingAlertsManager";
 import { PmsStaysManager } from "@/components/admin/PmsStaysManager";
+import { PmsSummaryCards } from "@/components/admin/PmsSummaryCards";
 import { LeadsManager } from "@/components/admin/LeadsManager";
 import { LoginHistoryManager } from "@/components/admin/LoginHistoryManager";
 import { MigrationManager } from "@/components/admin/MigrationManager";
@@ -476,6 +477,8 @@ const Admin = () => {
             </Button>
           </div>
         </div>
+
+        <PmsSummaryCards />
 
         <Tabs defaultValue="age-groups" className="w-full max-w-full">
           <div className="w-full overflow-x-auto mb-6 scrollbar-thin -mx-4 px-4 sm:mx-0 sm:px-0">
