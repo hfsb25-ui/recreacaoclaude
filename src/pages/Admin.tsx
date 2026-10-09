@@ -37,6 +37,7 @@ import { PdfSettingsManager, PdfSettings, loadPdfSettings, savePdfSettings, getD
 import { DatabaseExport } from "@/components/admin/DatabaseExport";
 import { DatabaseImport } from "@/components/admin/database/DatabaseImport";
 import { WhatsAppManager } from "@/components/admin/WhatsAppManager";
+import { RatingAlertsManager } from "@/components/admin/RatingAlertsManager";
 import { LeadsManager } from "@/components/admin/LeadsManager";
 import { LoginHistoryManager } from "@/components/admin/LoginHistoryManager";
 import { MigrationManager } from "@/components/admin/MigrationManager";
@@ -591,6 +592,7 @@ const Admin = () => {
                     </TabsContent>
                     <TabsContent value="whatsapp" className="mt-4">
                       <WhatsAppManager />
+                      <RatingAlertsManager />
                     </TabsContent>
                   </Tabs>
                 </Card>
