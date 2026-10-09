@@ -89,6 +89,12 @@ Deno.serve(async (req) => {
     })
     .filter(Boolean) as Record<string, unknown>[];
 
+  // Garante uma linha por reserva+apto (o upsert não aceita repetidos no mesmo envio)
+  const unique = new Map<string, Record<string, unknown>>();
+  for (const r of rows) unique.set(`${r.reservation_code}|${r.uh}`, r);
+  rows.length = 0;
+  rows.push(...unique.values());
+
   const supabase = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!, {
     auth: { persistSession: false, autoRefreshToken: false },
   });
@@ -104,7 +110,7 @@ Deno.serve(async (req) => {
     .upsert(rows, { onConflict: "reservation_code,uh" });
   if (upsertError) {
     console.error(upsertError);
-    return json({ error: "Erro ao salvar" }, 500);
+    return json({ error: `Erro ao salvar: ${upsertError.message}`, code: upsertError.code }, 500);
   }
 
   // Remove quem não veio nesta lista (já saiu, cancelou ou não compareceu)
