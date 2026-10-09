@@ -4,3 +4,6 @@ project_id = "exxcevxihbcgleopekvt"
 verify_jwt = false
 [functions.auto-reset-ranking]
 verify_jwt = false
+
+[functions.pms-sync]
+verify_jwt = false

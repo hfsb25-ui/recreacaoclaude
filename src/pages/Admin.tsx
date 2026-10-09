@@ -38,6 +38,7 @@ import { DatabaseExport } from "@/components/admin/DatabaseExport";
 import { DatabaseImport } from "@/components/admin/database/DatabaseImport";
 import { WhatsAppManager } from "@/components/admin/WhatsAppManager";
 import { RatingAlertsManager } from "@/components/admin/RatingAlertsManager";
+import { PmsStaysManager } from "@/components/admin/PmsStaysManager";
 import { LeadsManager } from "@/components/admin/LeadsManager";
 import { LoginHistoryManager } from "@/components/admin/LoginHistoryManager";
 import { MigrationManager } from "@/components/admin/MigrationManager";
@@ -482,6 +483,7 @@ const Admin = () => {
               <TabsTrigger value="age-groups" className="whitespace-nowrap text-xs sm:text-sm px-2 sm:px-3">Faixas Etárias</TabsTrigger>
               <TabsTrigger value="activity-templates" className="whitespace-nowrap text-xs sm:text-sm px-2 sm:px-3">Catálogo</TabsTrigger>
               <TabsTrigger value="activities" className="whitespace-nowrap text-xs sm:text-sm px-2 sm:px-3">Atividades</TabsTrigger>
+              <TabsTrigger value="pms-guests" className="whitespace-nowrap text-xs sm:text-sm px-2 sm:px-3">Hóspedes</TabsTrigger>
               {isGestor && (
                 <>
                   <TabsTrigger value="ratings" className="whitespace-nowrap text-xs sm:text-sm px-2 sm:px-3">Avaliações</TabsTrigger>
@@ -515,6 +517,10 @@ const Admin = () => {
 
           <TabsContent value="activities" className="space-y-4">
             <ActivitiesManager />
+          </TabsContent>
+
+          <TabsContent value="pms-guests" className="space-y-4">
+            <PmsStaysManager />
           </TabsContent>
 
           {isGestor && (
