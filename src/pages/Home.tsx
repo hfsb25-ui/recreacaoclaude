@@ -12,6 +12,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { WeatherWidget } from "@/components/WeatherWidget";
 import { useGuestAuth } from "@/hooks/useGuestAuth";
+import { GuestStayBanner } from "@/components/GuestStayBanner";
 import { InstallBanner } from "@/components/InstallBanner";
 import { NotificationPrompt } from "@/components/NotificationPrompt";
 
@@ -332,6 +333,9 @@ const Home = () => {
               />
             </div>
           )}
+
+          {/* Boas-vindas / último dia (hóspedes vindos do TOTVS) */}
+          {guest && <GuestStayBanner guestId={guest.id} guestName={guest.name} roomNumber={guest.room_number} />}
 
           {/* CTA Buttons */}
           <div className="text-center mb-12 flex flex-col sm:flex-row gap-4 justify-center items-center max-w-2xl mx-auto">
