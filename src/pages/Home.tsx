@@ -14,7 +14,6 @@ import { WeatherWidget } from "@/components/WeatherWidget";
 import { useGuestAuth } from "@/hooks/useGuestAuth";
 import { GuestStayBanner } from "@/components/GuestStayBanner";
 import { InstallBanner } from "@/components/InstallBanner";
-import { NotificationPrompt } from "@/components/NotificationPrompt";
 
 interface Announcement {
   id: string;
@@ -527,7 +526,6 @@ const Home = () => {
       <InstallBanner />
       
       {/* Notification Prompt */}
-      <NotificationPrompt />
     </div>
   );
 };

@@ -9,7 +9,6 @@ import { Label } from "@/components/ui/label";
 import { Progress } from "@/components/ui/progress";
 import { ArrowLeft, Trophy, LogOut, Calendar, Gamepad2, MessageSquare, Loader2 } from "lucide-react";
 import { toast } from "sonner";
-import { NotificationSettings } from "@/components/NotificationSettings";
 
 interface CheckIn {
   id: string;
@@ -201,7 +200,6 @@ const GuestProfile = () => {
           </div>
         </Card>
 
-        <NotificationSettings />
 
         <Card className="p-6">
           <h2 className="text-xl font-bold mb-4">Últimos Check-ins</h2>
