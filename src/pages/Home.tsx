@@ -525,7 +525,6 @@ const Home = () => {
       {/* Install Prompt */}
       <InstallBanner />
       
-      {/* Notification Prompt */}
     </div>
   );
 };
