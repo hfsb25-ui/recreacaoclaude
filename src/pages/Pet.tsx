@@ -9,6 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { PetArt, PET_SPECIES, PET_STAGES, stageFromXp, type PetSpecies } from "@/components/pet/PetArt";
 import { shareOrDownloadCertificate } from "@/components/pet/petCertificate";
+import { InteractivePet } from "@/components/pet/InteractivePet";
 
 interface PetData {
   id: string;
@@ -32,7 +33,7 @@ const CARE = [
 
 /** Cenário do pasto com cerca de madeira */
 const Pasture = ({ children }: { children: React.ReactNode }) => (
-  <div className="relative overflow-hidden rounded-3xl" style={{ background: "linear-gradient(#CFEAF7 0%, #EAF6FB 58%, #9BCB5B 58%)" }}>
+  <div className="relative w-full overflow-hidden rounded-3xl" style={{ background: "linear-gradient(#CFEAF7 0%, #EAF6FB 58%, #9BCB5B 58%)" }}>
     <svg className="absolute inset-x-0 bottom-0 w-full" viewBox="0 0 400 60" preserveAspectRatio="none" aria-hidden>
       <path d="M0 18 Q200 -6 400 18 V60 H0 Z" fill="#9BCB5B" />
       <g fill="#A0673B">
@@ -226,18 +227,27 @@ const Pet = () => {
             const species = PET_SPECIES.find((s) => s.id === pet.species)!;
             return (
               <>
-                <Pasture>
-                  <div className="flex flex-col items-center pt-5 pb-8">
-                    <div className="rounded-xl bg-[#C98B57] px-5 py-1 shadow-[0_3px_0_#A0673B]">
-                      <h1 className="text-3xl font-extrabold text-[#FFF8EC] leading-tight" style={display}>
-                        {pet.name}
-                      </h1>
-                    </div>
-                    <div ref={artRef}>
-                      <PetArt species={pet.species} stage={stage} size={240} />
-                    </div>
-                  </div>
-                </Pasture>
+                <InteractivePet
+                  species={pet.species}
+                  stage={stage}
+                  name={pet.name}
+                  frame={(petNode) => (
+                    <Pasture>
+                      <div className="flex flex-col items-center pt-5 pb-8">
+                        <div className="rounded-xl bg-[#C98B57] px-5 py-1 shadow-[0_3px_0_#A0673B]">
+                          <h1 className="text-3xl font-extrabold text-[#FFF8EC] leading-tight" style={display}>
+                            {pet.name}
+                          </h1>
+                        </div>
+                        {petNode}
+                      </div>
+                    </Pasture>
+                  )}
+                />
+                {/* versão estática (sempre de olhos abertos) usada na certidão */}
+                <div ref={artRef} className="hidden" aria-hidden>
+                  <PetArt species={pet.species} stage={stage} size={240} eyes={stage === 0 ? "sleep" : "open"} />
+                </div>
 
                 <div className="space-y-2">
                   <div className="flex items-baseline justify-between">

@@ -40,13 +40,31 @@ const PALETTES: Record<PetSpecies, Palette> = {
   bezerrinho: { body: "#FFFDF7", shade: "#E9E2D3", muzzle: "#F6B5C0" },
 };
 
-const Eyes = ({ sleepy }: { sleepy: boolean }) =>
-  sleepy ? (
-    <g stroke={INK} strokeWidth={4} strokeLinecap="round" fill="none">
-      <path d="M72 92 q10 8 20 0" />
-      <path d="M108 92 q10 8 20 0" />
-    </g>
-  ) : (
+export type PetEyes = "open" | "happy" | "sleep" | "blink";
+
+const Eyes = ({ mode }: { mode: PetEyes }) => {
+  if (mode === "sleep")
+    return (
+      <g stroke={INK} strokeWidth={4} strokeLinecap="round" fill="none">
+        <path d="M72 92 q10 8 20 0" />
+        <path d="M108 92 q10 8 20 0" />
+      </g>
+    );
+  if (mode === "happy")
+    return (
+      <g stroke={INK} strokeWidth={4.5} strokeLinecap="round" fill="none">
+        <path d="M73 94 q9 -11 18 0" />
+        <path d="M109 94 q9 -11 18 0" />
+      </g>
+    );
+  if (mode === "blink")
+    return (
+      <g stroke={INK} strokeWidth={4} strokeLinecap="round">
+        <path d="M74 91 h16" />
+        <path d="M110 91 h16" />
+      </g>
+    );
+  return (
     <g>
       <circle cx={82} cy={90} r={8} fill={INK} />
       <circle cx={118} cy={90} r={8} fill={INK} />
@@ -54,6 +72,7 @@ const Eyes = ({ sleepy }: { sleepy: boolean }) =>
       <circle cx={121} cy={87} r={2.6} fill="#fff" />
     </g>
   );
+};
 
 const Blush = () => (
   <g fill="#F28AA3" opacity={0.55}>
@@ -237,12 +256,17 @@ interface PetArtProps {
   stage: number;
   size?: number;
   title?: string;
+  /** expressão dos olhos (padrão: dormindo no bebê, abertos nas outras fases) */
+  eyes?: PetEyes;
+  /** classe CSS do corpo, usada para as animações */
+  bodyClassName?: string;
 }
 
 /** Desenho do bichinho. As fases mudam tamanho, expressão e acessórios. */
-export const PetArt = ({ species, stage, size = 220, title }: PetArtProps) => {
+export const PetArt = ({ species, stage, size = 220, title, eyes, bodyClassName }: PetArtProps) => {
   const scale = [0.68, 0.8, 0.9, 1][Math.max(0, Math.min(3, stage))];
-  const sleepy = stage === 0;
+  const eyeMode: PetEyes = eyes ?? (stage === 0 ? "sleep" : "open");
+  const sleepy = eyeMode === "sleep";
   const extras: ReactNode[] = [];
   if (stage >= 2) extras.push(<Bandana key="bandana" />);
   if (stage >= 3) extras.push(<StrawHat key="hat" />, <Medal key="medal" />);
@@ -258,10 +282,12 @@ export const PetArt = ({ species, stage, size = 220, title }: PetArtProps) => {
       {/* sombra no chão */}
       <ellipse cx={100} cy={190} rx={52 * scale} ry={7 * scale} fill="#2F5D1E" opacity={0.18} />
       <g transform={`translate(100 190) scale(${scale}) translate(-100 -190)`}>
+        <g className={bodyClassName} style={{ transformOrigin: "100px 190px", transformBox: "view-box" }}>
         <SpeciesBody species={species} />
-        <Eyes sleepy={sleepy} />
+        <Eyes mode={eyeMode} />
         {!sleepy && <Blush />}
         {extras}
+        </g>
       </g>
       {sleepy && <Zzz />}
       {stage >= 3 && <Sparkles />}
