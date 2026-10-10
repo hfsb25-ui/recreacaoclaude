@@ -99,6 +99,9 @@ export const GuestStayBanner = ({ guestId, guestName, roomNumber }: Props) => {
                 <Star className="h-4 w-4 mr-1.5" />
                 Avaliar as atividades
               </Button>
+              <Button size="sm" variant="outline" onClick={() => navigate("/bichinho")}>
+                🐣 Certidão do bichinho
+              </Button>
             </div>
           </div>
         </div>

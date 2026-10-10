@@ -5,20 +5,21 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { useTheme } from "@/hooks/useTheme";
 import { usePageTracking } from "@/hooks/usePageTracking";
 import { SplashScreen } from "@/components/SplashScreen";
-import { useState, useEffect } from "react";
+import { useState, useEffect, lazy, Suspense } from "react";
 import Home from "./pages/Home";
 import Schedule from "./pages/Schedule";
 import Activities from "./pages/Activities";
-import Auth from "./pages/Auth";
-import Admin from "./pages/Admin";
+const Auth = lazy(() => import("./pages/Auth"));
+const Admin = lazy(() => import("./pages/Admin"));
 import GuestAuth from "./pages/GuestAuth";
 import GuestProfile from "./pages/GuestProfile";
 import Ranking from "./pages/Ranking";
-import HallOfFame from "./pages/HallOfFame";
-import Install from "./pages/Install";
-import Totem from "./pages/Totem";
-import Games from "./pages/Games";
-import HotelMap from "./pages/HotelMap";
+const HallOfFame = lazy(() => import("./pages/HallOfFame"));
+const Install = lazy(() => import("./pages/Install"));
+const Totem = lazy(() => import("./pages/Totem"));
+const Games = lazy(() => import("./pages/Games"));
+const HotelMap = lazy(() => import("./pages/HotelMap"));
+const Pet = lazy(() => import("./pages/Pet"));
 import NotFound from "./pages/NotFound";
 
 // Component that uses hooks that require Router context
@@ -26,6 +27,7 @@ const AppRoutes = () => {
   usePageTracking();
   
   return (
+    <Suspense fallback={<div className="min-h-screen bg-background" />}>
     <Routes>
       <Route path="/" element={<Home />} />
       <Route path="/programacao" element={<Schedule />} />
@@ -40,9 +42,11 @@ const AppRoutes = () => {
       <Route path="/totem" element={<Totem />} />
       <Route path="/games" element={<Games />} />
       <Route path="/mapa" element={<HotelMap />} />
+      <Route path="/bichinho" element={<Pet />} />
       {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
       <Route path="*" element={<NotFound />} />
     </Routes>
+    </Suspense>
   );
 };
 
