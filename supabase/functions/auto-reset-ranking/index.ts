@@ -161,28 +161,28 @@ Deno.serve(async (req) => {
       .update({ is_active: false })
       .eq("id", activePeriod.id);
 
-    // Detach ratings from guests (preserves ratings but removes guest association)
-    await supabase
-      .from("activity_ratings")
-      .update({ guest_id: null })
-      .not("guest_id", "is", null);
-
-    // Delete all check-ins
-    await supabase
-      .from("activity_checkins")
-      .delete()
-      .neq("id", "00000000-0000-0000-0000-000000000000");
-
-    // Save guests as leads before deleting
+    // Save guests as leads BEFORE detaching ratings and deleting check-ins,
+    // otherwise their check-in and rating counts are always saved as zero
     const { data: allGuests } = await supabase
       .from("guests")
       .select("id, name, room_number, phone, total_points");
 
     if (allGuests && allGuests.length > 0) {
       const guestIds = allGuests.map(g => g.id);
+      // busca tudo em páginas de 1000 (o Supabase corta cada consulta em 1000 linhas)
+      const fetchAllGuestIds = async (table: string) => {
+        const rows: { guest_id: string | null }[] = [];
+        for (let from = 0; ; from += 1000) {
+          const { data } = await supabase.from(table).select("guest_id").not("guest_id", "is", null)
+            .order("id").range(from, from + 999);
+          rows.push(...(data || []));
+          if (!data || data.length < 1000) break;
+        }
+        return { data: rows };
+      };
       const [checkinsData, ratingsData] = await Promise.all([
-        supabase.from("activity_checkins").select("guest_id").in("guest_id", guestIds),
-        supabase.from("activity_ratings").select("guest_id").in("guest_id", guestIds),
+        fetchAllGuestIds("activity_checkins"),
+        fetchAllGuestIds("activity_ratings"),
       ]);
 
       const checkinCounts: Record<string, number> = {};
@@ -207,6 +207,18 @@ Deno.serve(async (req) => {
       await supabase.from("leads").insert(leadsToInsert);
       console.log(`Saved ${leadsToInsert.length} leads before deleting guests`);
     }
+
+    // Detach ratings from guests (preserves ratings but removes guest association)
+    await supabase
+      .from("activity_ratings")
+      .update({ guest_id: null })
+      .not("guest_id", "is", null);
+
+    // Delete all check-ins
+    await supabase
+      .from("activity_checkins")
+      .delete()
+      .neq("id", "00000000-0000-0000-0000-000000000000");
 
     // Delete all guests
     await supabase

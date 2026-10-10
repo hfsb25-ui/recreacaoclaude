@@ -5,7 +5,21 @@ import {
   Users, Activity, Star, TrendingUp, Trophy, Calendar, CheckCircle, 
   Globe, Eye, UserPlus, Clock, ArrowUp, ArrowDown, Minus
 } from "lucide-react";
-import { format, subDays, startOfWeek, endOfWeek, startOfDay, endOfDay, subWeeks } from "date-fns";
+import { addDays, format, subDays, startOfWeek, startOfDay, subWeeks } from "date-fns";
+import {
+  dayBounds,
+  dayKey,
+  fetchAll,
+  getActivityStats,
+  getAgeGroupStats,
+  getDailyStats,
+  getTopPages,
+  getVisitHours,
+  getVisitTotals,
+  pageName,
+  summarizeRatings,
+  totalCheckinsAllTime,
+} from "@/lib/adminStats";
 import { ptBR } from "date-fns/locale";
 import {
   ChartContainer,
@@ -60,10 +74,13 @@ interface MultiWeekStats {
   guests: number;
 }
 
+const MIN_RATINGS_FOR_BEST = 5;
+
 const COLORS = ['hsl(var(--primary))', 'hsl(142, 71%, 45%)', 'hsl(280, 65%, 60%)', 'hsl(45, 93%, 47%)', 'hsl(0, 72%, 51%)'];
 
 export const StatisticsManager = () => {
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
   
   // Basic stats
   const [totalGuests, setTotalGuests] = useState(0);
@@ -99,330 +116,180 @@ export const StatisticsManager = () => {
 
   const fetchStatistics = async () => {
     setLoading(true);
+    setLoadError(null);
     try {
-      const today = new Date();
-      const todayStr = format(today, "yyyy-MM-dd");
-      const todayStart = `${todayStr}T00:00:00`;
-      const todayEnd = `${todayStr}T23:59:59`;
-      const last24h = new Date(today.getTime() - 24 * 60 * 60 * 1000);
-      const last7Days = subDays(today, 6);
-      const last8Weeks = subWeeks(today, 8);
+      const now = new Date();
+      const today = startOfDay(now);
+      const todayStr = dayKey(today);
+      const todayB = dayBounds(today);
+      const weekStart = startOfWeek(today, { weekStartsOn: 0 });
+      const firstWeek = subWeeks(weekStart, 7);
+      const last7 = dayBounds(subDays(today, 6), today);
 
-      // ===== PARALLEL BATCH 1: All count queries =====
       const [
-        guestsResult,
-        checkinsResult,
-        ratingsResult,
-        activitiesResult,
+        daily,
+        visitsToday,
+        visitsLast7,
+        hours,
+        topPages,
+        activityAgg,
+        ageAgg,
+        allTimeCheckins,
         totalVisitsResult,
-        visitsTodayResult,
-        newGuestsTodayResult,
-      ] = await Promise.all([
-        supabase.from("guests").select("*", { count: "exact", head: true }),
-        supabase.from("activity_checkins").select("*", { count: "exact", head: true }),
-        supabase.from("activity_ratings").select("rating", { count: "exact" }),
-        supabase.from("activities").select("*", { count: "exact", head: true }),
-        supabase.from("site_visits").select("*", { count: "exact", head: true }),
-        supabase.from("site_visits").select("*", { count: "exact", head: true }).gte("created_at", todayStart).lte("created_at", todayEnd),
-        supabase.from("guests").select("*", { count: "exact", head: true }).gte("created_at", todayStart).lte("created_at", todayEnd),
-      ]);
-
-      const guestsCount = guestsResult.count || 0;
-      const checkinsCount = checkinsResult.count || 0;
-      const ratingsCount = ratingsResult.count || 0;
-      const activitiesCount = activitiesResult.count || 0;
-      const totalVisitsCount = totalVisitsResult.count || 0;
-      const visitsTodayCount = visitsTodayResult.count || 0;
-      const newGuestsCount = newGuestsTodayResult.count || 0;
-
-      setTotalGuests(guestsCount);
-      setTotalCheckins(checkinsCount);
-      setTotalRatings(ratingsCount);
-      setTotalActivities(activitiesCount);
-      setTotalVisits(totalVisitsCount);
-      setVisitsToday(visitsTodayCount);
-      setNewGuestsToday(newGuestsCount);
-
-      // Calculate average rating
-      if (ratingsResult.data && ratingsResult.data.length > 0) {
-        const avg = ratingsResult.data.reduce((sum, r) => sum + r.rating, 0) / ratingsResult.data.length;
-        setAverageRating(avg);
-      }
-
-      // Conversion rate
-      if (totalVisitsCount > 0) {
-        setConversionRate((guestsCount / totalVisitsCount) * 100);
-      }
-
-      // ===== PARALLEL BATCH 2: Data for processing =====
-      const [
-        todayCheckinsResult,
-        uniqueVisitorsResult,
-        visitsLast24hResult,
-        pageVisitsResult,
-        checkinsLast7DaysResult,
-        ratingsLast7DaysResult,
-        visitsLast8WeeksResult,
-        checkinsLast8WeeksResult,
-        guestsLast8WeeksResult,
+        guestsResult,
+        activitiesTodayResult,
         ageGroupsResult,
-        allCheckinsWithActivityResult,
-        allRatingsWithActivityResult,
-        allCheckinsWithGuestResult,
+        todayCheckins,
+        periodCheckins,
       ] = await Promise.all([
-        // Today's check-ins for active guests
-        supabase.from("activity_checkins").select("guest_id").gte("checked_in_at", todayStart).lte("checked_in_at", todayEnd),
-        // Unique visitors today
-        supabase.from("site_visits").select("session_id").gte("created_at", todayStart).lte("created_at", todayEnd),
-        // Visits last 24h for hourly chart
-        supabase.from("site_visits").select("created_at").gte("created_at", last24h.toISOString()),
-        // Page visits today
-        supabase.from("site_visits").select("page_path").gte("created_at", todayStart),
-        // Check-ins last 7 days
-        supabase.from("activity_checkins").select("checked_in_at").gte("checked_in_at", format(last7Days, "yyyy-MM-dd") + "T00:00:00"),
-        // Ratings last 7 days
-        supabase.from("activity_ratings").select("created_at").gte("created_at", format(last7Days, "yyyy-MM-dd") + "T00:00:00"),
-        // Visits last 8 weeks
-        supabase.from("site_visits").select("created_at").gte("created_at", last8Weeks.toISOString()),
-        // Check-ins last 8 weeks
-        supabase.from("activity_checkins").select("checked_in_at").gte("checked_in_at", last8Weeks.toISOString()),
-        // Guests last 8 weeks
-        supabase.from("guests").select("created_at").gte("created_at", last8Weeks.toISOString()),
-        // Age groups
+        getDailyStats(firstWeek, today),
+        getVisitTotals(todayB.from, todayB.to),
+        getVisitTotals(last7.from, last7.to),
+        getVisitHours(new Date(now.getTime() - 24 * 60 * 60 * 1000).toISOString(), now.toISOString()),
+        getTopPages(todayB.from, todayB.to),
+        getActivityStats(),
+        getAgeGroupStats(),
+        totalCheckinsAllTime(),
+        supabase.from("site_visits").select("id", { count: "exact", head: true }),
+        supabase.from("guests").select("id", { count: "exact", head: true }),
+        supabase.from("activities").select("id", { count: "exact", head: true }).eq("activity_date", todayStr),
         supabase.from("age_groups").select("id, name, color"),
-        // All check-ins with activity names
-        supabase.from("activity_checkins").select("activity_id, activities(name, age_group_id)"),
-        // All ratings with activity names
-        supabase.from("activity_ratings").select("activity_id, rating, activities(name)"),
-        // All check-ins with guest names
-        supabase.from("activity_checkins").select("guest_id, guests(name)"),
+        fetchAll<{ guest_id: string }>(() =>
+          supabase.from("activity_checkins").select("guest_id").gte("checked_in_at", todayB.from).lt("checked_in_at", todayB.to).order("id")
+        ),
+        fetchAll<{ guest_id: string; guests: { name: string } | null }>(() =>
+          supabase.from("activity_checkins").select("guest_id, guests(name)").order("id")
+        ),
       ]);
 
-      // Active guests today
-      const uniqueGuests = new Set(todayCheckinsResult.data?.map(c => c.guest_id) || []);
-      setActiveGuestsToday(uniqueGuests.size);
+      // ===== Cartões do topo =====
+      const todayRow = daily.find((d) => d.day === todayStr);
+      setVisitsToday(visitsToday.visits);
+      setUniqueVisitorsToday(visitsToday.visitors);
+      setTotalVisits(totalVisitsResult.count || 0);
+      setNewGuestsToday(todayRow?.signups ?? 0);
+      setTotalGuests(guestsResult.count || 0);
+      setTotalActivities(activitiesTodayResult.count || 0);
+      setTotalCheckins(allTimeCheckins);
+      setActiveGuestsToday(new Set(todayCheckins.map((c) => c.guest_id)).size);
 
-      // Unique visitors today
-      const uniqueSessions = new Set(uniqueVisitorsResult.data?.map(v => v.session_id) || []);
-      setUniqueVisitorsToday(uniqueSessions.size);
+      const signupsLast7 = daily.filter((d) => d.day >= dayKey(subDays(today, 6))).reduce((s, d) => s + d.signups, 0);
+      setConversionRate(visitsLast7.visitors > 0 ? Math.min(100, (signupsLast7 / visitsLast7.visitors) * 100) : 0);
 
-      // ===== HOURLY VISITS (process from data, not queries) =====
-      const hourlyData: HourlyVisits[] = [];
-      const visitsData = visitsLast24hResult.data || [];
-      
-      // Group by hour
-      const hourCounts: Record<number, number> = {};
-      for (let i = 0; i < 24; i++) {
-        hourCounts[i] = 0;
-      }
-      
-      visitsData.forEach(v => {
-        const hour = new Date(v.created_at).getHours();
-        hourCounts[hour] = (hourCounts[hour] || 0) + 1;
-      });
+      const ratingSummary = summarizeRatings(activityAgg);
+      setTotalRatings(ratingSummary.count);
+      setAverageRating(ratingSummary.average);
 
+      // ===== Visitas por hora (últimas 24h, horário de Brasília) =====
+      const byHour: Record<number, number> = {};
+      hours.forEach((h) => (byHour[h.hour] = (byHour[h.hour] || 0) + h.visits));
       let maxVisits = 0;
-      let maxHour = "";
-      
-      for (let i = 0; i < 24; i++) {
-        const hourLabel = `${i.toString().padStart(2, '0')}:00`;
-        const visits = hourCounts[i] || 0;
-        hourlyData.push({ hour: hourLabel, visits });
-        
+      let maxHour: string | null = null;
+      const hourlyData: HourlyVisits[] = Array.from({ length: 24 }, (_, i) => {
+        const label = `${String(i).padStart(2, "0")}:00`;
+        const visits = byHour[i] || 0;
         if (visits > maxVisits) {
           maxVisits = visits;
-          maxHour = hourLabel;
+          maxHour = label;
         }
-      }
-      
+        return { hour: label, visits };
+      });
       setHourlyVisits(hourlyData);
-      setPeakHour(maxHour || null);
+      setPeakHour(maxHour);
 
-      // ===== PAGE VISITS =====
-      if (pageVisitsResult.data) {
-        const pageCount = pageVisitsResult.data.reduce((acc, v) => {
-          const page = v.page_path || "/";
-          acc[page] = (acc[page] || 0) + 1;
-          return acc;
-        }, {} as Record<string, number>);
+      // ===== Páginas mais visitadas hoje =====
+      setPageVisits(topPages.map((p) => ({ page: pageName(p.path), visits: p.visits })));
 
-        const pageNames: Record<string, string> = {
-          "/": "Início",
-          "/programacao": "Programação",
-          "/ranking": "Ranking",
-          "/guest-auth": "Login Hóspede",
-          "/guest-profile": "Perfil",
-          "/hall-of-fame": "Hall da Fama",
-          "/instalar": "Instalar App",
-          "/admin": "Admin",
-          "/auth": "Login Admin",
-        };
+      // ===== Últimos 7 dias =====
+      setDailyStats(
+        daily.slice(-7).map((d) => ({
+          date: format(new Date(`${d.day}T12:00:00`), "dd/MM", { locale: ptBR }),
+          checkins: d.checkins,
+          ratings: d.ratings,
+        }))
+      );
 
-        const sorted = Object.entries(pageCount)
-          .map(([page, visits]) => ({ 
-            page: pageNames[page] || page, 
-            visits 
-          }))
-          .sort((a, b) => b.visits - a.visits)
-          .slice(0, 6);
-        setPageVisits(sorted);
-      }
-
-      // ===== DAILY STATS (process from data) =====
-      const last7DaysData: DailyStats[] = [];
-      const checkinsData = checkinsLast7DaysResult.data || [];
-      const ratingsData = ratingsLast7DaysResult.data || [];
-      
-      for (let i = 6; i >= 0; i--) {
-        const date = subDays(today, i);
-        const dateStr = format(date, "yyyy-MM-dd");
-        
-        const dayCheckins = checkinsData.filter(c => 
-          c.checked_in_at?.startsWith(dateStr)
-        ).length;
-        
-        const dayRatings = ratingsData.filter(r => 
-          r.created_at?.startsWith(dateStr)
-        ).length;
-
-        last7DaysData.push({
-          date: format(date, "dd/MM", { locale: ptBR }),
-          checkins: dayCheckins,
-          ratings: dayRatings,
-        });
-      }
-      setDailyStats(last7DaysData);
-
-      // ===== MULTI-WEEK STATS (process from data) =====
+      // ===== 8 semanas (domingo a sábado) =====
       const weeksData: MultiWeekStats[] = [];
-      const visitsWeekData = visitsLast8WeeksResult.data || [];
-      const checkinsWeekData = checkinsLast8WeeksResult.data || [];
-      const guestsWeekData = guestsLast8WeeksResult.data || [];
-      
       for (let i = 7; i >= 0; i--) {
-        const weekStart = startOfWeek(subWeeks(today, i), { weekStartsOn: 0 });
-        const weekEnd = endOfWeek(subWeeks(today, i), { weekStartsOn: 0 });
-        const weekLabel = i === 0 ? "Atual" : i === 1 ? "Sem. -1" : `Sem. -${i}`;
-
-        const weekVisits = visitsWeekData.filter(v => {
-          const date = new Date(v.created_at);
-          return date >= weekStart && date <= weekEnd;
-        }).length;
-
-        const weekCheckins = checkinsWeekData.filter(c => {
-          if (!c.checked_in_at) return false;
-          const date = new Date(c.checked_in_at);
-          return date >= weekStart && date <= weekEnd;
-        }).length;
-
-        const weekGuests = guestsWeekData.filter(g => {
-          if (!g.created_at) return false;
-          const date = new Date(g.created_at);
-          return date >= weekStart && date <= weekEnd;
-        }).length;
-
+        const ws = dayKey(subWeeks(weekStart, i));
+        const we = dayKey(addDays(subWeeks(weekStart, i), 6));
+        const rows = daily.filter((d) => d.day >= ws && d.day <= we);
         weeksData.push({
-          week: weekLabel,
-          visits: weekVisits,
-          checkins: weekCheckins,
-          guests: weekGuests,
+          week: i === 0 ? "Atual" : `Sem. -${i}`,
+          visits: rows.reduce((s, d) => s + d.visits, 0),
+          checkins: rows.reduce((s, d) => s + d.checkins, 0),
+          guests: rows.reduce((s, d) => s + d.signups, 0),
         });
       }
-      
       setMultiWeekStats(weeksData);
 
-      // Weekly comparison
-      const thisWeekVisits = weeksData[weeksData.length - 1]?.visits || 0;
-      const lastWeekVisits = weeksData[weeksData.length - 2]?.visits || 0;
-      const thisWeekCheckins = weeksData[weeksData.length - 1]?.checkins || 0;
-      const lastWeekCheckins = weeksData[weeksData.length - 2]?.checkins || 0;
-      const thisWeekGuests = weeksData[weeksData.length - 1]?.guests || 0;
-      const lastWeekGuests = weeksData[weeksData.length - 2]?.guests || 0;
+      // ===== Esta semana x mesmos dias da semana passada =====
+      const sumRange = (from: Date, to: Date, key: "visits" | "checkins" | "signups") =>
+        daily.filter((d) => d.day >= dayKey(from) && d.day <= dayKey(to)).reduce((s, d) => s + d[key], 0);
+      const lwStart = subWeeks(weekStart, 1);
+      const lwEnd = subWeeks(today, 1);
+      const cmp = (label: string, key: "visits" | "checkins" | "signups") => ({
+        label,
+        thisWeek: sumRange(weekStart, today, key),
+        lastWeek: sumRange(lwStart, lwEnd, key),
+      });
+      const comparison = [cmp("Visitas", "visits"), cmp("Check-ins", "checkins"), cmp("Cadastros", "signups")];
+      setWeeklyComparison(comparison);
+      const signupsCmp = comparison[2];
+      setWeeklyGrowth(
+        signupsCmp.lastWeek > 0
+          ? ((signupsCmp.thisWeek - signupsCmp.lastWeek) / signupsCmp.lastWeek) * 100
+          : signupsCmp.thisWeek > 0
+            ? 100
+            : 0
+      );
 
-      setWeeklyComparison([
-        { label: "Visitas", thisWeek: thisWeekVisits, lastWeek: lastWeekVisits },
-        { label: "Check-ins", thisWeek: thisWeekCheckins, lastWeek: lastWeekCheckins },
-        { label: "Cadastros", thisWeek: thisWeekGuests, lastWeek: lastWeekGuests },
-      ]);
+      // ===== Faixas etárias =====
+      const groups = ageGroupsResult.data || [];
+      setAgeGroupStats(
+        ageAgg
+          .filter((a) => a.checkins > 0)
+          .map((a) => {
+            const g = groups.find((x) => x.id === a.ageGroupId);
+            return { name: g?.name || "Sem faixa", checkins: a.checkins, color: g?.color || "" };
+          })
+      );
 
-      // Weekly growth
-      if (lastWeekGuests > 0) {
-        const growth = ((thisWeekGuests - lastWeekGuests) / lastWeekGuests) * 100;
-        setWeeklyGrowth(growth);
-      } else if (thisWeekGuests > 0) {
-        setWeeklyGrowth(100);
-      }
-
-      // ===== AGE GROUP STATS (process from data) =====
-      if (ageGroupsResult.data && allCheckinsWithActivityResult.data) {
-        const ageGroupCheckins: AgeGroupStats[] = [];
-        const checkinsWithActivity = allCheckinsWithActivityResult.data;
-        
-        for (const group of ageGroupsResult.data) {
-          const groupCheckins = checkinsWithActivity.filter(c => 
-            (c.activities as any)?.age_group_id === group.id
-          ).length;
-
-          if (groupCheckins > 0) {
-            ageGroupCheckins.push({
-              name: group.name,
-              checkins: groupCheckins,
-              color: group.color,
-            });
-          }
-        }
-        setAgeGroupStats(ageGroupCheckins);
-      }
-
-      // ===== TOP ACTIVITIES (process from data) =====
-      if (allCheckinsWithActivityResult.data) {
-        const activityCount = allCheckinsWithActivityResult.data.reduce((acc, c) => {
-          const name = (c.activities as any)?.name || "Desconhecida";
-          acc[name] = (acc[name] || 0) + 1;
-          return acc;
-        }, {} as Record<string, number>);
-
-        const sorted = Object.entries(activityCount)
-          .map(([name, checkins]) => ({ name, checkins }))
+      // ===== Atividades (agrupadas pelo nome) =====
+      const byName = new Map<string, { checkins: number; ratings: number; ratingSum: number }>();
+      activityAgg.forEach((a) => {
+        const cur = byName.get(a.name) || { checkins: 0, ratings: 0, ratingSum: 0 };
+        cur.checkins += a.checkins;
+        cur.ratings += a.ratings;
+        cur.ratingSum += a.ratingSum;
+        byName.set(a.name, cur);
+      });
+      const named = Array.from(byName.entries()).map(([name, v]) => ({ name, ...v }));
+      setTopActivities(
+        named
+          .filter((a) => a.checkins > 0)
           .sort((a, b) => b.checkins - a.checkins)
-          .slice(0, 5);
-        setTopActivities(sorted);
-      }
+          .slice(0, 5)
+          .map((a) => ({ name: a.name, checkins: a.checkins }))
+      );
+      const best = named
+        .filter((a) => a.ratings >= MIN_RATINGS_FOR_BEST)
+        .map((a) => ({ name: a.name, rating: a.ratingSum / a.ratings, count: a.ratings }))
+        .sort((a, b) => b.rating - a.rating || b.count - a.count)[0];
+      setBestRatedActivity(best ? { name: best.name, rating: best.rating } : null);
 
-      // ===== BEST RATED ACTIVITY =====
-      if (allRatingsWithActivityResult.data && allRatingsWithActivityResult.data.length > 0) {
-        const activityRatings = allRatingsWithActivityResult.data.reduce((acc, r) => {
-          const name = (r.activities as any)?.name || "Desconhecida";
-          if (!acc[name]) acc[name] = { total: 0, count: 0 };
-          acc[name].total += r.rating;
-          acc[name].count += 1;
-          return acc;
-        }, {} as Record<string, { total: number; count: number }>);
-
-        const best = Object.entries(activityRatings)
-          .map(([name, data]) => ({ name, rating: data.total / data.count }))
-          .sort((a, b) => b.rating - a.rating)[0];
-        
-        if (best) setBestRatedActivity(best);
-      }
-
-      // ===== MOST ACTIVE GUEST =====
-      if (allCheckinsWithGuestResult.data && allCheckinsWithGuestResult.data.length > 0) {
-        const guestCount = allCheckinsWithGuestResult.data.reduce((acc, c) => {
-          const name = (c.guests as any)?.name || "Desconhecido";
-          acc[name] = (acc[name] || 0) + 1;
-          return acc;
-        }, {} as Record<string, number>);
-
-        const mostActive = Object.entries(guestCount)
-          .map(([name, checkins]) => ({ name, checkins }))
-          .sort((a, b) => b.checkins - a.checkins)[0];
-        
-        if (mostActive) setMostActiveGuest(mostActive);
-      }
-
+      // ===== Hóspede mais ativo (período atual), contando por hóspede e não pelo nome =====
+      const perGuest = new Map<string, { name: string; checkins: number }>();
+      periodCheckins.forEach((c) => {
+        const cur = perGuest.get(c.guest_id) || { name: c.guests?.name || "Hóspede", checkins: 0 };
+        cur.checkins += 1;
+        perGuest.set(c.guest_id, cur);
+      });
+      setMostActiveGuest(Array.from(perGuest.values()).sort((a, b) => b.checkins - a.checkins)[0] ?? null);
     } catch (error) {
       console.error("Error fetching statistics:", error);
+      setLoadError(error instanceof Error ? error.message : String(error));
     } finally {
       setLoading(false);
     }
@@ -448,6 +315,15 @@ export const StatisticsManager = () => {
       <div className="flex justify-between items-center">
         <h2 className="text-2xl font-bold">Estatísticas Detalhadas</h2>
       </div>
+
+      {loadError && (
+        <Card className="border-destructive/40 bg-destructive/5">
+          <CardContent className="p-4 text-sm">
+            Não foi possível carregar as estatísticas. Confira se o SQL de estatísticas foi rodado no Supabase.
+            <span className="block text-xs text-muted-foreground mt-1">{loadError}</span>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Visit Stats Row */}
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
@@ -482,7 +358,7 @@ export const StatisticsManager = () => {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{conversionRate.toFixed(1)}%</div>
-            <p className="text-xs text-muted-foreground">visitantes → cadastros</p>
+            <p className="text-xs text-muted-foreground">visitantes → cadastros (7 dias)</p>
           </CardContent>
         </Card>
 
@@ -519,7 +395,7 @@ export const StatisticsManager = () => {
           <CardContent>
             <div className="text-2xl font-bold">{totalGuests}</div>
             <p className="text-xs text-muted-foreground">
-              {activeGuestsToday} ativos hoje
+              no período atual · {activeGuestsToday} ativos hoje
             </p>
           </CardContent>
         </Card>
@@ -550,12 +426,12 @@ export const StatisticsManager = () => {
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Atividades</CardTitle>
+            <CardTitle className="text-sm font-medium">Atividades Hoje</CardTitle>
             <Activity className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{totalActivities}</div>
-            <p className="text-xs text-muted-foreground">programadas</p>
+            <p className="text-xs text-muted-foreground">na programação de hoje</p>
           </CardContent>
         </Card>
 
@@ -568,7 +444,7 @@ export const StatisticsManager = () => {
             <div className="text-2xl font-bold">
               {weeklyGrowth > 0 ? "+" : ""}{weeklyGrowth.toFixed(0)}%
             </div>
-            <p className="text-xs text-muted-foreground">vs. semana passada</p>
+            <p className="text-xs text-muted-foreground">cadastros vs. mesmos dias da sem. passada</p>
           </CardContent>
         </Card>
 
@@ -583,7 +459,7 @@ export const StatisticsManager = () => {
                 ? (dailyStats.reduce((sum, d) => sum + d.checkins, 0) / dailyStats.length).toFixed(1)
                 : 0}
             </div>
-            <p className="text-xs text-muted-foreground">check-ins por dia</p>
+            <p className="text-xs text-muted-foreground">check-ins por dia (7 dias)</p>
           </CardContent>
         </Card>
       </div>
@@ -601,7 +477,7 @@ export const StatisticsManager = () => {
             <CardContent>
               <div className="text-lg font-bold">{bestRatedActivity.name}</div>
               <p className="text-sm text-muted-foreground">
-                {bestRatedActivity.rating.toFixed(1)} ⭐ de média
+                {bestRatedActivity.rating.toFixed(1)} ⭐ de média (mín. {MIN_RATINGS_FOR_BEST} avaliações)
               </p>
             </CardContent>
           </Card>
@@ -612,7 +488,7 @@ export const StatisticsManager = () => {
             <CardHeader className="pb-2">
               <CardTitle className="text-sm font-medium flex items-center gap-2">
                 <Trophy className="h-4 w-4 text-blue-500" />
-                Hóspede Mais Ativo
+                Hóspede Mais Ativo (período atual)
               </CardTitle>
             </CardHeader>
             <CardContent>
@@ -827,7 +703,7 @@ export const StatisticsManager = () => {
       {/* Weekly Comparison Table */}
       <Card>
         <CardHeader>
-          <CardTitle className="text-lg">Resumo Semanal</CardTitle>
+          <CardTitle className="text-lg">Resumo da Semana (domingo até hoje)</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-3 gap-4">
@@ -835,7 +711,7 @@ export const StatisticsManager = () => {
               const diff = item.thisWeek - item.lastWeek;
               const percentChange = item.lastWeek > 0 
                 ? ((diff / item.lastWeek) * 100).toFixed(0) 
-                : item.thisWeek > 0 ? "+100" : "0";
+                : item.thisWeek > 0 ? "100" : "0";
               
               return (
                 <div key={item.label} className="text-center p-4 bg-muted/50 rounded-lg">
@@ -845,7 +721,7 @@ export const StatisticsManager = () => {
                     diff > 0 ? 'text-green-500' : diff < 0 ? 'text-red-500' : 'text-muted-foreground'
                   }`}>
                     {diff > 0 ? <ArrowUp className="h-3 w-3" /> : diff < 0 ? <ArrowDown className="h-3 w-3" /> : null}
-                    {diff > 0 ? "+" : ""}{percentChange}% vs sem. passada
+                    {diff > 0 ? "+" : ""}{percentChange}% vs mesmos dias da sem. passada
                   </div>
                 </div>
               );

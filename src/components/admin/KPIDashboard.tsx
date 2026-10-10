@@ -2,7 +2,20 @@ import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { format, subDays, startOfDay, endOfDay, eachDayOfInterval } from "date-fns";
+import { differenceInCalendarDays, format, subDays } from "date-fns";
+import {
+  dayBounds,
+  dayKey,
+  fetchAll,
+  getActivityStats,
+  getAgeGroupStats,
+  getDailyStats,
+  getPeriodStats,
+  getVisitHours,
+  getVisitTotals,
+  summarizeRatings,
+  type DailyRow,
+} from "@/lib/adminStats";
 import { ptBR } from "date-fns/locale";
 import { KPICards } from "./kpi/KPICards";
 import { ActivityHeatmap } from "./kpi/ActivityHeatmap";
@@ -70,6 +83,7 @@ const getDefaultFilters = (): FilterState => ({
 export const KPIDashboard = () => {
   const [currentTime, setCurrentTime] = useState(new Date());
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [filters, setFilters] = useState<FilterState>(getDefaultFilters());
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
   const [ageGroups, setAgeGroups] = useState<AgeGroup[]>([]);
@@ -84,6 +98,7 @@ export const KPIDashboard = () => {
   const [previousParticipationRate, setPreviousParticipationRate] = useState<number>();
   const [previousSatisfaction, setPreviousSatisfaction] = useState<number>();
   const [nps, setNps] = useState(0);
+  const [previousNps, setPreviousNps] = useState<number>();
   const [conversionRate, setConversionRate] = useState(0);
   
   // Heatmap data
@@ -150,6 +165,7 @@ export const KPIDashboard = () => {
 
   const fetchAllData = useCallback(async () => {
     setLoading(true);
+    setLoadError(null);
     try {
       await Promise.all([
         fetchKPIData(),
@@ -164,96 +180,78 @@ export const KPIDashboard = () => {
       setLastUpdated(new Date());
     } catch (error) {
       console.error("Error fetching KPI data:", error);
+      setLoadError(error instanceof Error ? error.message : String(error));
     } finally {
       setLoading(false);
     }
   }, [filters]);
 
-  const getDateFilters = () => {
-    const from = startOfDay(filters.dateRange.from).toISOString();
-    const to = endOfDay(filters.dateRange.to).toISOString();
-    return { from, to };
+  const getDateFilters = () => dayBounds(filters.dateRange.from, filters.dateRange.to);
+
+  /** Intervalo anterior com o mesmo número de dias (para comparar) */
+  const getPreviousDateFilters = () => {
+    const days = differenceInCalendarDays(filters.dateRange.to, filters.dateRange.from) + 1;
+    return dayBounds(subDays(filters.dateRange.from, days), subDays(filters.dateRange.from, 1));
   };
 
   const fetchKPIData = async () => {
     const { from, to } = getDateFilters();
-    
-    const [guestsResult, checkinsResult, ratingsResult, visitsResult] = await Promise.all([
-      supabase.from("guests").select("id, total_points, current_level"),
-      supabase.from("activity_checkins").select("id, guest_id, checked_in_at, activity_id")
-        .gte("checked_in_at", from).lte("checked_in_at", to),
-      supabase.from("activity_ratings").select("id, rating, guest_id, activity_id")
-        .gte("created_at", from).lte("created_at", to),
-      supabase.from("site_visits").select("id, session_id, guest_id")
-        .gte("created_at", from).lte("created_at", to)
-    ]);
+    const prev = getPreviousDateFilters();
 
-    const guests = guestsResult.data || [];
-    const checkins = checkinsResult.data || [];
-    const ratings = ratingsResult.data || [];
-    const visits = visitsResult.data || [];
+    const [guests, checkins, ratingsNow, ratingsPrev, visits, daily] = await Promise.all([
+      fetchAll<{ id: string }>(() => supabase.from("guests").select("id").order("id")),
+      fetchAll<{ guest_id: string; checked_in_at: string }>(() =>
+        supabase.from("activity_checkins").select("guest_id, checked_in_at").gte("checked_in_at", from).lt("checked_in_at", to).order("id")
+      ),
+      getActivityStats(from, to),
+      getActivityStats(prev.from, prev.to),
+      getVisitTotals(from, to),
+      getDailyStats(filters.dateRange.from, filters.dateRange.to),
+    ]);
 
     setTotalGuests(guests.length);
 
-    // Participation rate
-    const guestsWithCheckins = new Set(checkins.map(c => c.guest_id));
+    // Participação: hóspedes do período atual com 1+ check-in no intervalo
+    const guestsWithCheckins = new Set(checkins.map((c) => c.guest_id));
     const activeGuestsCount = guestsWithCheckins.size;
     setTotalActiveGuests(activeGuestsCount);
-    
-    const partRate = guests.length > 0 ? (activeGuestsCount / guests.length) * 100 : 0;
-    setParticipationRate(partRate);
+    setParticipationRate(guests.length > 0 ? (activeGuestsCount / guests.length) * 100 : 0);
+    setPreviousParticipationRate(undefined);
 
-    // Average check-ins per active guest
-    const avgCheckins = activeGuestsCount > 0 ? checkins.length / activeGuestsCount : 0;
-    setAvgCheckinsPerGuest(avgCheckins);
+    setAvgCheckinsPerGuest(activeGuestsCount > 0 ? checkins.length / activeGuestsCount : 0);
 
-    // Rating rate
-    const rateRating = checkins.length > 0 ? (ratings.length / checkins.length) * 100 : 0;
-    setRatingRate(Math.min(rateRating, 100));
+    // Avaliações x check-ins no intervalo (inclui o histórico dos períodos já encerrados)
+    const now = summarizeRatings(ratingsNow);
+    const before = summarizeRatings(ratingsPrev);
+    const checkinsInRange = daily.reduce((s, d) => s + d.checkins, 0);
+    setRatingRate(checkinsInRange > 0 ? Math.min((now.count / checkinsInRange) * 100, 100) : 0);
+    setSatisfactionScore(now.average);
+    setPreviousSatisfaction(before.count > 0 ? before.average : undefined);
+    setNps(now.nps);
+    setPreviousNps(before.count > 0 ? before.nps : undefined);
 
-    // Satisfaction score
-    const avgRating = ratings.length > 0
-      ? ratings.reduce((sum, r) => sum + r.rating, 0) / ratings.length
-      : 0;
-    setSatisfactionScore(avgRating);
+    setConversionRate(visits.visitors > 0 ? Math.min((activeGuestsCount / visits.visitors) * 100, 100) : 0);
 
-    // NPS calculation
-    const promoters = ratings.filter(r => r.rating === 5).length;
-    const detractors = ratings.filter(r => r.rating <= 2).length;
-    const npsValue = ratings.length > 0 ? ((promoters - detractors) / ratings.length) * 100 : 0;
-    setNps(npsValue);
-
-    // Conversion rate
-    const uniqueVisitors = new Set(visits.map(v => v.session_id)).size;
-    const convRate = uniqueVisitors > 0 ? (activeGuestsCount / uniqueVisitors) * 100 : 0;
-    setConversionRate(Math.min(convRate, 100));
-
-    // Retention rate
+    // Retenção: check-in em 2 ou mais dias (dia no horário local)
     const guestDays: Record<string, Set<string>> = {};
-    checkins.forEach(c => {
-      if (c.guest_id && c.checked_in_at) {
-        if (!guestDays[c.guest_id]) guestDays[c.guest_id] = new Set();
-        guestDays[c.guest_id].add(c.checked_in_at.split('T')[0]);
-      }
+    checkins.forEach((c) => {
+      if (!guestDays[c.guest_id]) guestDays[c.guest_id] = new Set();
+      guestDays[c.guest_id].add(dayKey(c.checked_in_at));
     });
-    const multiDayGuests = Object.values(guestDays).filter(days => days.size > 1).length;
-    const retRate = activeGuestsCount > 0 ? (multiDayGuests / activeGuestsCount) * 100 : 0;
-    setRetentionRate(retRate);
+    const multiDayGuests = Object.values(guestDays).filter((days) => days.size > 1).length;
+    setRetentionRate(activeGuestsCount > 0 ? (multiDayGuests / activeGuestsCount) * 100 : 0);
 
-    // Generate insights
-    generateInsights(checkins, ratings, visits, guests);
+    generateInsights(checkins, daily, now.average);
   };
 
-  const generateInsights = (checkins: any[], ratings: any[], visits: any[], guests: any[]) => {
+  const generateInsights = (checkins: { checked_in_at: string }[], daily: DailyRow[], avgRating: number) => {
     const newInsights: Insight[] = [];
 
-    // Peak hour insight
+    // Horário de pico dos check-ins
     const hourCounts: Record<number, number> = {};
-    checkins.forEach(c => {
-      if (c.checked_in_at) {
-        const hour = new Date(c.checked_in_at).getHours();
-        hourCounts[hour] = (hourCounts[hour] || 0) + 1;
-      }
+    checkins.forEach((c) => {
+      const hour = new Date(c.checked_in_at).getHours();
+      hourCounts[hour] = (hourCounts[hour] || 0) + 1;
     });
     const peakHour = Object.entries(hourCounts).sort((a, b) => b[1] - a[1])[0];
     if (peakHour) {
@@ -263,34 +261,30 @@ export const KPIDashboard = () => {
         category: "time",
         title: "Horário de Pico",
         description: `A maioria dos check-ins acontece às ${peakHour[0]}h`,
-        metric: `${peakHour[1]} check-ins neste horário`
+        metric: `${peakHour[1]} check-ins neste horário`,
       });
     }
 
-    // Weekend vs weekday
-    const weekendCheckins = checkins.filter(c => {
-      const day = new Date(c.checked_in_at).getDay();
-      return day === 0 || day === 6;
-    }).length;
-    const weekdayCheckins = checkins.length - weekendCheckins;
-    const avgWeekend = weekendCheckins / 2;
-    const avgWeekday = weekdayCheckins / 5;
-    
-    if (avgWeekend > avgWeekday * 1.3) {
+    // Fim de semana x dias úteis: média por dia, contando quantos dias de cada tipo há no intervalo
+    const isWeekend = (d: DailyRow) => {
+      const dow = new Date(`${d.day}T12:00:00`).getDay();
+      return dow === 0 || dow === 6;
+    };
+    const weekendDays = daily.filter(isWeekend);
+    const weekDays = daily.filter((d) => !isWeekend(d));
+    const avgWeekend = weekendDays.length ? weekendDays.reduce((s, d) => s + d.checkins, 0) / weekendDays.length : 0;
+    const avgWeekday = weekDays.length ? weekDays.reduce((s, d) => s + d.checkins, 0) / weekDays.length : 0;
+    if (avgWeekday > 0 && avgWeekend > avgWeekday * 1.3) {
       newInsights.push({
         id: "weekend-high",
         type: "positive",
         category: "time",
         title: "Fins de Semana Fortes",
         description: "Os finais de semana têm maior engajamento que os dias úteis",
-        metric: `${((avgWeekend / avgWeekday - 1) * 100).toFixed(0)}% mais check-ins`
+        metric: `${((avgWeekend / avgWeekday - 1) * 100).toFixed(0)}% mais check-ins por dia`,
       });
     }
 
-    // High rating insight
-    const avgRating = ratings.length > 0
-      ? ratings.reduce((sum, r) => sum + r.rating, 0) / ratings.length
-      : 0;
     if (avgRating >= 4.5) {
       newInsights.push({
         id: "high-satisfaction",
@@ -298,7 +292,7 @@ export const KPIDashboard = () => {
         category: "engagement",
         title: "Alta Satisfação",
         description: "Os hóspedes estão muito satisfeitos com as atividades",
-        metric: `Média de ${avgRating.toFixed(1)} estrelas`
+        metric: `Média de ${avgRating.toFixed(1)} estrelas`,
       });
     }
 
@@ -307,34 +301,20 @@ export const KPIDashboard = () => {
 
   const fetchHeatmapData = async () => {
     const { from, to } = getDateFilters();
-    
-    const { data: visits } = await supabase
-      .from("site_visits")
-      .select("created_at")
-      .gte("created_at", from)
-      .lte("created_at", to);
-
-    if (!visits) return;
+    const rows = await getVisitHours(from, to);
 
     const heatmap: Record<string, number> = {};
     let maxVal = 0;
-
-    visits.forEach(v => {
-      if (v.created_at) {
-        const date = new Date(v.created_at);
-        const day = date.getDay();
-        const hour = date.getHours();
-        const key = `${day}-${hour}`;
-        heatmap[key] = (heatmap[key] || 0) + 1;
-        maxVal = Math.max(maxVal, heatmap[key]);
-      }
+    rows.forEach((r) => {
+      const key = `${r.dow}-${r.hour}`;
+      heatmap[key] = (heatmap[key] || 0) + r.visits;
+      maxVal = Math.max(maxVal, heatmap[key]);
     });
 
     const heatmapArray: HeatmapData[] = [];
     for (let day = 0; day < 7; day++) {
       for (let hour = 8; hour <= 22; hour++) {
-        const key = `${day}-${hour}`;
-        heatmapArray.push({ day, hour, value: heatmap[key] || 0 });
+        heatmapArray.push({ day, hour, value: heatmap[`${day}-${hour}`] || 0 });
       }
     }
 
@@ -343,170 +323,98 @@ export const KPIDashboard = () => {
   };
 
   const fetchPeriodData = async () => {
-    const { data: periods } = await supabase
-      .from("ranking_periods")
-      .select("id, period_number, start_date, end_date, is_active")
-      .order("period_number", { ascending: false })
-      .limit(5);
+    const rows = await getPeriodStats(5);
+    const short = (d: string) => format(new Date(`${d}T12:00:00`), "dd/MM");
 
-    if (!periods || periods.length === 0) {
-      setPeriodData([]);
-      return;
-    }
-
-    const { data: winners } = await supabase
-      .from("ranking_winners")
-      .select("ranking_period_id, total_points, total_checkins, guest_id");
-
-    const periodStats: PeriodData[] = periods
-      .filter(p => !p.is_active)
-      .map(period => {
-        const periodWinners = (winners || []).filter(w => w.ranking_period_id === period.id);
-        const totalParticipants = periodWinners.length;
-        const totalPoints = periodWinners.reduce((sum, w) => sum + (w.total_points || 0), 0);
-        const totalCheckins = periodWinners.reduce((sum, w) => sum + (w.total_checkins || 0), 0);
-        const avgPoints = totalParticipants > 0 ? totalPoints / totalParticipants : 0;
-
-        return {
-          periodNumber: period.period_number,
-          startDate: format(new Date(period.start_date), "dd/MM"),
-          endDate: format(new Date(period.end_date), "dd/MM"),
-          totalParticipants,
-          totalPoints,
-          totalCheckins,
-          avgPointsPerGuest: avgPoints
-        };
-      });
-
+    const periodStats: PeriodData[] = rows.map((p) => ({
+      periodNumber: p.periodNumber,
+      startDate: short(p.startDate),
+      endDate: short(p.endDate),
+      totalParticipants: p.participants,
+      totalPoints: p.points,
+      totalCheckins: p.checkins,
+      avgPointsPerGuest: p.participants > 0 ? p.points / p.participants : 0,
+    }));
     setPeriodData(periodStats);
 
-    if (periodStats.length >= 2) {
-      const latest = periodStats[0];
-      const previous = periodStats[1];
-      if (previous.totalParticipants > 0) {
-        const drop = ((previous.totalParticipants - latest.totalParticipants) / previous.totalParticipants) * 100;
-        setParticipationDrop(Math.max(0, drop));
-        setPreviousParticipationRate(previous.totalParticipants);
-      }
+    if (periodStats.length >= 2 && periodStats[1].totalParticipants > 0) {
+      const [latest, previous] = periodStats;
+      const drop = ((previous.totalParticipants - latest.totalParticipants) / previous.totalParticipants) * 100;
+      setParticipationDrop(Math.max(0, drop));
+    } else {
+      setParticipationDrop(0);
     }
   };
 
   const fetchActivityStats = async () => {
     const { from, to } = getDateFilters();
-    
-    let activitiesQuery = supabase.from("activities").select("id, name, age_group_id");
-    if (filters.ageGroupId) {
-      activitiesQuery = activitiesQuery.eq("age_group_id", filters.ageGroupId);
-    }
-    
-    const [activitiesResult, checkinsResult, ratingsResult, ageGroupsResult] = await Promise.all([
-      activitiesQuery,
-      supabase.from("activity_checkins").select("activity_id")
-        .gte("checked_in_at", from).lte("checked_in_at", to),
-      supabase.from("activity_ratings").select("activity_id, rating")
-        .gte("created_at", from).lte("created_at", to),
-      supabase.from("age_groups").select("id, name, color")
+    const [rows, ageGroupsResult] = await Promise.all([
+      getActivityStats(from, to),
+      supabase.from("age_groups").select("id, name, color"),
     ]);
+    const ageGroupMap = new Map((ageGroupsResult.data || []).map((ag) => [ag.id, ag]));
 
-    const activities = activitiesResult.data || [];
-    const checkins = checkinsResult.data || [];
-    const ratings = ratingsResult.data || [];
-    const ageGroupsList = ageGroupsResult.data || [];
+    const stats: ActivityStats[] = rows
+      .filter((r) => !filters.ageGroupId || r.ageGroupId === filters.ageGroupId)
+      .map((r) => {
+        const ag = ageGroupMap.get(r.ageGroupId);
+        return {
+          id: `${r.name}|${r.ageGroupId}`,
+          name: r.name,
+          totalCheckins: r.checkins,
+          totalRatings: r.ratings,
+          avgRating: r.ratings > 0 ? r.ratingSum / r.ratings : 0,
+          ratingRate: r.checkins > 0 ? Math.min((r.ratings / r.checkins) * 100, 100) : 0,
+          ageGroup: ag?.name || "Sem faixa",
+          ageGroupColor: ag?.color || "#888888",
+        };
+      })
+      .sort((a, b) => b.totalCheckins - a.totalCheckins || b.totalRatings - a.totalRatings);
 
-    const ageGroupMap = new Map(ageGroupsList.map(ag => [ag.id, ag]));
-    const activityMap = new Map<string, { name: string; checkins: number; ratings: number[]; ageGroup: string; ageGroupColor: string }>();
-
-    activities.forEach(a => {
-      const ag = ageGroupMap.get(a.age_group_id);
-      activityMap.set(a.id, {
-        name: a.name,
-        checkins: 0,
-        ratings: [],
-        ageGroup: ag?.name || "Sem faixa",
-        ageGroupColor: ag?.color || "#888888"
-      });
-    });
-
-    checkins.forEach(c => {
-      const activity = activityMap.get(c.activity_id);
-      if (activity) activity.checkins++;
-    });
-
-    ratings.forEach(r => {
-      const activity = activityMap.get(r.activity_id);
-      if (activity) activity.ratings.push(r.rating);
-    });
-
-    const stats: ActivityStats[] = Array.from(activityMap.entries()).map(([id, data]) => {
-      const avgRating = data.ratings.length > 0
-        ? data.ratings.reduce((sum, r) => sum + r, 0) / data.ratings.length
-        : 0;
-      const ratingRate = data.checkins > 0 ? (data.ratings.length / data.checkins) * 100 : 0;
-
-      return {
-        id,
-        name: data.name,
-        totalCheckins: data.checkins,
-        totalRatings: data.ratings.length,
-        avgRating,
-        ratingRate,
-        ageGroup: data.ageGroup,
-        ageGroupColor: data.ageGroupColor
-      };
-    });
-
-    const sortedByEngagement = [...stats]
-      .filter(a => a.totalCheckins > 0)
-      .sort((a, b) => (b.totalCheckins * (b.avgRating || 3)) - (a.totalCheckins * (a.avgRating || 3)));
+    const sortedByEngagement = stats
+      .filter((a) => a.totalCheckins > 0)
+      .sort((a, b) => b.totalCheckins * (b.avgRating || 3) - a.totalCheckins * (a.avgRating || 3));
 
     const underperforming = stats
-      .filter(a => (a.avgRating > 0 && a.avgRating < 3.5) || (a.totalCheckins > 0 && a.totalCheckins < 3))
+      .filter((a) => (a.totalRatings >= 3 && a.avgRating < 3.5) || (a.totalCheckins > 0 && a.totalCheckins < 3))
       .sort((a, b) => a.avgRating - b.avgRating);
 
     setActivityStats(stats);
     setTopActivities(sortedByEngagement);
     setUnderperformingActivities(underperforming);
-
-    const lowRated = stats
-      .filter(a => a.avgRating > 0 && a.avgRating < 3.5)
-      .map(a => ({ name: a.name, rating: a.avgRating }));
-    setLowRatedActivities(lowRated);
+    setLowRatedActivities(
+      stats.filter((a) => a.totalRatings >= 3 && a.avgRating < 3.5).map((a) => ({ name: a.name, rating: a.avgRating }))
+    );
   };
 
   const fetchLevelData = async () => {
-    const [levelsResult, guestsResult, checkinsResult] = await Promise.all([
+    const [levelsResult, guests, checkins] = await Promise.all([
       supabase.from("levels").select("level_number, name, badge_emoji").order("level_number"),
-      supabase.from("guests").select("id, current_level"),
-      supabase.from("activity_checkins").select("guest_id")
+      fetchAll<{ id: string; current_level: number }>(() => supabase.from("guests").select("id, current_level").order("id")),
+      fetchAll<{ guest_id: string }>(() => supabase.from("activity_checkins").select("guest_id").order("id")),
     ]);
 
     const levels = levelsResult.data || [];
-    const guests = guestsResult.data || [];
-    const checkins = checkinsResult.data || [];
-
     const checkinCounts: Record<string, number> = {};
-    checkins.forEach(c => {
+    checkins.forEach((c) => {
       checkinCounts[c.guest_id] = (checkinCounts[c.guest_id] || 0) + 1;
     });
 
-    const levelStats: LevelData[] = levels.map(level => {
-      const guestsAtLevel = guests.filter(g => g.current_level === level.level_number);
-      const guestCount = guestsAtLevel.length;
-      const totalCheckins = guestsAtLevel.reduce((sum, g) => sum + (checkinCounts[g.id] || 0), 0);
-      const avgCheckins = guestCount > 0 ? totalCheckins / guestCount : 0;
-      const percentOfTotal = guests.length > 0 ? (guestCount / guests.length) * 100 : 0;
-
-      return {
-        level: level.level_number,
-        name: level.name,
-        emoji: level.badge_emoji,
-        guestCount,
-        avgCheckins,
-        percentOfTotal
-      };
-    });
-
-    setLevelData(levelStats);
+    setLevelData(
+      levels.map((level) => {
+        const guestsAtLevel = guests.filter((g) => g.current_level === level.level_number);
+        const guestCount = guestsAtLevel.length;
+        const totalCheckins = guestsAtLevel.reduce((sum, g) => sum + (checkinCounts[g.id] || 0), 0);
+        return {
+          level: level.level_number,
+          name: level.name,
+          emoji: level.badge_emoji,
+          guestCount,
+          avgCheckins: guestCount > 0 ? totalCheckins / guestCount : 0,
+          percentOfTotal: guests.length > 0 ? (guestCount / guests.length) * 100 : 0,
+        };
+      })
+    );
   };
 
   const fetchAlertData = async () => {
@@ -523,88 +431,53 @@ export const KPIDashboard = () => {
         .limit(1);
 
       if (lastCheckin && lastCheckin.length > 0) {
-        const lastTime = new Date(lastCheckin[0].checked_in_at);
-        const hoursDiff = (now.getTime() - lastTime.getTime()) / (1000 * 60 * 60);
+        const hoursDiff = (now.getTime() - new Date(lastCheckin[0].checked_in_at).getTime()) / (1000 * 60 * 60);
         setHoursWithoutCheckin(Math.floor(hoursDiff));
+      } else {
+        setHoursWithoutCheckin(0);
       }
     }
   };
 
   const fetchTrendData = async () => {
-    const { from, to } = getDateFilters();
-    const days = eachDayOfInterval({ start: filters.dateRange.from, end: filters.dateRange.to });
-
-    const [checkinsResult, ratingsResult, visitsResult, guestsResult] = await Promise.all([
-      supabase.from("activity_checkins").select("checked_in_at").gte("checked_in_at", from).lte("checked_in_at", to),
-      supabase.from("activity_ratings").select("created_at").gte("created_at", from).lte("created_at", to),
-      supabase.from("site_visits").select("created_at").gte("created_at", from).lte("created_at", to),
-      supabase.from("guests").select("created_at").gte("created_at", from).lte("created_at", to)
-    ]);
-
-    const checkins = checkinsResult.data || [];
-    const ratings = ratingsResult.data || [];
-    const visits = visitsResult.data || [];
-    const guests = guestsResult.data || [];
-
-    const trendPoints: TrendDataPoint[] = days.map(day => {
-      const dayStr = format(day, "yyyy-MM-dd");
-      const label = format(day, "dd/MM", { locale: ptBR });
-
-      return {
-        date: dayStr,
-        label,
-        checkins: checkins.filter(c => c.checked_in_at?.startsWith(dayStr)).length,
-        ratings: ratings.filter(r => r.created_at?.startsWith(dayStr)).length,
-        visits: visits.filter(v => v.created_at?.startsWith(dayStr)).length,
-        registrations: guests.filter(g => g.created_at?.startsWith(dayStr)).length
-      };
-    });
-
-    setTrendData(trendPoints);
+    const daily = await getDailyStats(filters.dateRange.from, filters.dateRange.to);
+    setTrendData(
+      daily.map((d) => ({
+        date: d.day,
+        label: format(new Date(`${d.day}T12:00:00`), "dd/MM", { locale: ptBR }),
+        checkins: d.checkins,
+        ratings: d.ratings,
+        visits: d.visits,
+        registrations: d.signups,
+      }))
+    );
   };
 
   const fetchAgeGroupMetrics = async () => {
     const { from, to } = getDateFilters();
-
-    const [ageGroupsResult, activitiesResult, checkinsResult, ratingsResult, guestsResult] = await Promise.all([
+    const [ageGroupsResult, rows] = await Promise.all([
       supabase.from("age_groups").select("id, name, color").order("sort_order"),
-      supabase.from("activities").select("id, age_group_id"),
-      supabase.from("activity_checkins").select("activity_id, guest_id").gte("checked_in_at", from).lte("checked_in_at", to),
-      supabase.from("activity_ratings").select("activity_id, rating").gte("created_at", from).lte("created_at", to),
-      supabase.from("guests").select("id")
+      getAgeGroupStats(from, to),
     ]);
 
-    const ageGroupsList = ageGroupsResult.data || [];
-    const activities = activitiesResult.data || [];
-    const checkins = checkinsResult.data || [];
-    const ratings = ratingsResult.data || [];
-    const guests = guestsResult.data || [];
-
-    const activityAgeMap = new Map(activities.map(a => [a.id, a.age_group_id]));
-
-    const metrics: AgeGroupData[] = ageGroupsList.map(ag => {
-      const agActivityIds = activities.filter(a => a.age_group_id === ag.id).map(a => a.id);
-      const agCheckins = checkins.filter(c => agActivityIds.includes(c.activity_id));
-      const agRatings = ratings.filter(r => agActivityIds.includes(r.activity_id));
-      const uniqueGuests = new Set(agCheckins.map(c => c.guest_id));
-
-      const avgRating = agRatings.length > 0
-        ? agRatings.reduce((sum, r) => sum + r.rating, 0) / agRatings.length
-        : 0;
-
-      return {
-        id: ag.id,
-        name: ag.name,
-        color: ag.color,
-        totalCheckins: agCheckins.length,
-        totalGuests: uniqueGuests.size,
-        avgCheckins: uniqueGuests.size > 0 ? agCheckins.length / uniqueGuests.size : 0,
-        avgRating,
-        engagementScore: agCheckins.length * (avgRating || 3)
-      };
-    });
-
-    setAgeGroupMetrics(metrics);
+    setAgeGroupMetrics(
+      (ageGroupsResult.data || []).map((ag) => {
+        const r = rows.find((x) => x.ageGroupId === ag.id);
+        const checkins = r?.checkins ?? 0;
+        const guests = r?.guests ?? 0;
+        const avgRating = r && r.ratings > 0 ? r.ratingSum / r.ratings : 0;
+        return {
+          id: ag.id,
+          name: ag.name,
+          color: ag.color,
+          totalCheckins: checkins,
+          totalGuests: guests,
+          avgCheckins: guests > 0 ? checkins / guests : 0,
+          avgRating,
+          engagementScore: checkins * (avgRating || 3),
+        };
+      })
+    );
   };
 
   const handleRefresh = () => {
@@ -680,6 +553,13 @@ export const KPIDashboard = () => {
         />
       </div>
 
+      {loadError && (
+        <div className="rounded-xl border border-destructive/40 bg-destructive/5 p-4 text-sm">
+          Não foi possível carregar todos os indicadores. Confira se o SQL de estatísticas foi rodado no Supabase.
+          <span className="block text-xs text-muted-foreground mt-1">{loadError}</span>
+        </div>
+      )}
+
       {/* KPI Alerts */}
       <KPIAlerts
         participationDrop={participationDrop}
@@ -699,6 +579,7 @@ export const KPIDashboard = () => {
         previousParticipationRate={previousParticipationRate}
         previousSatisfaction={previousSatisfaction}
         nps={nps}
+        previousNps={previousNps}
         conversionRate={conversionRate}
       />
 
