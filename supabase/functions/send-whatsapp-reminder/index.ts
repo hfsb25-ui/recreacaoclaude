@@ -35,16 +35,26 @@ Deno.serve(async (req) => {
       );
     }
 
-    // 2. Get pending reminders for activities starting in 9-11 minutes
+    // 2. Horário de Brasília (o servidor roda em UTC; as atividades são cadastradas no horário local)
+    const TZ = "America/Sao_Paulo";
+    const localParts = (d: Date) => {
+      const p = Object.fromEntries(
+        new Intl.DateTimeFormat("en-CA", {
+          timeZone: TZ, year: "numeric", month: "2-digit", day: "2-digit",
+          hour: "2-digit", minute: "2-digit", second: "2-digit", hourCycle: "h23",
+        }).formatToParts(d).map((x) => [x.type, x.value])
+      );
+      return { date: `${p.year}-${p.month}-${p.day}`, time: `${p.hour}:${p.minute}:${p.second}` };
+    };
+
     const now = new Date();
-    const todayStr = now.toISOString().split("T")[0];
-
-    // Calculate time window: 9-11 minutes from now
-    const minFrom = new Date(now.getTime() + 9 * 60 * 1000);
-    const minTo = new Date(now.getTime() + 11 * 60 * 1000);
-
-    const timeFrom = `${String(minFrom.getHours()).padStart(2, "0")}:${String(minFrom.getMinutes()).padStart(2, "0")}:00`;
-    const timeTo = `${String(minTo.getHours()).padStart(2, "0")}:${String(minTo.getMinutes()).padStart(2, "0")}:00`;
+    const nowLocal = localParts(now);
+    const todayStr = nowLocal.date;
+    // Janela: atividades que começam a partir de agora até daqui a 11 minutos
+    // (a função roda a cada 2 minutos, então cada lembrete sai ~10 min antes)
+    const windowEnd = localParts(new Date(now.getTime() + 11 * 60 * 1000));
+    const timeFrom = nowLocal.time;
+    const timeTo = windowEnd.date === todayStr ? windowEnd.time : "23:59:59";
 
     // Get pending reminders
     const { data: reminders } = await supabase
@@ -68,7 +78,7 @@ Deno.serve(async (req) => {
       .select("id, name, start_time, activity_date")
       .in("id", activityIds)
       .eq("activity_date", todayStr)
-      .gte("start_time", timeFrom)
+      .gt("start_time", timeFrom)
       .lte("start_time", timeTo);
 
     if (!activities || activities.length === 0) {
@@ -116,10 +126,13 @@ Deno.serve(async (req) => {
       }
 
       const startTime = activity.start_time.substring(0, 5);
-      const message = `🏨 Olá, ${guest.name}! 🎉\n\nLembrete: a atividade *"${activity.name}"* começa em 10 minutos (às ${startTime}).\n\nNos vemos lá! 🎮`;
+      const firstName = String(guest.name || "").trim().split(/\s+/)[0] || "";
+      const message = `🏨 Olá, ${firstName}! 🎉\n\nLembrete: a atividade *"${activity.name}"* começa às ${startTime}.\n\nNos vemos lá! 🎮`;
+      let number = String(guest.phone).replace(/\D/g, "");
+      if (number.length === 10 || number.length === 11) number = `55${number}`;
 
       try {
-        const url = `${config.instance_url}/message/sendText/${config.instance_name}`;
+        const url = `${String(config.instance_url).replace(/\/+$/, "")}/message/sendText/${config.instance_name}`;
         const response = await fetch(url, {
           method: "POST",
           headers: {
@@ -127,7 +140,7 @@ Deno.serve(async (req) => {
             apikey: config.api_key,
           },
           body: JSON.stringify({
-            number: guest.phone,
+            number,
             text: message,
           }),
         });
