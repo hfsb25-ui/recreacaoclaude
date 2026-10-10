@@ -1,47 +1,19 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { Cloud, CloudRain, Sun, CloudSnow, Wind, Droplets, Thermometer } from "lucide-react";
-
-interface WeatherData {
-  temperature: number;
-  weatherCode: number;
-  humidity: number;
-  windSpeed: number;
-  feelsLike: number;
-}
-
-interface HourlyForecast {
-  time: string;
-  temperature: number;
-  weatherCode: number;
-}
+import { Droplets, Thermometer, Wind, Umbrella } from "lucide-react";
+import { describeWeather, fetchForecast, type Forecast } from "@/lib/weather";
 
 interface TotemSlideWeatherProps {
   isActive: boolean;
 }
 
-const getWeatherIcon = (code: number, size: string = "w-16 h-16") => {
-  const classes = size;
-  if (code === 0) return <Sun className={`${classes} text-yellow-500`} />;
-  if (code <= 3) return <Cloud className={`${classes} text-gray-400`} />;
-  if (code <= 67) return <CloudRain className={`${classes} text-blue-500`} />;
-  if (code <= 77) return <CloudSnow className={`${classes} text-blue-300`} />;
-  return <Wind className={`${classes} text-gray-500`} />;
-};
-
-const getWeatherDescription = (code: number): string => {
-  if (code === 0) return "Céu limpo";
-  if (code <= 3) return "Parcialmente nublado";
-  if (code <= 48) return "Nublado";
-  if (code <= 67) return "Chuva";
-  if (code <= 77) return "Neve";
-  if (code <= 82) return "Aguaceiros";
-  return "Tempestade";
+const WeatherIcon = ({ code, isDay, className }: { code: number; isDay: boolean; className: string }) => {
+  const { Icon, color } = describeWeather(code, isDay);
+  return <Icon className={`${className} ${color}`} />;
 };
 
 export const TotemSlideWeather = ({ isActive }: TotemSlideWeatherProps) => {
-  const [weather, setWeather] = useState<WeatherData | null>(null);
-  const [hourly, setHourly] = useState<HourlyForecast[]>([]);
+  const [forecast, setForecast] = useState<Forecast | null>(null);
   const [cityName, setCityName] = useState<string>("Carregando...");
   const [loading, setLoading] = useState(true);
 
@@ -60,30 +32,7 @@ export const TotemSlideWeather = ({ isActive }: TotemSlideWeatherProps) => {
       setCityName(settings.weather_city_name || "Localização");
 
       try {
-        const response = await fetch(
-          `https://api.open-meteo.com/v1/forecast?latitude=${settings.weather_latitude}&longitude=${settings.weather_longitude}&current=temperature_2m,relative_humidity_2m,weather_code,wind_speed_10m,apparent_temperature&hourly=temperature_2m,weather_code&timezone=auto`
-        );
-        const data = await response.json();
-
-        setWeather({
-          temperature: Math.round(data.current.temperature_2m),
-          weatherCode: data.current.weather_code,
-          humidity: data.current.relative_humidity_2m,
-          windSpeed: Math.round(data.current.wind_speed_10m),
-          feelsLike: Math.round(data.current.apparent_temperature),
-        });
-
-        // Get next 6 hours
-        const currentHour = new Date().getHours();
-        const hourlyData: HourlyForecast[] = [];
-        for (let i = currentHour + 1; i < currentHour + 7 && i < 24; i++) {
-          hourlyData.push({
-            time: `${i}:00`,
-            temperature: Math.round(data.hourly.temperature_2m[i]),
-            weatherCode: data.hourly.weather_code[i],
-          });
-        }
-        setHourly(hourlyData);
+        setForecast(await fetchForecast(Number(settings.weather_latitude), Number(settings.weather_longitude), 6));
       } catch (error) {
         console.error("Error fetching weather:", error);
       } finally {
@@ -106,7 +55,7 @@ export const TotemSlideWeather = ({ isActive }: TotemSlideWeatherProps) => {
     );
   }
 
-  if (!weather) {
+  if (!forecast) {
     return (
       <div className="flex items-center justify-center h-full">
         <p className="text-3xl text-muted-foreground">
@@ -116,6 +65,11 @@ export const TotemSlideWeather = ({ isActive }: TotemSlideWeatherProps) => {
     );
   }
 
+  const weather = forecast.current;
+  const look = describeWeather(weather.weatherCode, weather.isDay);
+  const hourly = forecast.nextHours;
+  const alert = forecast.rainAlert;
+
   return (
     <div className="h-full flex flex-col items-center justify-center">
       {/* Main Weather Display */}
@@ -123,13 +77,13 @@ export const TotemSlideWeather = ({ isActive }: TotemSlideWeatherProps) => {
         <p className="text-3xl text-muted-foreground mb-4">{cityName}</p>
         
         <div className="flex items-center justify-center gap-8 mb-6">
-          {getWeatherIcon(weather.weatherCode, "w-32 h-32")}
+          <WeatherIcon code={weather.weatherCode} isDay={weather.isDay} className="w-32 h-32" />
           <div>
             <p className="text-9xl font-bold text-foreground">
               {weather.temperature}°
             </p>
             <p className="text-3xl text-muted-foreground">
-              {getWeatherDescription(weather.weatherCode)}
+              {look.label}
             </p>
           </div>
         </div>
@@ -150,6 +104,15 @@ export const TotemSlideWeather = ({ isActive }: TotemSlideWeatherProps) => {
               <p className="text-2xl font-bold text-foreground">{weather.humidity}%</p>
             </div>
           </div>
+          {weather.rainChance !== null && (
+            <div className="flex items-center gap-3">
+              <Umbrella className="w-8 h-8 text-sky-500" />
+              <div className="text-left">
+                <p className="text-sm text-muted-foreground">Chance de chuva</p>
+                <p className="text-2xl font-bold text-foreground">{weather.rainChance}%</p>
+              </div>
+            </div>
+          )}
           <div className="flex items-center gap-3">
             <Wind className="w-8 h-8 text-gray-500" />
             <div className="text-left">
@@ -160,6 +123,15 @@ export const TotemSlideWeather = ({ isActive }: TotemSlideWeatherProps) => {
         </div>
       </div>
 
+      {alert && (
+        <div className="mb-8 flex items-center gap-3 rounded-2xl bg-sky-100 dark:bg-sky-900/40 px-6 py-3 text-2xl text-sky-900 dark:text-sky-100">
+          <Umbrella className="w-8 h-8 shrink-0" />
+          <span>
+            Possibilidade de chuva às {alert.hour}h ({alert.rainChance}%). Confira as atividades cobertas!
+          </span>
+        </div>
+      )}
+
       {/* Hourly Forecast */}
       {hourly.length > 0 && (
         <div className="w-full max-w-4xl">
@@ -167,15 +139,16 @@ export const TotemSlideWeather = ({ isActive }: TotemSlideWeatherProps) => {
             Próximas horas
           </p>
           <div className="flex justify-center gap-6">
-            {hourly.map((hour, index) => (
+            {hourly.map((hour) => (
               <div
-                key={index}
-                className="flex flex-col items-center p-4 bg-card rounded-xl border border-border"
+                key={hour.hour}
+                className="flex flex-col items-center p-4 bg-card rounded-xl border border-border min-w-[96px]"
               >
-                <p className="text-lg text-muted-foreground">{hour.time}</p>
-                {getWeatherIcon(hour.weatherCode, "w-10 h-10")}
-                <p className="text-2xl font-bold text-foreground mt-2">
-                  {hour.temperature}°
+                <p className="text-lg text-muted-foreground">{hour.hour}h</p>
+                <WeatherIcon code={hour.weatherCode} isDay={hour.isDay} className="w-10 h-10" />
+                <p className="text-2xl font-bold text-foreground mt-2">{hour.temperature}°</p>
+                <p className={`text-base mt-1 ${hour.rainChance >= 20 ? "text-sky-600 font-semibold" : "text-muted-foreground"}`}>
+                  💧 {hour.rainChance}%
                 </p>
               </div>
             ))}

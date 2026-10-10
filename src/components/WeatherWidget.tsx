@@ -1,13 +1,7 @@
 import { useEffect, useState } from "react";
 import { Card } from "./ui/card";
-import { Cloud, CloudRain, Sun, CloudSnow, Wind } from "lucide-react";
-
-interface WeatherData {
-  temperature: number;
-  weatherCode: number;
-  humidity: number;
-  windSpeed: number;
-}
+import { Umbrella } from "lucide-react";
+import { describeWeather, fetchForecast, type Forecast } from "@/lib/weather";
 
 interface WeatherWidgetProps {
   latitude: number;
@@ -15,43 +9,14 @@ interface WeatherWidgetProps {
   cityName?: string;
 }
 
-const getWeatherIcon = (code: number) => {
-  if (code === 0) return <Sun className="w-8 h-8 text-yellow-500" />;
-  if (code <= 3) return <Cloud className="w-8 h-8 text-gray-400" />;
-  if (code <= 67) return <CloudRain className="w-8 h-8 text-blue-500" />;
-  if (code <= 77) return <CloudSnow className="w-8 h-8 text-blue-300" />;
-  return <Wind className="w-8 h-8 text-gray-500" />;
-};
-
-const getWeatherDescription = (code: number): string => {
-  if (code === 0) return "Céu limpo";
-  if (code <= 3) return "Parcialmente nublado";
-  if (code <= 48) return "Nublado";
-  if (code <= 67) return "Chuva";
-  if (code <= 77) return "Neve";
-  if (code <= 82) return "Aguaceiros";
-  if (code <= 86) return "Chuva forte";
-  return "Tempestade";
-};
-
 export const WeatherWidget = ({ latitude, longitude, cityName }: WeatherWidgetProps) => {
-  const [weather, setWeather] = useState<WeatherData | null>(null);
+  const [forecast, setForecast] = useState<Forecast | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const fetchWeather = async () => {
       try {
-        const response = await fetch(
-          `https://api.open-meteo.com/v1/forecast?latitude=${latitude}&longitude=${longitude}&current=temperature_2m,relative_humidity_2m,weather_code,wind_speed_10m&timezone=auto`
-        );
-        const data = await response.json();
-        
-        setWeather({
-          temperature: Math.round(data.current.temperature_2m),
-          weatherCode: data.current.weather_code,
-          humidity: data.current.relative_humidity_2m,
-          windSpeed: Math.round(data.current.wind_speed_10m),
-        });
+        setForecast(await fetchForecast(latitude, longitude, 6));
       } catch (error) {
         console.error("Erro ao buscar dados do clima:", error);
       } finally {
@@ -79,13 +44,16 @@ export const WeatherWidget = ({ latitude, longitude, cityName }: WeatherWidgetPr
     );
   }
 
-  if (!weather) return null;
+  if (!forecast) return null;
+  const weather = forecast.current;
+  const { Icon, color, label } = describeWeather(weather.weatherCode, weather.isDay);
+  const alert = forecast.rainAlert;
 
   return (
     <Card className="p-4 bg-background/50 backdrop-blur-sm border-border/50">
       <div className="flex items-center gap-4">
         <div className="flex-shrink-0">
-          {getWeatherIcon(weather.weatherCode)}
+          <Icon className={`w-8 h-8 ${color}`} />
         </div>
         <div className="flex-1">
           {cityName && (
@@ -98,13 +66,20 @@ export const WeatherWidget = ({ latitude, longitude, cityName }: WeatherWidgetPr
               {weather.temperature}°C
             </span>
             <span className="text-sm text-muted-foreground">
-              {getWeatherDescription(weather.weatherCode)}
+              {label}
             </span>
           </div>
           <div className="flex gap-4 mt-2 text-xs text-muted-foreground">
             <span>Umidade: {weather.humidity}%</span>
             <span>Vento: {weather.windSpeed} km/h</span>
+            {weather.rainChance !== null && <span>Chuva: {weather.rainChance}%</span>}
           </div>
+          {alert && (
+            <p className="mt-2 flex items-center gap-1.5 text-xs font-medium text-sky-700 dark:text-sky-300">
+              <Umbrella className="h-3.5 w-3.5 shrink-0" />
+              Possibilidade de chuva às {alert.hour}h ({alert.rainChance}%)
+            </p>
+          )}
         </div>
       </div>
     </Card>
