@@ -24,6 +24,9 @@
   const DAYS_BACK = 15; // busca entradas dos últimos X dias para achar quem ainda está hospedado
   const CONSUMPTION_URL = "https://exxcevxihbcgleopekvt.supabase.co/functions/v1/pms-consumption-sync";
   const REPORT_BASE = "https://ebs.totvshospitalidade.com/report";
+  // pedido que o PMS faz para obter o login do "Saldo das Contas"
+  const FILTERS_URL = "https://ebs.totvshospitalidade.com/report/api/FiltersReport/7e6d796f-53d6-4d43-9f55-2de54785ab7b?culture=pt-BR";
+  const JWT_RE = /eyJ[\w-]+\.eyJ[\w-]+\.[\w-]+/g;
   const CONSUMPTION_EVERY_MIN = 30; // de quanto em quanto tempo atualiza o consumo
   const CONSUMPTION_HOURS = [7, 23]; // só atualiza o consumo entre estes horários
   // =====================================
@@ -360,21 +363,33 @@
   const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
   const fetchConsumptionCsv = async () => {
-    const auth = reportAuth || bearerToken();
-    if (!auth) throw new Error("aguardando o login do PMS");
+    // 1) pede um login novo de relatório ao TOTVS, como o próprio PMS faz
+    const candidates = [];
+    if (authHeaders) {
+      const r = await gmRequest({ method: "GET", url: FILTERS_URL, headers: { Accept: "application/json", ...authHeaders } });
+      [...new Set((r.responseText || "").match(JWT_RE) || [])].forEach((t) => candidates.push(t));
+    }
+    if (reportAuth) candidates.push(reportAuth);
+    if (!candidates.length) throw new Error("aguardando o login do PMS");
 
-    // 1) abre o relatório de hoje (campos vazios = data atual do sistema)
+    // 2) abre o relatório de hoje (campos vazios = data atual do sistema)
+    const pageUrl = reportPageUrl || `${REPORT_BASE}/AccountBalanceOnDate`;
     const form = "ArrivalDate=&BalanceOnDate=&BalanceSystemDate=&BillingAccountType=&CompanyClientId=&GroupName=" +
       "&PendingAccount=&PositiveBalance=&ReservationStatus=2&SortByUh=&ZeroBalance=";
-    const page1 = await gmRequest({
-      method: "POST",
-      url: `${reportPageUrl || `${REPORT_BASE}/AccountBalanceOnDate`}?auth=${encodeURIComponent(auth)}`,
-      headers: { "Content-Type": "application/x-www-form-urlencoded" },
-      data: form,
-    });
-    if (page1.status === 401 || page1.status === 403) throw new Error("login do relatório expirou, abra qualquer relatório no PMS");
-    if (page1.status === 404 && !reportPageUrl) throw new Error("abra o Saldo das Contas uma vez pelo menu do PMS");
-    if (page1.status < 200 || page1.status >= 300) throw new Error(`Relatório respondeu ${page1.status}`);
+    let page1 = null;
+    for (const token of candidates) {
+      const r = await gmRequest({
+        method: "POST",
+        url: `${pageUrl}?auth=${encodeURIComponent(token)}`,
+        headers: { "Content-Type": "application/x-www-form-urlencoded" },
+        data: form,
+      });
+      if (r.status >= 200 && r.status < 300 && /reportId/i.test(r.responseText || "")) {
+        page1 = r;
+        break;
+      }
+    }
+    if (!page1) throw new Error("o relatório não aceitou o login");
     const html = page1.responseText || "";
     const m = html.match(/["']?reportId["']?\s*[:=]\s*["']([^"']+)["']/i);
     if (!m) throw new Error("não achei o código do relatório (o TOTVS pode ter mudado a tela)");
