@@ -10,6 +10,7 @@ import { Progress } from "@/components/ui/progress";
 import { ArrowLeft, Trophy, LogOut, Calendar, Gamepad2, MessageSquare, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { PetMiniCard } from "@/components/pet/PetMiniCard";
+import { GuestConsumptionCard } from "@/components/GuestConsumptionCard";
 
 interface CheckIn {
   id: string;
@@ -104,6 +105,8 @@ const GuestProfile = () => {
         </div>
 
         <PetMiniCard guestId={guest.id} />
+
+        <GuestConsumptionCard guestId={guest.id} />
 
         <Card className="p-8">
           <div className="text-center mb-6">
