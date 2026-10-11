@@ -203,16 +203,20 @@
         block = null;
         if (values.length !== VALUE_FIELDS.length || !values.every(isMoney) || !info.length) {
           skipped++;
+          if (typeof skippedShapes !== "undefined") skippedShapes.push(shapeOf(info, values));
           continue;
         }
         const flat = info.flat();
         const reservation = flat.find((c) => /^[A-Z0-9]{4,}-\d{3,}$/i.test(c)) || (info[1] && info[1][0]);
-        const uh = info[0][0];
+        // apto: normalmente o 1º campo da 1ª linha; se ali estiver a reserva, procura um código curto de apto
+        const looksUh = (c) => /^[A-Z]{0,2}\d{1,4}[A-Z]?$/i.test(c) && c !== reservation;
+        const uh = looksUh(info[0][0]) ? info[0][0] : flat.find(looksUh);
         const dates = flat.map(brToIso).filter(Boolean).sort();
         const type = (info[1] || []).find((c) => ACCOUNT_TYPE.test(c)) || flat.find((c) => ACCOUNT_TYPE.test(c)) || null;
         const status = flat.find((c) => /check|confirm|hosped|pend|bloq/i.test(c)) || null;
-        if (!reservation || !uh || uh.length > 10 || DATE_BR.test(uh)) {
+        if (!reservation || !uh) {
           skipped++;
+          if (typeof skippedShapes !== "undefined") skippedShapes.push(shapeOf(info, values));
           continue;
         }
         const acc = {

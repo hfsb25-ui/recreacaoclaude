@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         TESTE – Coleta de consumo do TOTVS (não envia nada)
 // @namespace    https://github.com/hfsb25-ui/recreacaoclaude
-// @version      0.2.0
+// @version      0.3.0
 // @description  Só para testar: gera o relatório "Saldo das Contas" de hoje, exporta em CSV e mostra o resultado na tela. Não envia dados para lugar nenhum.
 // @match        https://gestaopms.totvshospitalidade.com/*
 // @run-at       document-start
@@ -117,6 +117,19 @@
     return m ? `${m[3]}-${m[2]}-${m[1]}` : null;
   };
 
+  // Diagnóstico dos blocos não reconhecidos, sem mostrar nomes nem valores
+  const skippedShapes = [];
+  const shapeOf = (info, values) => {
+    const kind = (c) =>
+      /^[A-Z0-9]{4,}-\d{3,}$/i.test(c) ? "RESERVA" :
+      DATE_BR.test(c) ? "DATA" :
+      ACCOUNT_TYPE.test(c) ? `TIPO:${c}` :
+      /^[A-Z]{0,2}\d{1,4}[A-Z]?$/i.test(c) ? `APTO?:${c}` :
+      isMoney(c) ? "VALOR" :
+      /check|confirm|pend|bloq/i.test(c) ? `STATUS:${c}` : `texto(${c.length})`;
+    return info.map((l) => l.map(kind).join(" | ")).join("  /  ") + `  →  ${values.length} valores`;
+  };
+
   // Devolve só apto, reserva, tipo de conta, status, datas e valores. Os nomes dos hóspedes ficam de fora.
   const parseConsumptionCsv = (text) => {
     const lines = String(text).split(/\r?\n/);
@@ -145,16 +158,20 @@
         block = null;
         if (values.length !== VALUE_FIELDS.length || !values.every(isMoney) || !info.length) {
           skipped++;
+          if (typeof skippedShapes !== "undefined") skippedShapes.push(shapeOf(info, values));
           continue;
         }
         const flat = info.flat();
         const reservation = flat.find((c) => /^[A-Z0-9]{4,}-\d{3,}$/i.test(c)) || (info[1] && info[1][0]);
-        const uh = info[0][0];
+        // apto: normalmente o 1º campo da 1ª linha; se ali estiver a reserva, procura um código curto de apto
+        const looksUh = (c) => /^[A-Z]{0,2}\d{1,4}[A-Z]?$/i.test(c) && c !== reservation;
+        const uh = looksUh(info[0][0]) ? info[0][0] : flat.find(looksUh);
         const dates = flat.map(brToIso).filter(Boolean).sort();
         const type = (info[1] || []).find((c) => ACCOUNT_TYPE.test(c)) || flat.find((c) => ACCOUNT_TYPE.test(c)) || null;
         const status = flat.find((c) => /check|confirm|hosped|pend|bloq/i.test(c)) || null;
-        if (!reservation || !uh || uh.length > 10 || DATE_BR.test(uh)) {
+        if (!reservation || !uh) {
           skipped++;
+          if (typeof skippedShapes !== "undefined") skippedShapes.push(shapeOf(info, values));
           continue;
         }
         const acc = {
@@ -317,11 +334,15 @@
     running = true;
     logLines = [];
     result = null;
+    skippedShapes.length = 0;
     const t0 = Date.now();
     try {
       const csv = await fetchConsumptionCsv();
       const parsed = parseConsumptionCsv(csv);
       result = parsed;
+      const seen = {};
+      parsed.accounts.forEach((a) => { const k = a.reservation_code + "|" + a.uh; seen[k] = (seen[k] || 0) + 1; });
+      result.repeated = Object.entries(seen).filter(([, n]) => n > 1);
       log(`6) Leitura concluída em ${((Date.now() - t0) / 1000).toFixed(1)}s: ${parsed.accounts.length} contas lidas` +
         (parsed.skipped ? `, ${parsed.skipped} blocos não reconhecidos` : "") +
         ` · data do relatório: ${parsed.reportDate || "?"}`);
@@ -363,6 +384,14 @@
     html += logLines.map((l) => `<div>${esc(l)}</div>`).join("");
     if (result && result.accounts.length) {
       const totalConsumo = result.accounts.reduce((s, a) => s + consumo(a), 0);
+      if (result.repeated && result.repeated.length) {
+        html += `<div style="margin-top:8px">Reserva+apto com mais de uma conta: ${result.repeated.length} ` +
+          `(ex.: ${esc(result.repeated.slice(0, 3).map(([k, n]) => `${k.split("|")[1]} (${n} contas)`).join(", "))})</div>`;
+      }
+      if (skippedShapes.length) {
+        html += `<div style="margin-top:8px"><b>Blocos não reconhecidos (formato, sem dados):</b></div>` +
+          skippedShapes.map((sh) => `<div style="font-family:monospace;font-size:11px">${esc(sh)}</div>`).join("");
+      }
       const types = {};
       result.accounts.forEach((a) => (types[a.account_type || "?"] = (types[a.account_type || "?"] || 0) + 1));
       html += `<div style="margin-top:8px">Tipos de conta: ${esc(Object.entries(types).map(([k, v]) => `${k}: ${v}`).join(" · "))}</div>`;
