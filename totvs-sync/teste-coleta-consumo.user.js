@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         TESTE – Coleta de consumo do TOTVS (não envia nada)
 // @namespace    https://github.com/hfsb25-ui/recreacaoclaude
-// @version      0.7.0
+// @version      0.8.0
 // @description  Só para testar: gera o relatório "Saldo das Contas" de hoje, exporta em CSV e mostra o resultado na tela. Não envia dados para lugar nenhum.
 // @match        https://gestaopms.totvshospitalidade.com/*
 // @run-at       document-start
@@ -16,6 +16,8 @@
   "use strict";
 
   const REPORT_BASE = "https://ebs.totvshospitalidade.com/report";
+  // pedido que o PMS faz para obter o login do "Saldo das Contas" (descoberto no teste 0.7.0)
+  const DEFAULT_FILTERS_URL = "https://ebs.totvshospitalidade.com/report/api/FiltersReport/7e6d796f-53d6-4d43-9f55-2de54785ab7b?culture=pt-BR";
   const page = typeof unsafeWindow !== "undefined" ? unsafeWindow : window;
   const PMS_HOST = /totvshospitalidade\.com/i;
   let authHeaders = null;
@@ -112,6 +114,9 @@
         reportAuthSource = src
           ? `${src.method} ${src.url.split("?")[0]}` + (src.url.includes("?") ? `  ?${src.url.split("?")[1].replace(JWT_RE, "<login>").slice(0, 300)}` : "") + (src.body ? `  corpo: ${src.body}` : "")
           : "não encontrado entre os pedidos do PMS (" + tokenSources.length + " pedidos com login vistos)";
+        if (src && /\/api\/FiltersReport\//i.test(src.url) && /AccountBalanceOnDate/i.test(u.pathname)) {
+          GM_setValue("filtersUrl", src.url.replace(JWT_RE, ""));
+        }
         try { render(); } catch (e) {}
         if (/AccountBalanceOnDate/i.test(u.pathname)) {
           reportPageUrl = u.origin + u.pathname;
@@ -358,6 +363,24 @@
     const form = "ArrivalDate=&BalanceOnDate=&BalanceSystemDate=&BillingAccountType=&CompanyClientId=&GroupName=" +
       "&PendingAccount=&PositiveBalance=&ReservationStatus=2&SortByUh=&ZeroBalance=";
     const candidates = [];
+    // 1º: pede um login novo de relatório ao TOTVS, como o próprio PMS faz
+    const filtersUrl = GM_getValue("filtersUrl", DEFAULT_FILTERS_URL);
+    if (authHeaders) {
+      try {
+        const r = await gmRequest({
+          method: "GET",
+          url: filtersUrl,
+          headers: { Accept: "application/json", ...authHeaders },
+        });
+        const found = (r.responseText || "").match(JWT_RE) || [];
+        log(`   Pedido de login do relatório → ${r.status}, ${found.length} login(s) recebido(s)`);
+        [...new Set(found)].forEach((t, i) => candidates.push({ where: `login novo do relatório #${i + 1}`, token: t }));
+      } catch (e) {
+        log(`   Pedido de login do relatório falhou: ${e.message}`);
+      }
+    } else {
+      log("   Ainda sem o login geral do PMS (aguarde o PMS carregar e tente de novo)");
+    }
     if (reportAuth) candidates.push({ where: "relatório aberto agora", token: reportAuth });
     const savedWhere = GM_getValue("reportAuthWhere", null);
     const stored = storedTokens();
@@ -380,7 +403,7 @@
       log(`   ${ok ? "✅" : "✖"} ${c.where} → ${r.status}`);
       if (ok) {
         page1 = r;
-        if (c.where !== "relatório aberto agora" && c.where !== "login geral do PMS") GM_setValue("reportAuthWhere", c.where);
+        if (c.where.startsWith("localStorage") || c.where.startsWith("sessionStorage")) GM_setValue("reportAuthWhere", c.where);
         break;
       }
     }
