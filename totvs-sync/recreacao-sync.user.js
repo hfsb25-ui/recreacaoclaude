@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Recreação HFSB – Sincronizar hóspedes e consumo do PMS
 // @namespace    https://github.com/hfsb25-ui/recreacaoclaude
-// @version      1.3.0
+// @version      1.4.0
 // @description  Envia ao app de Recreação os hóspedes na casa (1 vez por dia, relatório "Hóspedes na Casa") e o consumo por apartamento (a cada 30 min) do TOTVS PMS SaaS.
 // @match        https://gestaopms.totvshospitalidade.com/*
 // @run-at       document-start
@@ -32,6 +32,13 @@
       form: "ArrivalDate=&BalanceOnDate=&BalanceSystemDate=&BillingAccountType=&CompanyClientId=&GroupName=" +
         "&PendingAccount=&PositiveBalance=&ReservationStatus=2&SortByUh=&ZeroBalance=",
       looksLike: /Saldo das Contas|C[óo]d\. Reserva/,
+    },
+    titulares: {
+      filtersUrl: "https://ebs.totvshospitalidade.com/report/api/FiltersReport/76e5fa87-1619-4ed5-ba4e-4a2ef2334079?culture=pt-BR",
+      page: "InHouseGuests",
+      form: "BaseRate=&BirthdayEndDate=&BirthdayStartDate=&Classification=&GuestType=&MainGuestOnly=true&NoPost=" +
+        "&Observations=&PensionType=&TotalizerByPensionType=&Wing=",
+      looksLike: /Reserva/,
     },
     hospedes: {
       filtersUrl: "https://ebs.totvshospitalidade.com/report/api/FiltersReport/76e5fa87-1619-4ed5-ba4e-4a2ef2334079?culture=pt-BR",
@@ -332,11 +339,16 @@
 
 
   // Monta a lista de aptos para o app: titular = 1º adulto; crianças pelo AD/C1/C2/C3 (ou pela idade)
-  const buildStaysFromInHouse = (parsed) =>
+  const personKey = (reservation, g) =>
+    `${reservation}|${`${g.name} ${g.surname}`.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toUpperCase().replace(/\s+/g, " ").trim()}`;
+
+  // mainKeys: titulares vindos do relatório com "só hóspede principal" (se disponível)
+  const buildStaysFromInHouse = (parsed, mainKeys = null) =>
     parsed
       .filter((s) => s.uh && s.guests.length)
       .map((s) => {
-        const holder = s.guests.find((g) => g.age >= 18) || s.guests[0];
+        const main = mainKeys ? s.guests.find((g) => mainKeys.has(personKey(s.reservation_code, g))) : null;
+        const holder = main || s.guests.find((g) => g.age >= 18) || s.guests[0];
         const comp = s.composition || [];
         const adults = comp.length ? comp[0] : s.guests.filter((g) => g.age >= 12).length;
         const children = comp.length ? comp.slice(1).reduce((a, b) => a + b, 0) : s.guests.filter((g) => g.age < 12).length;
@@ -352,7 +364,7 @@
           arrival_date: arrivals[0] ? `${arrivals[0]}T14:00:00` : null,
           departure_date: departures.length ? `${departures[departures.length - 1]}T12:00:00` : null,
           status: "Check-In",
-          guests: s.guests.map((g) => ({ first_name: g.name, surname: g.surname, age: g.age, phone: g.phone })),
+          guests: s.guests.map((g) => ({ first_name: g.name, surname: g.surname, age: g.age, phone: g.phone, is_main: !!main && g === main })),
         };
       });
 
@@ -649,7 +661,19 @@
       let source = "";
       try {
         const parsed = parseGuestsCsv(await fetchReportCsv(REPORTS.hospedes));
-        stays = buildStaysFromInHouse(parsed);
+        // titulares: mesmo relatório só com o hóspede principal (se falhar, segue sem marcar)
+        let mainKeys = null;
+        try {
+          const mains = parseGuestsCsv(await fetchReportCsv(REPORTS.titulares));
+          const total = parsed.reduce((n, x) => n + x.guests.length, 0);
+          const mainTotal = mains.reduce((n, x) => n + x.guests.length, 0);
+          if (mainTotal > 0 && mainTotal < total) {
+            mainKeys = new Set(mains.flatMap((x) => x.guests.map((g) => personKey(x.reservation_code, g))));
+          }
+        } catch (e) {
+          console.warn("[Recreação] titulares não identificados", e);
+        }
+        stays = buildStaysFromInHouse(parsed, mainKeys);
         if (!stays.length) throw new Error("relatório Hóspedes na Casa veio vazio");
       } catch (e) {
         console.warn("[Recreação] Hóspedes na Casa falhou, usando o método antigo", e);

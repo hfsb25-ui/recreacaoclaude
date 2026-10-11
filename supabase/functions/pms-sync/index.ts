@@ -92,6 +92,7 @@ Deno.serve(async (req) => {
             surname,
             age: Number.isFinite(age) && age >= 0 && age < 130 ? Math.trunc(age) : null,
             phone: phoneDigits.length >= 10 ? phoneDigits : null,
+            is_main: g?.is_main === true,
             synced_at: syncedAt,
           });
         }
