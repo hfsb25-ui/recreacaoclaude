@@ -1,11 +1,13 @@
 // ==UserScript==
 // @name         TESTE – Coleta de consumo do TOTVS (não envia nada)
 // @namespace    https://github.com/hfsb25-ui/recreacaoclaude
-// @version      0.4.0
+// @version      0.5.0
 // @description  Só para testar: gera o relatório "Saldo das Contas" de hoje, exporta em CSV e mostra o resultado na tela. Não envia dados para lugar nenhum.
 // @match        https://gestaopms.totvshospitalidade.com/*
 // @run-at       document-start
 // @grant        GM_xmlhttpRequest
+// @grant        GM_getValue
+// @grant        GM_setValue
 // @grant        unsafeWindow
 // @connect      ebs.totvshospitalidade.com
 // ==/UserScript==
@@ -62,13 +64,17 @@
 
   // Login dos relatórios: o PMS abre os relatórios com "?auth=..." no endereço
   let reportAuth = null;
-  let reportPageUrl = null; // endereço real do relatório, aprendido quando o PMS abre o "Saldo das Contas"
+  // endereço real do relatório: aprendido na 1ª vez que o PMS abre o "Saldo das Contas" e guardado
+  let reportPageUrl = GM_getValue("reportPageUrl", null);
   const rememberReportUrl = (url) => {
     try {
       const u = new URL(String(url), page.location.href);
       if (/ebs\.totvshospitalidade\.com$/i.test(u.hostname) && u.searchParams.get("auth")) {
         reportAuth = u.searchParams.get("auth");
-        if (/AccountBalanceOnDate/i.test(u.pathname)) reportPageUrl = u.origin + u.pathname;
+        if (/AccountBalanceOnDate/i.test(u.pathname)) {
+          reportPageUrl = u.origin + u.pathname;
+          GM_setValue("reportPageUrl", reportPageUrl); // só o endereço; o login não é guardado
+        }
       }
     } catch (e) {}
   };
@@ -272,7 +278,7 @@
     const form = "ArrivalDate=&BalanceOnDate=&BalanceSystemDate=&BillingAccountType=&CompanyClientId=&GroupName=" +
       "&PendingAccount=&PositiveBalance=&ReservationStatus=2&SortByUh=&ZeroBalance=";
     const pageUrl = reportPageUrl || `${REPORT_BASE}/AccountBalanceOnDate`;
-    log(`   Endereço usado: ${pageUrl}${reportPageUrl ? " (aprendido do PMS)" : " (padrão)"}`);
+    log(`   Endereço usado: ${pageUrl}${reportPageUrl ? " (guardado)" : " (padrão)"}`);
     const page1 = await gmRequest({
       method: "POST",
       url: `${pageUrl}?auth=${encodeURIComponent(auth)}`,

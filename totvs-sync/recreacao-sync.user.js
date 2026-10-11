@@ -84,14 +84,30 @@
 
   // Login dos relatórios: o PMS abre os relatórios com "?auth=..." no endereço
   let reportAuth = null;
+  // endereço real do relatório: aprendido na 1ª vez que o PMS abre o "Saldo das Contas" e guardado
+  let reportPageUrl = GM_getValue("reportPageUrl", null);
   const rememberReportUrl = (url) => {
     try {
       const u = new URL(String(url), page.location.href);
       if (/ebs\.totvshospitalidade\.com$/i.test(u.hostname) && u.searchParams.get("auth")) {
         reportAuth = u.searchParams.get("auth");
+        if (/AccountBalanceOnDate/i.test(u.pathname)) {
+          reportPageUrl = u.origin + u.pathname;
+          GM_setValue("reportPageUrl", reportPageUrl); // só o endereço; o login não é guardado
+        }
       }
     } catch (e) {}
   };
+  try {
+    const desc = Object.getOwnPropertyDescriptor(page.HTMLIFrameElement.prototype, "src");
+    Object.defineProperty(page.HTMLIFrameElement.prototype, "src", {
+      ...desc,
+      set(v) {
+        rememberReportUrl(v);
+        return desc.set.call(this, v);
+      },
+    });
+  } catch (e) {}
   try {
     const FormProto = page.HTMLFormElement.prototype;
     const origSubmit = FormProto.submit;
@@ -352,11 +368,12 @@
       "&PendingAccount=&PositiveBalance=&ReservationStatus=2&SortByUh=&ZeroBalance=";
     const page1 = await gmRequest({
       method: "POST",
-      url: `${REPORT_BASE}/AccountBalanceOnDate?auth=${encodeURIComponent(auth)}`,
+      url: `${reportPageUrl || `${REPORT_BASE}/AccountBalanceOnDate`}?auth=${encodeURIComponent(auth)}`,
       headers: { "Content-Type": "application/x-www-form-urlencoded" },
       data: form,
     });
     if (page1.status === 401 || page1.status === 403) throw new Error("login do relatório expirou, abra qualquer relatório no PMS");
+    if (page1.status === 404 && !reportPageUrl) throw new Error("abra o Saldo das Contas uma vez pelo menu do PMS");
     if (page1.status < 200 || page1.status >= 300) throw new Error(`Relatório respondeu ${page1.status}`);
     const html = page1.responseText || "";
     const m = html.match(/["']?reportId["']?\s*[:=]\s*["']([^"']+)["']/i);
