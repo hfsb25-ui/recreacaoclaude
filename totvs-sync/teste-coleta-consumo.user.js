@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         TESTE – Coleta de consumo do TOTVS (não envia nada)
 // @namespace    https://github.com/hfsb25-ui/recreacaoclaude
-// @version      0.1.0
+// @version      0.2.0
 // @description  Só para testar: gera o relatório "Saldo das Contas" de hoje, exporta em CSV e mostra o resultado na tela. Não envia dados para lugar nenhum.
 // @match        https://gestaopms.totvshospitalidade.com/*
 // @run-at       document-start
@@ -62,14 +62,27 @@
 
   // Login dos relatórios: o PMS abre os relatórios com "?auth=..." no endereço
   let reportAuth = null;
+  let reportPageUrl = null; // endereço real do relatório, aprendido quando o PMS abre o "Saldo das Contas"
   const rememberReportUrl = (url) => {
     try {
       const u = new URL(String(url), page.location.href);
       if (/ebs\.totvshospitalidade\.com$/i.test(u.hostname) && u.searchParams.get("auth")) {
         reportAuth = u.searchParams.get("auth");
+        if (/AccountBalanceOnDate/i.test(u.pathname)) reportPageUrl = u.origin + u.pathname;
       }
     } catch (e) {}
   };
+  // o PMS também pode abrir o relatório trocando o endereço de um iframe
+  try {
+    const desc = Object.getOwnPropertyDescriptor(page.HTMLIFrameElement.prototype, "src");
+    Object.defineProperty(page.HTMLIFrameElement.prototype, "src", {
+      ...desc,
+      set(v) {
+        rememberReportUrl(v);
+        return desc.set.call(this, v);
+      },
+    });
+  } catch (e) {}
   try {
     const FormProto = page.HTMLFormElement.prototype;
     const origSubmit = FormProto.submit;
@@ -222,13 +235,17 @@
     // 1) abre o relatório de hoje (campos vazios = data atual do sistema)
     const form = "ArrivalDate=&BalanceOnDate=&BalanceSystemDate=&BillingAccountType=&CompanyClientId=&GroupName=" +
       "&PendingAccount=&PositiveBalance=&ReservationStatus=2&SortByUh=&ZeroBalance=";
+    const pageUrl = reportPageUrl || `${REPORT_BASE}/AccountBalanceOnDate`;
+    log(`   Endereço usado: ${pageUrl}${reportPageUrl ? " (aprendido do PMS)" : " (padrão)"}`);
     const page1 = await gmRequest({
       method: "POST",
-      url: `${REPORT_BASE}/AccountBalanceOnDate?auth=${encodeURIComponent(auth)}`,
+      url: `${pageUrl}?auth=${encodeURIComponent(auth)}`,
       headers: { "Content-Type": "application/x-www-form-urlencoded" },
       data: form,
     });
     if (page1.status === 401 || page1.status === 403) throw new Error("login do relatório expirou, abra qualquer relatório no PMS");
+    if (page1.status === 404 && !reportPageUrl)
+      throw new Error("endereço do relatório não encontrado (404). Abra o \"Saldo das Contas\" uma vez pelo menu do PMS e clique no botão de novo");
     if (page1.status < 200 || page1.status >= 300) throw new Error(`Relatório respondeu ${page1.status}`);
     const html = page1.responseText || "";
     const m = html.match(/["']?reportId["']?\s*[:=]\s*["']([^"']+)["']/i);
