@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         TESTE – Coleta de consumo do TOTVS (não envia nada)
 // @namespace    https://github.com/hfsb25-ui/recreacaoclaude
-// @version      0.6.0
+// @version      0.7.0
 // @description  Só para testar: gera o relatório "Saldo das Contas" de hoje, exporta em CSV e mostra o resultado na tela. Não envia dados para lugar nenhum.
 // @match        https://gestaopms.totvshospitalidade.com/*
 // @run-at       document-start
@@ -29,12 +29,29 @@
     if (Object.keys(found).length) authHeaders = found;
   };
 
+  // Diagnóstico: guarda quais pedidos do PMS devolveram um login (JWT), para descobrir de onde vem o login do relatório
+  const JWT_RE = /eyJ[\w-]+\.eyJ[\w-]+\.[\w-]+/g;
+  const tokenSources = []; // { method, url, body, tokens:Set }
+  const maskBody = (b) => {
+    if (b == null) return "";
+    let t = typeof b === "string" ? b : (() => { try { return JSON.stringify(b); } catch (e) { return String(b); } })();
+    return t.replace(JWT_RE, "<login>").slice(0, 400);
+  };
+  const recordResponse = (method, url, body, text) => {
+    if (!text || typeof text !== "string") return;
+    const found = text.match(JWT_RE);
+    if (!found) return;
+    tokenSources.push({ method: method || "GET", url: String(url), body: maskBody(body), tokens: new Set(found) });
+    if (tokenSources.length > 50) tokenSources.shift();
+  };
+
   const XHR = page.XMLHttpRequest.prototype;
   const origOpen = XHR.open;
   const origSet = XHR.setRequestHeader;
   const origSend = XHR.send;
   XHR.open = function (method, url) {
     this.__rsUrl = url;
+    this.__rsMethod = method;
     this.__rsHeaders = {};
     return origOpen.apply(this, arguments);
   };
@@ -42,9 +59,17 @@
     if (this.__rsHeaders) this.__rsHeaders[k] = v;
     return origSet.apply(this, arguments);
   };
-  XHR.send = function () {
+  XHR.send = function (body) {
     try {
       remember(String(this.__rsUrl), this.__rsHeaders);
+      const xhr = this;
+      this.addEventListener("load", () => {
+        try {
+          const t = xhr.responseType === "" || xhr.responseType === "text" ? xhr.responseText
+            : xhr.responseType === "json" ? JSON.stringify(xhr.response) : null;
+          recordResponse(xhr.__rsMethod, xhr.__rsUrl, body, t);
+        } catch (e) {}
+      });
     } catch (e) {}
     return origSend.apply(this, arguments);
   };
@@ -59,11 +84,23 @@
       else if (src) h = { ...src };
       remember(url, h);
     } catch (e) {}
-    return origFetch.apply(this, arguments);
+    const p = origFetch.apply(this, arguments);
+    try {
+      const url = typeof input === "string" ? input : input && input.url;
+      const method = (init && init.method) || (input && input.method) || "GET";
+      const body = init && init.body;
+      p.then((res) => {
+        try {
+          res.clone().text().then((t) => recordResponse(method, url, body, t)).catch(() => {});
+        } catch (e) {}
+      }).catch(() => {});
+    } catch (e) {}
+    return p;
   };
 
   // Login dos relatórios: o PMS abre os relatórios com "?auth=..." no endereço
   let reportAuth = null;
+  let reportAuthSource = null;
   // endereço real do relatório: aprendido na 1ª vez que o PMS abre o "Saldo das Contas" e guardado
   let reportPageUrl = GM_getValue("reportPageUrl", null);
   const rememberReportUrl = (url) => {
@@ -71,6 +108,11 @@
       const u = new URL(String(url), page.location.href);
       if (/ebs\.totvshospitalidade\.com$/i.test(u.hostname) && u.searchParams.get("auth")) {
         reportAuth = u.searchParams.get("auth");
+        const src = [...tokenSources].reverse().find((t) => t.tokens.has(reportAuth));
+        reportAuthSource = src
+          ? `${src.method} ${src.url.split("?")[0]}` + (src.url.includes("?") ? `  ?${src.url.split("?")[1].replace(JWT_RE, "<login>").slice(0, 300)}` : "") + (src.body ? `  corpo: ${src.body}` : "")
+          : "não encontrado entre os pedidos do PMS (" + tokenSources.length + " pedidos com login vistos)";
+        try { render(); } catch (e) {}
         if (/AccountBalanceOnDate/i.test(u.pathname)) {
           reportPageUrl = u.origin + u.pathname;
           GM_setValue("reportPageUrl", reportPageUrl); // só o endereço; o login não é guardado
@@ -459,6 +501,10 @@
       <b>Teste da coleta de consumo</b>
       <button id="rs-close" style="border:0;background:none;font-size:16px;cursor:pointer">✕</button></div>
       <div style="color:#475569;margin-bottom:8px">Nada é enviado: os dados ficam só nesta tela.</div>`;
+    if (reportAuthSource) {
+      html += `<div style="margin:6px 0;padding:6px;background:#f1f5f9;border-radius:6px"><b>De onde veio o login do relatório:</b><br>` +
+        `<span style="font-family:monospace;font-size:11px;word-break:break-all">${esc(reportAuthSource)}</span></div>`;
+    }
     html += logLines.map((l) => `<div>${esc(l)}</div>`).join("");
     if (result && result.accounts.length) {
       const totalConsumo = result.accounts.reduce((s, a) => s + consumo(a), 0);
@@ -492,6 +538,13 @@
   };
 
   const start = () => render();
+  // mostra a janelinha sozinha quando descobrir a origem do login
+  setInterval(() => {
+    if (reportAuthSource && panel && panel.style.display !== "block") {
+      panel.style.display = "block";
+      render();
+    }
+  }, 1500);
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", start);
   else start();
 })();
