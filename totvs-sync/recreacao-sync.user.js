@@ -237,8 +237,27 @@
     return { reportDate, accounts, skipped };
   };
 
+  // Junta as várias contas do mesmo apto + reserva num total só
+  const mergeAccounts = (accounts) => {
+    const map = new Map();
+    for (const a of accounts) {
+      const key = `${a.reservation_code}|${a.uh}`;
+      const cur = map.get(key);
+      if (!cur) {
+        map.set(key, { ...a, accounts: 1 });
+        continue;
+      }
+      cur.accounts += 1;
+      VALUE_FIELDS.forEach((f) => (cur[f] = Math.round(((cur[f] || 0) + (a[f] || 0)) * 100) / 100));
+      if (!/^h[óo]spede$/i.test(cur.account_type || "") && /^h[óo]spede$/i.test(a.account_type || "")) cur.account_type = a.account_type;
+      if (a.arrival_date && (!cur.arrival_date || a.arrival_date < cur.arrival_date)) cur.arrival_date = a.arrival_date;
+      if (a.departure_date && (!cur.departure_date || a.departure_date > cur.departure_date)) cur.departure_date = a.departure_date;
+    }
+    return [...map.values()];
+  };
+
   // Exposto só para teste
-  if (typeof module !== "undefined") module.exports = { buildStays, parseComposition, parseConsumptionCsv };
+  if (typeof module !== "undefined") module.exports = { buildStays, parseComposition, parseConsumptionCsv, mergeAccounts };
 
   // ---------- 3) Busca no PMS e envia ao app ----------
   const fetchReport = async () => {
@@ -420,7 +439,7 @@
       const { reportDate, accounts, skipped } = parseConsumptionCsv(csv);
       if (!accounts.length) throw new Error("relatório de consumo veio vazio");
       // envia só o necessário (sem créditos detalhados e sem nomes)
-      const slim = accounts.map((a) => ({
+      const slim = mergeAccounts(accounts).map((a) => ({
         reservation_code: a.reservation_code, uh: a.uh, account_type: a.account_type, status: a.status,
         arrival_date: a.arrival_date, departure_date: a.departure_date,
         diaria: a.diaria, restaurante: a.restaurante, bares: a.bares, banquete: a.banquete, eventos: a.eventos,
@@ -430,7 +449,7 @@
       await sendConsumption({ report_date: reportDate, accounts: slim });
       GM_setValue("lastConsumption", Date.now());
       const t = new Date().toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
-      consumptionStatus = `consumo às ${t} (${accounts.length} contas${skipped ? `, ${skipped} ignoradas` : ""})`;
+      consumptionStatus = `consumo às ${t} (${slim.length} aptos${skipped ? `, ${skipped} ignoradas` : ""})`;
       consumptionOk = true;
     } catch (e) {
       console.warn("[Recreação] consumo", e);

@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         TESTE – Coleta de consumo do TOTVS (não envia nada)
 // @namespace    https://github.com/hfsb25-ui/recreacaoclaude
-// @version      0.3.0
+// @version      0.4.0
 // @description  Só para testar: gera o relatório "Saldo das Contas" de hoje, exporta em CSV e mostra o resultado na tela. Não envia dados para lugar nenhum.
 // @match        https://gestaopms.totvshospitalidade.com/*
 // @run-at       document-start
@@ -193,6 +193,25 @@
   };
 
 
+  // Junta as várias contas do mesmo apto + reserva num total só
+  const mergeAccounts = (accounts) => {
+    const map = new Map();
+    for (const a of accounts) {
+      const key = `${a.reservation_code}|${a.uh}`;
+      const cur = map.get(key);
+      if (!cur) {
+        map.set(key, { ...a, accounts: 1 });
+        continue;
+      }
+      cur.accounts += 1;
+      VALUE_FIELDS.forEach((f) => (cur[f] = Math.round(((cur[f] || 0) + (a[f] || 0)) * 100) / 100));
+      if (!/^h[óo]spede$/i.test(cur.account_type || "") && /^h[óo]spede$/i.test(a.account_type || "")) cur.account_type = a.account_type;
+      if (a.arrival_date && (!cur.arrival_date || a.arrival_date < cur.arrival_date)) cur.arrival_date = a.arrival_date;
+      if (a.departure_date && (!cur.departure_date || a.departure_date > cur.departure_date)) cur.departure_date = a.departure_date;
+    }
+    return [...map.values()];
+  };
+
   // Mostra cada etapa na tela
   let logLines = [];
   const log = (msg) => {
@@ -340,9 +359,8 @@
       const csv = await fetchConsumptionCsv();
       const parsed = parseConsumptionCsv(csv);
       result = parsed;
-      const seen = {};
-      parsed.accounts.forEach((a) => { const k = a.reservation_code + "|" + a.uh; seen[k] = (seen[k] || 0) + 1; });
-      result.repeated = Object.entries(seen).filter(([, n]) => n > 1);
+      result.merged = mergeAccounts(parsed.accounts);
+      result.repeated = result.merged.filter((m) => m.accounts > 1);
       log(`6) Leitura concluída em ${((Date.now() - t0) / 1000).toFixed(1)}s: ${parsed.accounts.length} contas lidas` +
         (parsed.skipped ? `, ${parsed.skipped} blocos não reconhecidos` : "") +
         ` · data do relatório: ${parsed.reportDate || "?"}`);
@@ -384,10 +402,9 @@
     html += logLines.map((l) => `<div>${esc(l)}</div>`).join("");
     if (result && result.accounts.length) {
       const totalConsumo = result.accounts.reduce((s, a) => s + consumo(a), 0);
-      if (result.repeated && result.repeated.length) {
-        html += `<div style="margin-top:8px">Reserva+apto com mais de uma conta: ${result.repeated.length} ` +
-          `(ex.: ${esc(result.repeated.slice(0, 3).map(([k, n]) => `${k.split("|")[1]} (${n} contas)`).join(", "))})</div>`;
-      }
+      html += `<div style="margin-top:8px"><b>${result.merged.length} aptos</b> depois de somar as contas de cada apto ` +
+        `(${result.repeated.length} aptos tinham mais de uma conta` +
+        (result.repeated.length ? `, ex.: ${esc(result.repeated.slice(0, 4).map((m) => `${m.uh} (${m.accounts})`).join(", "))}` : "") + ")</div>";
       if (skippedShapes.length) {
         html += `<div style="margin-top:8px"><b>Blocos não reconhecidos (formato, sem dados):</b></div>` +
           skippedShapes.map((sh) => `<div style="font-family:monospace;font-size:11px">${esc(sh)}</div>`).join("");
@@ -400,13 +417,14 @@
         <table style="border-collapse:collapse;width:100%;margin-top:4px">
         <tr style="text-align:left;border-bottom:1px solid #e2e8f0"><th>Apto</th><th>Reserva</th><th>Tipo</th>
         <th style="text-align:right">Restaurante</th><th style="text-align:right">Bares</th><th style="text-align:right">Consumo</th></tr>`;
-      for (const a of result.accounts.slice(0, 15)) {
-        html += `<tr style="border-bottom:1px solid #f1f5f9"><td>${esc(a.uh)}</td><td>${esc(a.reservation_code)}</td><td>${esc(a.account_type || "")}</td>
+      const rows = [...result.repeated, ...result.merged.filter((m) => m.accounts === 1)];
+      for (const a of rows.slice(0, 15)) {
+        html += `<tr style="border-bottom:1px solid #f1f5f9"><td>${esc(a.uh)}${a.accounts > 1 ? ` <small>(${a.accounts} contas)</small>` : ""}</td><td>${esc(a.reservation_code)}</td><td>${esc(a.account_type || "")}</td>
           <td style="text-align:right">${brl(-a.restaurante)}</td><td style="text-align:right">${brl(-a.bares)}</td>
           <td style="text-align:right"><b>${brl(consumo(a))}</b></td></tr>`;
       }
       html += "</table>";
-      if (result.accounts.length > 15) html += `<div style="color:#475569">… e mais ${result.accounts.length - 15} contas.</div>`;
+      if (rows.length > 15) html += `<div style="color:#475569">… e mais ${rows.length - 15} aptos.</div>`;
     }
     panel.innerHTML = html;
     const close = panel.querySelector("#rs-close");
