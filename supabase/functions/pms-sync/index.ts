@@ -1,6 +1,8 @@
 // Recebe a lista de hóspedes hospedados enviada pelo script do TOTVS PMS.
 // Protegida por chave secreta (segredo PMS_SYNC_KEY no Supabase).
 // Cada envio é a lista COMPLETA: o que não vier mais é apagado (saiu, cancelou, no-show).
+// Quando vier do relatório "Hóspedes na Casa", cada apto traz também a lista de hóspedes
+// (nome, sobrenome, idade e telefone), guardada em pms_stay_guests.
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const corsHeaders = {
@@ -64,6 +66,8 @@ Deno.serve(async (req) => {
   }
 
   const raw = Array.isArray(payload.stays) ? payload.stays : null;
+  const guestRows: Record<string, unknown>[] = [];
+  let hasGuestLists = false;
   if (!raw || raw.length > 2000) return json({ error: "Lista de hóspedes inválida" }, 400);
 
   const syncedAt = new Date().toISOString();
@@ -73,6 +77,25 @@ Deno.serve(async (req) => {
       const uh = str(s?.uh, 20);
       const reservation_code = str(s?.reservation_code, 60);
       if (!guest_name || !uh || !reservation_code) return null;
+      if (Array.isArray(s.guests)) {
+        hasGuestLists = true;
+        for (const g of s.guests.slice(0, 30)) {
+          const first_name = str(g?.first_name, 80);
+          const surname = str(g?.surname, 120);
+          if (!first_name && !surname) continue;
+          const age = Number(g?.age);
+          const phoneDigits = typeof g?.phone === "string" ? g.phone.replace(/\D/g, "").slice(0, 15) : "";
+          guestRows.push({
+            reservation_code,
+            uh,
+            first_name,
+            surname,
+            age: Number.isFinite(age) && age >= 0 && age < 130 ? Math.trunc(age) : null,
+            phone: phoneDigits.length >= 10 ? phoneDigits : null,
+            synced_at: syncedAt,
+          });
+        }
+      }
       return {
         reservation_code,
         uh,
@@ -113,6 +136,10 @@ Deno.serve(async (req) => {
     return json({ error: `Erro ao salvar: ${upsertError.message}`, code: upsertError.code }, 500);
   }
 
+  // Religa contas de hóspedes se o formato do código da reserva mudou (não perde pontos)
+  const { error: relinkError } = await supabase.rpc("pms_relink_guests");
+  if (relinkError) console.error(relinkError);
+
   // Remove quem não veio nesta lista (já saiu, cancelou ou não compareceu)
   const { data: removedRows, error: deleteError } = await supabase
     .from("pms_stays")
@@ -121,6 +148,16 @@ Deno.serve(async (req) => {
     .select("id");
   if (deleteError) console.error(deleteError);
 
+  // Lista de hóspedes por apto: troca tudo pela lista nova
+  if (hasGuestLists) {
+    const { error: insError } = await supabase.from("pms_stay_guests").insert(guestRows);
+    if (insError) {
+      console.error(insError);
+      return json({ error: `Erro ao salvar hóspedes: ${insError.message}`, code: insError.code }, 500);
+    }
+    await supabase.from("pms_stay_guests").delete().lt("synced_at", syncedAt);
+  }
+
   const guests = rows.reduce((t, r) => t + ((r.adults as number) + (r.children as number)), 0);
   const removed = removedRows?.length ?? 0;
   await supabase.from("pms_sync_log").insert({ rooms: rows.length, guests, removed, source: str(payload.source, 60) });
@@ -128,5 +165,5 @@ Deno.serve(async (req) => {
   // Mantém só 30 dias de histórico do log
   await supabase.from("pms_sync_log").delete().lt("synced_at", new Date(Date.now() - 30 * 864e5).toISOString());
 
-  return json({ ok: true, rooms: rows.length, guests, removed });
+  return json({ ok: true, rooms: rows.length, guests, removed, guest_list: hasGuestLists ? guestRows.length : null });
 });

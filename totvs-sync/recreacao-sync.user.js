@@ -1,8 +1,8 @@
 // ==UserScript==
 // @name         Recreação HFSB – Sincronizar hóspedes e consumo do PMS
 // @namespace    https://github.com/hfsb25-ui/recreacaoclaude
-// @version      1.2.0
-// @description  Envia ao app de Recreação a lista de hóspedes (1 vez por dia) e o consumo por apartamento (a cada 30 min) do TOTVS PMS SaaS.
+// @version      1.3.0
+// @description  Envia ao app de Recreação os hóspedes na casa (1 vez por dia, relatório "Hóspedes na Casa") e o consumo por apartamento (a cada 30 min) do TOTVS PMS SaaS.
 // @match        https://gestaopms.totvshospitalidade.com/*
 // @run-at       document-start
 // @grant        GM_xmlhttpRequest
@@ -24,8 +24,23 @@
   const DAYS_BACK = 15; // busca entradas dos últimos X dias para achar quem ainda está hospedado
   const CONSUMPTION_URL = "https://exxcevxihbcgleopekvt.supabase.co/functions/v1/pms-consumption-sync";
   const REPORT_BASE = "https://ebs.totvshospitalidade.com/report";
-  // pedido que o PMS faz para obter o login do "Saldo das Contas"
-  const FILTERS_URL = "https://ebs.totvshospitalidade.com/report/api/FiltersReport/7e6d796f-53d6-4d43-9f55-2de54785ab7b?culture=pt-BR";
+  // Relatórios usados (pedido de login de cada um + página + filtros, todos vazios = hoje)
+  const REPORTS = {
+    consumo: {
+      filtersUrl: "https://ebs.totvshospitalidade.com/report/api/FiltersReport/7e6d796f-53d6-4d43-9f55-2de54785ab7b?culture=pt-BR",
+      page: "AccountBalanceOnDate",
+      form: "ArrivalDate=&BalanceOnDate=&BalanceSystemDate=&BillingAccountType=&CompanyClientId=&GroupName=" +
+        "&PendingAccount=&PositiveBalance=&ReservationStatus=2&SortByUh=&ZeroBalance=",
+      looksLike: /Saldo das Contas|C[óo]d\. Reserva/,
+    },
+    hospedes: {
+      filtersUrl: "https://ebs.totvshospitalidade.com/report/api/FiltersReport/76e5fa87-1619-4ed5-ba4e-4a2ef2334079?culture=pt-BR",
+      page: "InHouseGuests",
+      form: "BaseRate=&BirthdayEndDate=&BirthdayStartDate=&Classification=&GuestType=&MainGuestOnly=&NoPost=" +
+        "&Observations=&PensionType=&TotalizerByPensionType=&Wing=",
+      looksLike: /Reserva/,
+    },
+  };
   const JWT_RE = /eyJ[\w-]+\.eyJ[\w-]+\.[\w-]+/g;
   const CONSUMPTION_EVERY_MIN = 30; // de quanto em quanto tempo atualiza o consumo
   const CONSUMPTION_HOURS = [7, 23]; // só atualiza o consumo entre estes horários
@@ -256,6 +271,91 @@
     return { reportDate, accounts, skipped };
   };
 
+  // ----- Hóspedes na Casa: leitura do CSV -----
+  const RES_CODE = /^[A-Z0-9]{4,}-\d{3,}$/i;
+  const looksUhCode = (c) => /^[A-Z]{0,2}\d{1,4}[A-Z]?$/i.test(c);
+  const parseGuestsCsv = (text) => {
+    const lines = String(text).split(/\r?\n/);
+    const sep = (lines.find((l) => /Reserva/.test(l)) || "").includes(";") ? ";" : ",";
+    const cellsOf = (l) => l.split(sep).map((c) => c.replace(/^"|"$/g, "").trim()).filter(Boolean);
+    const stays = [];
+    let cur = null;
+    for (const line of lines) {
+      const cells = cellsOf(line);
+      if (!cells.length) continue;
+      const resIdx = cells.findIndex((c) => RES_CODE.test(c));
+      // Cabeçalho da reserva: tem o código da reserva
+      if (resIdx >= 0) {
+        const uhLabel = cells.findIndex((c) => /^C[óo]d\.?\s*UH$/i.test(c));
+        let uh = uhLabel >= 0 ? cells[uhLabel + 1] : null;
+        if (!uh || !looksUhCode(uh)) uh = cells.slice(resIdx + 1).find(looksUhCode) || null;
+        const adIdx = cells.findIndex((c) => /AD\s*\/\s*C1/i.test(c));
+        const comp = adIdx >= 0 ? cells.slice(adIdx + 1, adIdx + 5).map((c) => parseInt(c.replace(/\D/g, ""), 10) || 0) : [];
+        const pIdx = cells.findIndex((c) => /^Tipo\s*Pens/i.test(c));
+        const tIdx = cells.findIndex((c) => /^Tipo\s*UH$/i.test(c));
+        const cIdx = cells.findIndex((c) => /^Cliente$/i.test(c));
+        cur = {
+          reservation_code: cells[resIdx],
+          uh,
+          room_type: tIdx >= 0 ? cells[tIdx + 1] : null,
+          client: cIdx >= 0 && !/^AD/i.test(cells[cIdx + 1] || "") ? cells[cIdx + 1] : null,
+          composition: comp,
+          pension: pIdx >= 0 ? cells.slice(pIdx + 1).join(" ") : null,
+          guests: [],
+        };
+        stays.push(cur);
+        continue;
+      }
+      // Linha de rótulos das colunas
+      if (cells.some((c) => /^Sobrenome$/i.test(c))) continue;
+      // Linha de hóspede: data de nascimento seguida da idade
+      const bIdx = cells.findIndex((c, i) => DATE_BR.test(c) && /^\d{1,3}$/.test(cells[i + 1] || ""));
+      if (bIdx >= 0 && cur) {
+        const dates = cells.filter((c) => DATE_BR.test(c));
+        const typeIdx = cells.findIndex((c) => /h[óo]spede|acompanhante|crian/i.test(c));
+        const nameCells = cells.slice(0, typeIdx >= 0 && typeIdx < bIdx ? typeIdx : bIdx);
+        const phone = cells.find((c, i) => i > bIdx + 1 && /^\+?[\d\s()-]{10,}$/.test(c) && !DATE_BR.test(c)) || null;
+        cur.guests.push({
+          surname: nameCells[0] || "",
+          name: nameCells.slice(1).join(" "),
+          phone,
+          guest_type: typeIdx >= 0 ? cells[typeIdx] : null,
+          age: parseInt(cells[bIdx + 1], 10),
+          arrival_date: brToIso(dates[1] || ""),
+          departure_date: brToIso(dates[2] || ""),
+        });
+        continue;
+      }
+    }
+    return stays;
+  };
+
+
+  // Monta a lista de aptos para o app: titular = 1º adulto; crianças pelo AD/C1/C2/C3 (ou pela idade)
+  const buildStaysFromInHouse = (parsed) =>
+    parsed
+      .filter((s) => s.uh && s.guests.length)
+      .map((s) => {
+        const holder = s.guests.find((g) => g.age >= 18) || s.guests[0];
+        const comp = s.composition || [];
+        const adults = comp.length ? comp[0] : s.guests.filter((g) => g.age >= 12).length;
+        const children = comp.length ? comp.slice(1).reduce((a, b) => a + b, 0) : s.guests.filter((g) => g.age < 12).length;
+        const arrivals = s.guests.map((g) => g.arrival_date).filter(Boolean).sort();
+        const departures = s.guests.map((g) => g.departure_date).filter(Boolean).sort();
+        return {
+          reservation_code: s.reservation_code,
+          uh: s.uh,
+          guest_name: `${holder.name} ${holder.surname}`.trim(),
+          adults,
+          children,
+          guests_listed: s.guests.length,
+          arrival_date: arrivals[0] ? `${arrivals[0]}T14:00:00` : null,
+          departure_date: departures.length ? `${departures[departures.length - 1]}T12:00:00` : null,
+          status: "Check-In",
+          guests: s.guests.map((g) => ({ first_name: g.name, surname: g.surname, age: g.age, phone: g.phone })),
+        };
+      });
+
   // Junta as várias contas do mesmo apto + reserva num total só
   const mergeAccounts = (accounts) => {
     const map = new Map();
@@ -276,7 +376,7 @@
   };
 
   // Exposto só para teste
-  if (typeof module !== "undefined") module.exports = { buildStays, parseComposition, parseConsumptionCsv, mergeAccounts };
+  if (typeof module !== "undefined") module.exports = { buildStays, parseComposition, parseConsumptionCsv, mergeAccounts, parseGuestsCsv, buildStaysFromInHouse };
 
   // ---------- 3) Busca no PMS e envia ao app ----------
   const fetchReport = async () => {
@@ -362,27 +462,26 @@
 
   const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
-  const fetchConsumptionCsv = async () => {
+  // Gera um relatório do TOTVS (de hoje) e devolve o CSV exportado
+  const fetchReportCsv = async (rep) => {
     // 1) pede um login novo de relatório ao TOTVS, como o próprio PMS faz
     const candidates = [];
     if (authHeaders) {
-      const r = await gmRequest({ method: "GET", url: FILTERS_URL, headers: { Accept: "application/json", ...authHeaders } });
+      const r = await gmRequest({ method: "GET", url: rep.filtersUrl, headers: { Accept: "application/json", ...authHeaders } });
       [...new Set((r.responseText || "").match(JWT_RE) || [])].forEach((t) => candidates.push(t));
     }
-    if (reportAuth) candidates.push(reportAuth);
+    if (rep.page === "AccountBalanceOnDate" && reportAuth) candidates.push(reportAuth);
     if (!candidates.length) throw new Error("aguardando o login do PMS");
 
-    // 2) abre o relatório de hoje (campos vazios = data atual do sistema)
-    const pageUrl = reportPageUrl || `${REPORT_BASE}/AccountBalanceOnDate`;
-    const form = "ArrivalDate=&BalanceOnDate=&BalanceSystemDate=&BillingAccountType=&CompanyClientId=&GroupName=" +
-      "&PendingAccount=&PositiveBalance=&ReservationStatus=2&SortByUh=&ZeroBalance=";
+    // 2) abre o relatório (filtros vazios = hoje)
+    const pageUrl = rep.page === "AccountBalanceOnDate" && reportPageUrl ? reportPageUrl : `${REPORT_BASE}/${rep.page}`;
     let page1 = null;
     for (const token of candidates) {
       const r = await gmRequest({
         method: "POST",
         url: `${pageUrl}?auth=${encodeURIComponent(token)}`,
         headers: { "Content-Type": "application/x-www-form-urlencoded" },
-        data: form,
+        data: rep.form,
       });
       if (r.status >= 200 && r.status < 300 && /reportId/i.test(r.responseText || "")) {
         page1 = r;
@@ -393,35 +492,31 @@
     const html = page1.responseText || "";
     const m = html.match(/["']?reportId["']?\s*[:=]\s*["']([^"']+)["']/i);
     if (!m) throw new Error("não achei o código do relatório (o TOTVS pode ter mudado a tela)");
-    const reportId = m[1];
     const urlMatch = html.match(/["']?reportUrl["']?\s*[:=]\s*["']([^"']*)["']/i);
 
-    // 2) gera o documento
-    const tz = 0 - new Date().getTimezoneOffset();
+    // 3) gera o documento
     const build = await dx("startBuild", {
-      reportId,
+      reportId: m[1],
       reportUrl: urlMatch ? urlMatch[1] : "",
       drillDownKeys: [],
       sortingState: [],
-      timeZoneOffset: tz,
+      timeZoneOffset: 0 - new Date().getTimezoneOffset(),
       parameters: [],
     });
     const documentId = build && (build.documentId || build.DocumentId);
     if (!documentId) throw new Error("o relatório não gerou o documento");
-
     for (let i = 0, first = true; ; i++, first = false) {
-      if (i > 60) throw new Error("o relatório demorou demais para ficar pronto");
+      if (i > 90) throw new Error("o relatório demorou demais para ficar pronto");
       const st = await dx("getBuildStatus", { documentId, isFirstRequest: first, timeOut: 5000 });
       if (st && (st.completed || st.progress >= 100)) break;
       await sleep(1000);
     }
 
-    // 3) exporta em CSV (primeiro do jeito direto; se o servidor exigir, do jeito assíncrono)
+    // 4) exporta em CSV (primeiro do jeito direto; se o servidor exigir, do jeito assíncrono)
     const exportArg = { documentId, exportOptions: null, format: "csv", inlineResult: true, editingFieldValues: [] };
-    const looksLikeCsv = (t) => /Saldo das Contas|C[óo]d\. Reserva/.test(t);
     try {
       const text = decode(await dx("exportTo", exportArg, true));
-      if (looksLikeCsv(text)) return text;
+      if (rep.looksLike.test(text)) return text;
     } catch (e) {
       console.warn("[Recreação] exportTo direto falhou, tentando assíncrono", e);
     }
@@ -435,9 +530,11 @@
       await sleep(1000);
     }
     const text = decode(await dx("getExportResult", { id, inlineResult: true }, true));
-    if (!looksLikeCsv(text)) throw new Error("a exportação não veio no formato esperado");
+    if (!rep.looksLike.test(text)) throw new Error("a exportação não veio no formato esperado");
     return text;
   };
+
+  const fetchConsumptionCsv = () => fetchReportCsv(REPORTS.consumo);
 
   const sendConsumption = (payload) =>
     new Promise((resolve, reject) => {
@@ -548,13 +645,22 @@
     running = true;
     try {
       show("🔄 Sincronizando com a Recreação…", true);
-      const items = await fetchReport();
-      const stays = buildStays(items);
+      let stays;
+      let source = "";
+      try {
+        const parsed = parseGuestsCsv(await fetchReportCsv(REPORTS.hospedes));
+        stays = buildStaysFromInHouse(parsed);
+        if (!stays.length) throw new Error("relatório Hóspedes na Casa veio vazio");
+      } catch (e) {
+        console.warn("[Recreação] Hóspedes na Casa falhou, usando o método antigo", e);
+        stays = buildStays(await fetchReport());
+        source = " (método antigo)";
+      }
       const result = await send(stays);
       GM_setValue("lastSync", Date.now());
       GM_setValue("lastSyncDay", todayKey());
       const t = new Date().toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
-      show(`✅ Recreação sincronizada hoje às ${t} · ${result.rooms ?? stays.length} aptos`, true);
+      show(`✅ Recreação sincronizada hoje às ${t} · ${result.rooms ?? stays.length} aptos${source}`, true);
     } catch (e) {
       console.warn("[Recreação]", e);
       show(`⚠️ Recreação: ${e.message} (clique para tentar de novo)`, false);
