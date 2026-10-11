@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         TESTE – Coleta de consumo do TOTVS (não envia nada)
 // @namespace    https://github.com/hfsb25-ui/recreacaoclaude
-// @version      0.5.0
+// @version      0.6.0
 // @description  Só para testar: gera o relatório "Saldo das Contas" de hoje, exporta em CSV e mostra o resultado na tela. Não envia dados para lugar nenhum.
 // @match        https://gestaopms.totvshospitalidade.com/*
 // @run-at       document-start
@@ -98,6 +98,48 @@
     };
     page.document.addEventListener("submit", (ev) => ev.target && rememberReportUrl(ev.target.action), true);
   } catch (e) {}
+
+  // Procura logins (JWT) guardados pelo PMS no navegador; devolve [{onde, token}]
+  const storedTokens = () => {
+    const out = [];
+    const seen = new Set();
+    const add = (where, tok) => {
+      if (tok && !seen.has(tok)) {
+        seen.add(tok);
+        out.push({ where, token: tok });
+      }
+    };
+    const scan = (where, value, depth = 0) => {
+      if (value == null || depth > 4) return;
+      if (typeof value === "string") {
+        if (/^[[{]/.test(value.trim())) {
+          try {
+            scan(where, JSON.parse(value), depth + 1);
+            return;
+          } catch (e) {}
+        }
+        const m = value.match(/eyJ[\w-]+\.eyJ[\w-]+\.[\w-]+/g);
+        if (m) m.forEach((t) => add(where, t));
+        return;
+      }
+      if (typeof value === "object") for (const k of Object.keys(value)) scan(`${where}.${k}`, value[k], depth + 1);
+    };
+    for (const [name, store] of [["localStorage", page.localStorage], ["sessionStorage", page.sessionStorage]]) {
+      try {
+        for (let i = 0; i < store.length; i++) {
+          const k = store.key(i);
+          scan(`${name}:${k}`, store.getItem(k));
+        }
+      } catch (e) {}
+    }
+    try {
+      page.document.cookie.split(";").forEach((c) => {
+        const [k, ...v] = c.trim().split("=");
+        scan(`cookie:${k}`, decodeURIComponent(v.join("=")));
+      });
+    } catch (e) {}
+    return out;
+  };
 
   const bearerToken = () => {
     if (!authHeaders) return null;
@@ -270,25 +312,37 @@
   const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
   const fetchConsumptionCsv = async () => {
-    const auth = reportAuth || bearerToken();
-    if (!auth) throw new Error("aguardando o login do PMS");
-
-    log(`1) Login encontrado (${reportAuth ? "do relatório" : "do PMS"}). Abrindo o relatório de hoje…`);
-    // 1) abre o relatório de hoje (campos vazios = data atual do sistema)
+    const pageUrl = reportPageUrl || `${REPORT_BASE}/AccountBalanceOnDate`;
     const form = "ArrivalDate=&BalanceOnDate=&BalanceSystemDate=&BillingAccountType=&CompanyClientId=&GroupName=" +
       "&PendingAccount=&PositiveBalance=&ReservationStatus=2&SortByUh=&ZeroBalance=";
-    const pageUrl = reportPageUrl || `${REPORT_BASE}/AccountBalanceOnDate`;
-    log(`   Endereço usado: ${pageUrl}${reportPageUrl ? " (guardado)" : " (padrão)"}`);
-    const page1 = await gmRequest({
-      method: "POST",
-      url: `${pageUrl}?auth=${encodeURIComponent(auth)}`,
-      headers: { "Content-Type": "application/x-www-form-urlencoded" },
-      data: form,
-    });
-    if (page1.status === 401 || page1.status === 403) throw new Error("login do relatório expirou, abra qualquer relatório no PMS");
-    if (page1.status === 404 && !reportPageUrl)
-      throw new Error("endereço do relatório não encontrado (404). Abra o \"Saldo das Contas\" uma vez pelo menu do PMS e clique no botão de novo");
-    if (page1.status < 200 || page1.status >= 300) throw new Error(`Relatório respondeu ${page1.status}`);
+    const candidates = [];
+    if (reportAuth) candidates.push({ where: "relatório aberto agora", token: reportAuth });
+    const savedWhere = GM_getValue("reportAuthWhere", null);
+    const stored = storedTokens();
+    stored.sort((a, b) => (b.where === savedWhere) - (a.where === savedWhere));
+    candidates.push(...stored);
+    const bt = bearerToken();
+    if (bt) candidates.push({ where: "login geral do PMS", token: bt });
+    if (!candidates.length) throw new Error("nenhum login encontrado; aguarde o PMS carregar");
+    log(`1) ${candidates.length} login(s) encontrado(s). Abrindo o relatório de hoje… (${pageUrl})`);
+
+    let page1 = null;
+    for (const c of candidates) {
+      const r = await gmRequest({
+        method: "POST",
+        url: `${pageUrl}?auth=${encodeURIComponent(c.token)}`,
+        headers: { "Content-Type": "application/x-www-form-urlencoded" },
+        data: form,
+      });
+      const ok = r.status >= 200 && r.status < 300 && /reportId/i.test(r.responseText || "");
+      log(`   ${ok ? "✅" : "✖"} ${c.where} → ${r.status}`);
+      if (ok) {
+        page1 = r;
+        if (c.where !== "relatório aberto agora" && c.where !== "login geral do PMS") GM_setValue("reportAuthWhere", c.where);
+        break;
+      }
+    }
+    if (!page1) throw new Error("nenhum login foi aceito pelo relatório");
     const html = page1.responseText || "";
     const m = html.match(/["']?reportId["']?\s*[:=]\s*["']([^"']+)["']/i);
     if (!m) throw new Error("não achei o código do relatório (o TOTVS pode ter mudado a tela)");
