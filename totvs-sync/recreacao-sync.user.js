@@ -1,8 +1,8 @@
 // ==UserScript==
 // @name         Recreação HFSB – Sincronizar hóspedes e consumo do PMS
 // @namespace    https://github.com/hfsb25-ui/recreacaoclaude
-// @version      1.4.0
-// @description  Envia ao app de Recreação os hóspedes na casa (1 vez por dia, relatório "Hóspedes na Casa") e o consumo por apartamento (a cada 30 min) do TOTVS PMS SaaS.
+// @version      1.5.0
+// @description  Envia ao app de Recreação os hóspedes na casa (2 vezes por dia: manhã e 20h, relatório "Hóspedes na Casa") e o consumo por apartamento (a cada 30 min) do TOTVS PMS SaaS.
 // @match        https://gestaopms.totvshospitalidade.com/*
 // @run-at       document-start
 // @grant        GM_xmlhttpRequest
@@ -20,7 +20,11 @@
   const SYNC_URL = "https://exxcevxihbcgleopekvt.supabase.co/functions/v1/pms-sync";
   const SYNC_KEY = "COLE_AQUI_A_CHAVE_SECRETA"; // a mesma do segredo PMS_SYNC_KEY no Supabase
   const DEFAULT_API = "https://group05.totvshospitalidade.com/pmsreport/api/reservationReport/4627";
-  const SYNC_HOUR = 7; // a partir de que hora do dia faz a sincronização diária
+  // Horários da sincronização dos hóspedes: a partir das 7h (manhã) e a partir das 20h (noite)
+  const SYNC_SLOTS = [
+    { hour: 7, name: "manhã" },
+    { hour: 20, name: "noite" },
+  ];
   const DAYS_BACK = 15; // busca entradas dos últimos X dias para achar quem ainda está hospedado
   const CONSUMPTION_URL = "https://exxcevxihbcgleopekvt.supabase.co/functions/v1/pms-consumption-sync";
   const REPORT_BASE = "https://ebs.totvshospitalidade.com/report";
@@ -631,18 +635,31 @@
 
   let running = false;
   const todayKey = () => ymd(new Date());
+  // Turno atual: o último horário de sincronização já alcançado hoje (null antes das 7h)
+  const currentSlot = () => {
+    const h = new Date().getHours();
+    const slot = [...SYNC_SLOTS].reverse().find((x) => h >= x.hour);
+    return slot ? { key: `${todayKey()}|${slot.hour}`, ...slot } : null;
+  };
+  const nextSlotHour = () => {
+    const h = new Date().getHours();
+    const next = SYNC_SLOTS.find((x) => h < x.hour);
+    return next ? next.hour : SYNC_SLOTS[0].hour;
+  };
   const run = async (force = false) => {
     if (running) return;
     const last = GM_getValue("lastSync", 0);
-    const lastDay = GM_getValue("lastSyncDay", "");
+    const lastSlot = GM_getValue("lastSyncSlot", "");
+    const slot = currentSlot();
     if (!force) {
-      if (lastDay === todayKey()) {
-        const t = new Date(last).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
-        show(`✅ Recreação sincronizada hoje às ${t}`, true);
+      const lastTime = last ? new Date(last).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" }) : "";
+      const lastWhen = last && ymd(new Date(last)) === todayKey() ? `hoje às ${lastTime}` : lastTime ? `ontem às ${lastTime}` : "";
+      if (!slot) {
+        show(`🕖 Recreação${lastWhen ? ` sincronizada ${lastWhen}` : ""} · próxima às ${SYNC_SLOTS[0].hour}h`, true);
         return;
       }
-      if (new Date().getHours() < SYNC_HOUR) {
-        show(`🕖 Recreação: sincroniza hoje a partir das ${SYNC_HOUR}h`, true);
+      if (lastSlot === slot.key) {
+        show(`✅ Recreação sincronizada ${lastWhen} · próxima às ${nextSlotHour()}h`, true);
         return;
       }
     }
@@ -682,9 +699,10 @@
       }
       const result = await send(stays);
       GM_setValue("lastSync", Date.now());
-      GM_setValue("lastSyncDay", todayKey());
+      const done = currentSlot();
+      if (done) GM_setValue("lastSyncSlot", done.key);
       const t = new Date().toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
-      show(`✅ Recreação sincronizada hoje às ${t} · ${result.rooms ?? stays.length} aptos${source}`, true);
+      show(`✅ Recreação sincronizada hoje às ${t} · ${result.rooms ?? stays.length} aptos${source} · próxima às ${nextSlotHour()}h`, true);
     } catch (e) {
       console.warn("[Recreação]", e);
       show(`⚠️ Recreação: ${e.message} (clique para tentar de novo)`, false);
