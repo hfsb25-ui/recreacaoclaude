@@ -11,6 +11,14 @@ export default defineConfig(({ mode }) => {
   const escaped = supabaseUrl.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
   const restPattern = new RegExp(`^${escaped}/rest/v1/.*`, "i");
   const storagePattern = new RegExp(`^${escaped}/storage/v1/.*`, "i");
+  // Endereço público do site, usado na prévia do link (WhatsApp, redes sociais).
+  // Na Vercel vem automático; dá para forçar com VITE_SITE_URL.
+  const siteHost =
+    env.VITE_SITE_URL ||
+    process.env.VERCEL_PROJECT_PRODUCTION_URL ||
+    process.env.VERCEL_URL ||
+    "";
+  const siteUrl = siteHost ? (siteHost.startsWith("http") ? siteHost : `https://${siteHost}`).replace(/\/+$/, "") : "";
 
   return {
   server: {
@@ -19,6 +27,10 @@ export default defineConfig(({ mode }) => {
   },
   plugins: [
     react(),
+    {
+      name: "site-url-meta",
+      transformIndexHtml: (html: string) => html.split("__SITE_URL__").join(siteUrl),
+    },
     VitePWA({
       registerType: 'autoUpdate',
       includeAssets: ['icon-192x192.png', 'icon-512x512.png', 'apple-touch-icon.png'],
