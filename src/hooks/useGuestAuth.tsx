@@ -20,6 +20,12 @@ interface Level {
   badge_emoji: string;
 }
 
+// Mensagem amigável quando o servidor bloqueia por excesso de tentativas
+const loginErrorMessage = (error: { message?: string } | null) =>
+  error?.message?.includes("BLOQUEADO")
+    ? "Muitas tentativas erradas. Aguarde 15 minutos ou fale com a recepção (ramal 9)."
+    : "Não foi possível entrar agora. Tente novamente.";
+
 export const useGuestAuth = () => {
   const [guest, setGuest] = useState<Guest | null>(null);
   const [currentLevel, setCurrentLevel] = useState<Level | null>(null);
@@ -52,14 +58,13 @@ export const useGuestAuth = () => {
   };
 
   const login = async (roomNumber: string, pin: string) => {
-    const { data, error } = await supabase
-      .from("guests")
-      .select("*")
-      .eq("room_number", roomNumber)
-      .eq("pin_code", pin)
-      .single();
+    const { data, error } = await (supabase as any).rpc("guest_login_pin", {
+      p_room: roomNumber.trim(),
+      p_pin: pin.trim(),
+    });
 
-    if (error || !data) {
+    if (error) throw new Error(loginErrorMessage(error));
+    if (!data) {
       throw new Error("Quarto ou PIN incorretos");
     }
 
@@ -75,7 +80,7 @@ export const useGuestAuth = () => {
       p_uh: roomNumber.trim(),
       p_surname: surname.trim(),
     });
-    if (error) throw new Error("Não foi possível entrar agora. Tente novamente.");
+    if (error) throw new Error(loginErrorMessage(error));
     if (!data) return null;
 
     const { is_new, ...guestData } = data as Guest & { is_new?: boolean };
