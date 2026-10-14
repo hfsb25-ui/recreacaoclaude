@@ -10,11 +10,17 @@ export const useUserRole = () => {
   useEffect(() => {
     fetchUserRole();
 
+    // Recomendação do Supabase: não chamar o Supabase direto dentro deste aviso (pode travar a sessão)
     const { data: { subscription } } = supabase.auth.onAuthStateChange(() => {
-      fetchUserRole();
+      setTimeout(() => fetchUserRole(), 0);
     });
+    // Garantia: se algo travar, para de carregar depois de 10 s
+    const limite = setTimeout(() => setLoading(false), 10000);
 
-    return () => subscription.unsubscribe();
+    return () => {
+      subscription.unsubscribe();
+      clearTimeout(limite);
+    };
   }, []);
 
   const fetchUserRole = async () => {

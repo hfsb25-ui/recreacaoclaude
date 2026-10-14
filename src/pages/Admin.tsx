@@ -50,6 +50,7 @@ const Admin = () => {
   const { role, loading: roleLoading, isGestor } = useUserRole();
   const [currentTime, setCurrentTime] = useState(new Date());
   const [loading, setLoading] = useState(true);
+  const [demorando, setDemorando] = useState(false);
   const [exportDialogOpen, setExportDialogOpen] = useState(false);
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [selectedAgeGroup, setSelectedAgeGroup] = useState<string>("all");
@@ -76,6 +77,32 @@ const Admin = () => {
     loadPdfSettingsFromDb();
   }, []);
 
+  // Se ficar carregando muito tempo, oferece entrar de novo
+  useEffect(() => {
+    if (!(loading || roleLoading)) return;
+    const t = setTimeout(() => setDemorando(true), 8000);
+    return () => clearTimeout(t);
+  }, [loading, roleLoading]);
+
+  const entrarDeNovo = async () => {
+    try {
+      await Promise.race([
+        supabase.auth.signOut({ scope: "local" }),
+        new Promise((r) => setTimeout(r, 3000)),
+      ]);
+    } catch {
+      // segue mesmo assim
+    }
+    try {
+      Object.keys(localStorage)
+        .filter((k) => k.startsWith("sb-") && k.endsWith("-auth-token"))
+        .forEach((k) => localStorage.removeItem(k));
+    } catch {
+      // sem armazenamento
+    }
+    window.location.href = "/auth";
+  };
+
   const loadPdfSettingsFromDb = async () => {
     const settings = await loadPdfSettings();
     setPdfSettings(settings);
@@ -96,8 +123,14 @@ const Admin = () => {
   };
 
   const checkAuth = async () => {
-    const { data: { session } } = await supabase.auth.getSession();
-    if (!session) {
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        navigate("/auth");
+        return;
+      }
+    } catch (e) {
+      console.error("Erro ao conferir a sessão:", e);
       navigate("/auth");
       return;
     }
@@ -340,7 +373,17 @@ const Admin = () => {
   if (loading || roleLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-[var(--gradient-bg)]">
-        <p className="text-foreground text-lg">Carregando...</p>
+        <div className="flex flex-col items-center gap-4 p-6 text-center">
+          <p className="text-foreground text-lg">Carregando...</p>
+          {demorando && (
+            <>
+              <p className="text-muted-foreground max-w-xs">
+                Está demorando mais que o normal. Pode ser a sessão que expirou.
+              </p>
+              <Button onClick={entrarDeNovo}>Entrar de novo</Button>
+            </>
+          )}
+        </div>
       </div>
     );
   }
