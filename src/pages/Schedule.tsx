@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { ChevronLeft, ChevronRight, List } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
@@ -45,6 +45,14 @@ const Schedule = () => {
   const [carregando, setCarregando] = useState(true);
   const [tempo, setTempo] = useState<CurrentWeather | null>(null);
   const [verTudo, setVerTudo] = useState(false);
+  const alvoRef = useRef<HTMLLIElement | null>(null);
+
+  // Ao abrir a lista do dia, desce até o que está acontecendo agora (ou a próxima atividade)
+  useEffect(() => {
+    if (!verTudo) return;
+    const t = setTimeout(() => alvoRef.current?.scrollIntoView({ behavior: "smooth", block: "center" }), 80);
+    return () => clearTimeout(t);
+  }, [verTudo]);
   const [agora, setAgora] = useState(agoraMin());
 
   useEffect(() => {
@@ -255,13 +263,18 @@ const Schedule = () => {
 
             {verTudo && (
               <ol className="flex flex-col rounded-[18px] bg-white shadow-[0_2px_8px_rgba(20,40,30,0.06)]">
-                {atividades.map((a, i) => {
+                {(() => {
+                  const alvoId =
+                    atividades.find((x) => minutos(x.start_time) <= agora && agora < minutos(x.end_time))?.id ??
+                    atividades.find((x) => minutos(x.start_time) > agora)?.id;
+                  return atividades.map((a, i) => {
                   const f = faixaPorId[a.age_group_id];
                   const passou = minutos(a.end_time) <= agora;
                   const agoraTa = minutos(a.start_time) <= agora && agora < minutos(a.end_time);
                   return (
                     <li
                       key={a.id}
+                      ref={a.id === alvoId ? alvoRef : undefined}
                       aria-current={agoraTa ? "time" : undefined}
                       className={`flex items-center gap-3 px-4 py-3 ${i < atividades.length - 1 ? "border-b border-[#E6EAE3]" : ""} ${
                         passou ? "opacity-50" : ""
@@ -293,7 +306,8 @@ const Schedule = () => {
                       )}
                     </li>
                   );
-                })}
+                  });
+                })()}
               </ol>
             )}
           </section>
