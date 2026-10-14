@@ -4,7 +4,7 @@ import { Bell, CalendarDays, ChevronRight, Hotel, LogIn, Megaphone, Receipt, Spa
 import { supabase } from "@/integrations/supabase/client";
 import { useGuestAuth } from "@/hooks/useGuestAuth";
 import { HotelLayout, HotelLogo, FONTE_TITULO } from "@/components/hotel/HotelLayout";
-import { HOTEL } from "@/config/hotel";
+import { useHotelInfo } from "@/hooks/useHotelInfo";
 import { describeWeather, fetchForecast, type CurrentWeather } from "@/lib/weather";
 
 interface ProximaAtividade {
@@ -42,6 +42,8 @@ const brl = (v: number) => v.toLocaleString("pt-BR", { style: "currency", curren
 
 const HotelHome = () => {
   const { guest } = useGuestAuth();
+  const info = useHotelInfo();
+  const horarios = info.horarios.filter((h) => h.visivel !== false && h.nome && h.horario);
   const [proxima, setProxima] = useState<ProximaAtividade | null>(null);
   const [faixas, setFaixas] = useState<Record<string, string>>({});
   const [tempo, setTempo] = useState<CurrentWeather | null>(null);
@@ -270,15 +272,16 @@ const HotelHome = () => {
         </section>
 
         {/* Hoje no hotel */}
+        {horarios.length > 0 && (
         <section aria-labelledby="hoje-hotel" className="flex flex-col gap-3">
           <h2 id="hoje-hotel" className="flex items-center gap-2 text-xl font-bold" style={FONTE_TITULO}>
             <CalendarDays className="h-5 w-5 text-[#1F4D3A]" /> Horários do hotel
           </h2>
           <div className="rounded-[20px] bg-white shadow-[0_2px_8px_rgba(20,40,30,0.06)]">
-            {HOTEL.horarios.map((h, i) => (
+            {horarios.map((h, i) => (
               <div
                 key={h.nome}
-                className={`flex justify-between gap-3 px-4 py-3 ${i < HOTEL.horarios.length - 1 ? "border-b border-[#E6EAE3]" : ""}`}
+                className={`flex justify-between gap-3 px-4 py-3 ${i < horarios.length - 1 ? "border-b border-[#E6EAE3]" : ""}`}
               >
                 <span className="font-bold">{h.nome}</span>
                 <span className="font-bold text-[#3D4A41]">{h.horario}</span>
@@ -286,6 +289,7 @@ const HotelHome = () => {
             ))}
           </div>
         </section>
+        )}
       </main>
     </HotelLayout>
   );

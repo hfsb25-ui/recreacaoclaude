@@ -5,7 +5,7 @@ import { useGuestAuth } from "@/hooks/useGuestAuth";
 import { toast } from "sonner";
 import { CelebrationModal } from "@/components/CelebrationModal";
 import { HotelLogo, FONTE_TITULO } from "@/components/hotel/HotelLayout";
-import { HOTEL, whatsappLink } from "@/config/hotel";
+import { useHotelInfo, linkWhatsapp, ramalRecepcao } from "@/hooks/useHotelInfo";
 
 const campo =
   "h-12 w-full rounded-xl border border-[#C9D2C6] bg-[#FAFBF8] px-3.5 text-base text-[#1D2A22] outline-none focus:border-[#1F4D3A] focus:ring-2 focus:ring-[#1F4D3A]/20";
@@ -14,6 +14,8 @@ const rotulo = "text-sm font-bold";
 const GuestAuth = () => {
   const navigate = useNavigate();
   const { login, register, loginByStay } = useGuestAuth();
+  const info = useHotelInfo();
+  const ramal = ramalRecepcao(info);
   // "stay" = apto + sobrenome (TOTVS); "pin" = entrar com PIN; "register" = cadastro manual
   const [mode, setMode] = useState<"stay" | "pin" | "register">("stay");
   const isLogin = mode === "pin";
@@ -190,7 +192,7 @@ const GuestAuth = () => {
             {notFound && mode === "stay" && (
               <p className="rounded-xl bg-[#FDECEA] p-3 text-sm text-[#8A1C12]">
                 Confira o número do apartamento e o sobrenome. Se você acabou de chegar, aguarde alguns minutos ou fale com
-                a recepção (ramal {HOTEL.ramais[0].ramal}).
+                a recepção{ramal ? ` (ramal ${ramal})` : ""}.
               </p>
             )}
 
@@ -248,8 +250,8 @@ const GuestAuth = () => {
           </section>
 
           <p className="text-center text-[13px] leading-relaxed text-[#5B6B60]">
-            Dúvidas? Fale com a recepção pelo ramal {HOTEL.ramais[0].ramal} ou no{" "}
-            <a href={whatsappLink()} target="_blank" rel="noopener noreferrer" className="font-extrabold text-[#1F4D3A] underline">
+            Dúvidas? Fale com a recepção{ramal ? ` pelo ramal ${ramal}` : ""} ou no{" "}
+            <a href={linkWhatsapp(info)} target="_blank" rel="noopener noreferrer" className="font-extrabold text-[#1F4D3A] underline">
               WhatsApp do hotel
             </a>
             .

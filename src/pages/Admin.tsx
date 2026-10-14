@@ -44,6 +44,7 @@ import { PmsSummaryCards } from "@/components/admin/PmsSummaryCards";
 import { LeadsManager } from "@/components/admin/LeadsManager";
 import { LoginHistoryManager } from "@/components/admin/LoginHistoryManager";
 import { MigrationManager } from "@/components/admin/MigrationManager";
+import HotelInfoManager from "@/components/admin/HotelInfoManager";
 
 const Admin = () => {
   const navigate = useNavigate();
@@ -537,6 +538,7 @@ const Admin = () => {
                   <TabsTrigger value="gamification" className="whitespace-nowrap text-xs sm:text-sm px-2 sm:px-3">Gamificação</TabsTrigger>
                   <TabsTrigger value="statistics" className="whitespace-nowrap text-xs sm:text-sm px-2 sm:px-3">Estatísticas</TabsTrigger>
                   <TabsTrigger value="kpis" className="whitespace-nowrap text-xs sm:text-sm px-2 sm:px-3">KPIs</TabsTrigger>
+                  <TabsTrigger value="hotel-info" className="whitespace-nowrap text-xs sm:text-sm px-2 sm:px-3">Informações do hotel</TabsTrigger>
                   <TabsTrigger value="announcements" className="whitespace-nowrap text-xs sm:text-sm px-2 sm:px-3">Anúncios</TabsTrigger>
                   <TabsTrigger value="menu" className="whitespace-nowrap text-xs sm:text-sm px-2 sm:px-3">Menu</TabsTrigger>
                   <TabsTrigger value="totem" className="whitespace-nowrap text-xs sm:text-sm px-2 sm:px-3">Totem</TabsTrigger>
@@ -586,6 +588,10 @@ const Admin = () => {
 
               <TabsContent value="kpis" className="space-y-4">
                 <KPIDashboard />
+              </TabsContent>
+
+              <TabsContent value="hotel-info" className="space-y-4">
+                <HotelInfoManager />
               </TabsContent>
 
               <TabsContent value="announcements" className="space-y-4">

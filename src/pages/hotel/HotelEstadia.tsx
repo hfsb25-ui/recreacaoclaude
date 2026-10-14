@@ -4,7 +4,7 @@ import { ChevronLeft, Clock, Eye, EyeOff, MessageCircle, Star } from "lucide-rea
 import { supabase } from "@/integrations/supabase/client";
 import { useGuestAuth } from "@/hooks/useGuestAuth";
 import { HotelLayout, FONTE_TITULO } from "@/components/hotel/HotelLayout";
-import { whatsappLink } from "@/config/hotel";
+import { useHotelInfo, linkWhatsapp } from "@/hooks/useHotelInfo";
 
 interface Consumo {
   available: boolean;
@@ -50,6 +50,7 @@ const noites = (a: string, b: string) => {
 const HotelEstadia = () => {
   const navigate = useNavigate();
   const { guest, loading } = useGuestAuth();
+  const info = useHotelInfo();
   const [estadia, setEstadia] = useState<Estadia | null>(null);
   const [consumo, setConsumo] = useState<Consumo | null>(null);
   const [carregou, setCarregou] = useState(false);
@@ -203,7 +204,7 @@ const HotelEstadia = () => {
           </h2>
           <div className="grid grid-cols-2 gap-3">
             <a
-              href={whatsappLink(`Olá! Sou hóspede do apto ${estadia?.uh ?? guest.room_number}.`)}
+              href={linkWhatsapp(info, estadia?.uh ?? guest.room_number)}
               target="_blank"
               rel="noopener noreferrer"
               className="flex min-h-[64px] items-center gap-2.5 rounded-2xl bg-white p-3.5 text-[15px] font-extrabold shadow-[0_2px_8px_rgba(20,40,30,0.06)]"

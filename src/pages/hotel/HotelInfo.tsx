@@ -2,14 +2,18 @@ import { useState } from "react";
 import { Link } from "react-router-dom";
 import { Check, ChevronRight, Copy, Map, Wifi } from "lucide-react";
 import { HotelLayout, HotelPageHeader, FONTE_TITULO } from "@/components/hotel/HotelLayout";
-import { HOTEL, whatsappLink } from "@/config/hotel";
+import { useHotelInfo, linkWhatsapp, formatarWhatsapp } from "@/hooks/useHotelInfo";
+import { useGuestAuth } from "@/hooks/useGuestAuth";
 
 const HotelInfo = () => {
+  const info = useHotelInfo();
+  const { guest } = useGuestAuth();
+  const horarios = info.horarios.filter((h) => h.visivel !== false && h.nome && h.horario);
   const [copiado, setCopiado] = useState(false);
 
   const copiarSenha = async () => {
     try {
-      await navigator.clipboard.writeText(HOTEL.wifi.senha);
+      await navigator.clipboard.writeText(info.wifi_senha);
       setCopiado(true);
       setTimeout(() => setCopiado(false), 2000);
     } catch {
@@ -34,15 +38,16 @@ const HotelInfo = () => {
           <ChevronRight className="h-5 w-5 text-[#5B6B60]" />
         </Link>
 
+        {horarios.length > 0 && (
         <section aria-labelledby="horarios" className="flex flex-col gap-2.5">
           <h2 id="horarios" className="text-xl font-bold" style={FONTE_TITULO}>
             Horários
           </h2>
           <div className="rounded-[18px] bg-white shadow-[0_2px_8px_rgba(20,40,30,0.06)]">
-            {HOTEL.horarios.map((h, i) => (
+            {horarios.map((h, i) => (
               <div
                 key={h.nome}
-                className={`flex justify-between gap-3 px-4 py-3.5 ${i < HOTEL.horarios.length - 1 ? "border-b border-[#E6EAE3]" : ""}`}
+                className={`flex justify-between gap-3 px-4 py-3.5 ${i < horarios.length - 1 ? "border-b border-[#E6EAE3]" : ""}`}
               >
                 <span className="font-bold">{h.nome}</span>
                 <span className="font-bold text-[#3D4A41]">{h.horario}</span>
@@ -50,7 +55,9 @@ const HotelInfo = () => {
             ))}
           </div>
         </section>
+        )}
 
+        {info.wifi_mostrar && info.wifi_rede && (
         <section aria-labelledby="wifi" className="flex flex-col gap-3 rounded-[18px] bg-white p-4 shadow-[0_2px_8px_rgba(20,40,30,0.06)]">
           <h2 id="wifi" className="flex items-center gap-2.5 text-xl font-bold" style={FONTE_TITULO}>
             <Wifi className="h-6 w-6 text-[#1F4D3A]" /> Wi-Fi
@@ -58,11 +65,11 @@ const HotelInfo = () => {
           <div className="flex items-center justify-between gap-3">
             <div className="flex flex-col">
               <span className="text-[13px] text-[#5B6B60]">Rede</span>
-              <span className="font-extrabold">{HOTEL.wifi.rede}</span>
+              <span className="font-extrabold">{info.wifi_rede}</span>
             </div>
             <div className="flex flex-col">
               <span className="text-[13px] text-[#5B6B60]">Senha</span>
-              <span className="font-extrabold">{HOTEL.wifi.senha}</span>
+              <span className="font-extrabold">{info.wifi_senha}</span>
             </div>
             <button
               type="button"
@@ -74,20 +81,21 @@ const HotelInfo = () => {
             </button>
           </div>
         </section>
+        )}
 
         <section aria-labelledby="contatos" className="flex flex-col gap-2.5">
           <h2 id="contatos" className="text-xl font-bold" style={FONTE_TITULO}>
             Contatos úteis
           </h2>
           <div className="grid grid-cols-2 gap-3">
-            {HOTEL.ramais.map((r) => (
+            {info.ramais.map((r) => (
               <div key={r.nome} className="flex flex-col gap-1 rounded-2xl bg-white p-3.5 shadow-[0_2px_8px_rgba(20,40,30,0.06)]">
                 <span className={`font-extrabold ${r.urgente ? "text-[#B42318]" : ""}`}>{r.nome}</span>
                 <span className="text-sm text-[#5B6B60]">Ramal {r.ramal}</span>
               </div>
             ))}
             <a
-              href={whatsappLink()}
+              href={linkWhatsapp(info, guest?.room_number)}
               target="_blank"
               rel="noopener noreferrer"
               className="col-span-2 flex items-center gap-3 rounded-2xl bg-[#E7F6EC] p-4 text-[#14532D] shadow-[0_2px_8px_rgba(20,40,30,0.06)]"
@@ -97,7 +105,7 @@ const HotelInfo = () => {
               </svg>
               <span className="flex flex-col">
                 <span className="font-extrabold">WhatsApp do hotel</span>
-                <span className="text-sm">{HOTEL.whatsappLabel} · toque para abrir</span>
+                <span className="text-sm">{formatarWhatsapp(info.whatsapp)} · toque para abrir</span>
               </span>
             </a>
           </div>
