@@ -262,71 +262,60 @@ const Vazio = ({ emoji, texto }: { emoji: string; texto: string }) => (
 /* Telas                                                               */
 /* ------------------------------------------------------------------ */
 
+/** Atividade acontecendo agora para a faixa (a da própria faixa primeiro, depois a "para todos"). */
+const atividadeAgora = (dados: DadosTotem, faixaId: string, m: number) =>
+  dados.atividades.find((a) => a.age_group_id === faixaId && !a.is_master && minutos(a.start_time) <= m && minutos(a.end_time) > m) ??
+  dados.atividades.find((a) => a.is_master && minutos(a.start_time) <= m && minutos(a.end_time) > m);
+
+/** Tem alguma atividade acontecendo neste momento? (sem nenhuma, a tela "Acontecendo agora" é pulada) */
+export const temAtividadeAgora = (dados: DadosTotem, quando = new Date()) => {
+  const m = quando.getHours() * 60 + quando.getMinutes();
+  return dados.atividades.some((a) => minutos(a.start_time) <= m && minutos(a.end_time) > m);
+};
+
 const SlideAgora = ({ dados }: { dados: DadosTotem }) => {
   const agora = useAgora();
   const faixas = useFaixas(dados.faixas);
   const m = agora.getHours() * 60 + agora.getMinutes();
-  const acontecendo = (id: string) =>
-    dados.atividades.find((a) => a.age_group_id === id && !a.is_master && minutos(a.start_time) <= m && minutos(a.end_time) > m) ??
-    dados.atividades.find((a) => a.is_master && minutos(a.start_time) <= m && minutos(a.end_time) > m);
-  const proxima = (id: string) =>
-    dados.atividades.find((a) => (a.age_group_id === id || a.is_master) && minutos(a.start_time) > m);
 
-  const cartoes = faixas.slice(0, 4);
+  // Só as faixas que têm atividade neste momento
+  const cartoes = faixas
+    .map((f) => ({ f, a: atividadeAgora(dados, f.id, m) }))
+    .filter((x): x is { f: (typeof faixas)[number]; a: Atividade } => Boolean(x.a))
+    .slice(0, 4);
   return (
     <>
       <TituloSlide titulo="Acontecendo agora" sub="Venha participar!" />
       {cartoes.length === 0 ? (
-        <Vazio emoji="🌿" texto="Sem atividades no momento" />
+        <Vazio emoji="🌿" texto="Nenhuma atividade neste momento" />
       ) : (
         <div className="flex min-h-0 flex-1 gap-4">
-          {cartoes.map((f) => {
-            const a = acontecendo(f.id);
-            const p = a ? null : proxima(f.id);
-            return (
-              <div key={f.id} className={`${CARD} flex min-w-0 flex-1 flex-col overflow-hidden`}>
-                <div className="flex items-center gap-3 px-[18px] py-4" style={{ background: corClara(f.color, 0.18) }}>
-                  <span className="text-[44px] leading-none">{f.emojiFinal}</span>
-                  <span className="flex min-w-0 flex-col leading-tight">
-                    <span className="truncate text-[26px] font-extrabold" style={{ ...TITULO, color: f.color }}>
-                      {f.nome}
-                    </span>
-                    {f.idade && <span className="text-sm font-bold" style={{ color: CINZA }}>{f.idade}</span>}
+          {cartoes.map(({ f, a }) => (
+            <div key={f.id} className={`${CARD} flex min-w-0 flex-1 flex-col overflow-hidden`}>
+              <div className="flex items-center gap-3 px-[18px] py-4" style={{ background: corClara(f.color, 0.18) }}>
+                <span className="text-[44px] leading-none">{f.emojiFinal}</span>
+                <span className="flex min-w-0 flex-col leading-tight">
+                  <span className="truncate text-[26px] font-extrabold" style={{ ...TITULO, color: f.color }}>
+                    {f.nome}
                   </span>
-                </div>
-                <div className="flex flex-1 flex-col gap-2 px-[18px] py-4">
-                  {a ? (
-                    <>
-                      <span className="inline-flex items-center gap-1.5 self-start rounded-full bg-[#1E6B3E] px-3 py-1 text-sm font-extrabold text-white">
-                        ● AGORA · até {hm(a.end_time)}
-                      </span>
-                      <span className="text-[30px] font-extrabold leading-[1.05]" style={TITULO}>
-                        {a.name}
-                      </span>
-                      {a.description && (
-                        <span className="line-clamp-3 text-[17px] font-bold" style={{ color: CINZA }}>
-                          📍 {a.description}
-                        </span>
-                      )}
-                    </>
-                  ) : p ? (
-                    <>
-                      <span className="inline-flex self-start rounded-full bg-[#EEF1EC] px-3 py-1 text-sm font-extrabold" style={{ color: CINZA }}>
-                        PRÓXIMA · {hm(p.start_time)}
-                      </span>
-                      <span className="text-[28px] font-extrabold leading-[1.05]" style={TITULO}>
-                        {p.name}
-                      </span>
-                    </>
-                  ) : (
-                    <span className="text-xl font-bold" style={{ color: CINZA }}>
-                      Sem mais atividades hoje
-                    </span>
-                  )}
-                </div>
+                  {f.idade && <span className="text-sm font-bold" style={{ color: CINZA }}>{f.idade}</span>}
+                </span>
               </div>
-            );
-          })}
+              <div className="flex flex-1 flex-col gap-2 px-[18px] py-4">
+                <span className="inline-flex items-center gap-1.5 self-start rounded-full bg-[#1E6B3E] px-3 py-1 text-sm font-extrabold text-white">
+                  ● AGORA · até {hm(a.end_time)}
+                </span>
+                <span className="text-[30px] font-extrabold leading-[1.05]" style={TITULO}>
+                  {a.name}
+                </span>
+                {a.description && (
+                  <span className="line-clamp-3 text-[17px] font-bold" style={{ color: CINZA }}>
+                    📍 {a.description}
+                  </span>
+                )}
+              </div>
+            </div>
+          ))}
         </div>
       )}
       <div className={`${CARD} flex items-center gap-3.5 bg-[#FFF4E0] px-5 py-3.5`}>
@@ -488,18 +477,31 @@ const SlideDestaques = ({ dados, duracao }: { dados: DadosTotem; duracao: number
   return (
     <>
       <TituloSlide titulo="Destaques" sub="novidades do hotel" />
+      {img ? (
+        /* Banner inteiro, sem cortar: o fundo desfocado preenche as sobras */
+        <div className={`${CARD} relative flex min-h-0 flex-1 items-center justify-center overflow-hidden bg-[#1D2A22]`}>
+          <img src={img} alt="" aria-hidden className="absolute inset-0 h-full w-full scale-110 object-cover opacity-60 blur-2xl" />
+          <img src={img} alt={a.title} className="relative h-full w-full object-contain" />
+          {lista.length > 1 && (
+            <div className="absolute bottom-3 left-1/2 flex -translate-x-1/2 gap-2 rounded-full bg-black/40 px-3 py-2">
+              {lista.map((x, k) => (
+                <span
+                  key={x.id}
+                  className="h-2.5 rounded-full"
+                  style={{ width: k === i ? 30 : 10, background: k === i ? "#FFFFFF" : "rgba(255,255,255,.5)" }}
+                />
+              ))}
+            </div>
+          )}
+        </div>
+      ) : (
       <div className={`${CARD} flex min-h-0 flex-1 overflow-hidden`}>
-        {img && (
-          <div className="w-[55%] shrink-0 bg-[#E7F0EA]">
-            <img src={img} alt="" className="h-full w-full object-cover" />
-          </div>
-        )}
         <div className="flex flex-1 flex-col justify-center gap-3.5 px-8 py-7">
-          <span className={`${img ? "text-[44px]" : "text-[56px]"} font-extrabold leading-none`} style={TITULO}>
+          <span className="text-[56px] font-extrabold leading-none" style={TITULO}>
             {a.title}
           </span>
           {a.description && (
-            <span className={`${img ? "text-[21px]" : "text-[26px]"} line-clamp-6 font-bold leading-[1.35]`} style={{ color: CINZA }}>
+            <span className="line-clamp-6 text-[26px] font-bold leading-[1.35]" style={{ color: CINZA }}>
               {a.description}
             </span>
           )}
@@ -516,6 +518,7 @@ const SlideDestaques = ({ dados, duracao }: { dados: DadosTotem; duracao: number
           )}
         </div>
       </div>
+      )}
     </>
   );
 };

@@ -1,7 +1,7 @@
 import { useEffect, useState, useCallback, useRef, useMemo } from "react";
 import { useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
-import { TelaTotem, useDadosTotem, type SlideNovo } from "@/components/totem/TotemNovo";
+import { TelaTotem, useDadosTotem, temAtividadeAgora, type SlideNovo } from "@/components/totem/TotemNovo";
 import { cn } from "@/lib/utils";
 import { Shield, Play } from "lucide-react";
 
@@ -253,15 +253,25 @@ const Totem = () => {
   // Dados das telas (programação, ranking, tempo, destaques e avisos importantes)
   const dados = useDadosTotem();
 
+  // Sem nenhuma atividade acontecendo, a tela "Acontecendo agora" sai da sequência (confere a cada 30s)
+  const [haAgora, setHaAgora] = useState(true);
+  useEffect(() => {
+    const conferir = () => setHaAgora(temAtividadeAgora(dados));
+    conferir();
+    const t = setInterval(conferir, 30_000);
+    return () => clearInterval(t);
+  }, [dados]);
+
   // Sequência de telas: avisos importantes ativos primeiro, depois as telas ligadas no painel
   const rotacao = useMemo<SlideNovo[]>(() => {
     const tipos = ["nextactivity", "schedule", "weather", "announcements", "ranking", "qrcode"] as const;
     const normais: SlideNovo[] = activeSlides
       .filter((s) => (tipos as readonly string[]).includes(s.type))
+      .filter((s) => s.type !== "nextactivity" || haAgora)
       .map((s) => ({ tipo: s.type as (typeof tipos)[number], duracao: s.duration || 10 }));
     const alertas: SlideNovo[] = dados.alertas.map((a) => ({ tipo: "alerta", duracao: a.duration_seconds || 10, alerta: a }));
     return [...alertas, ...normais];
-  }, [activeSlides, dados.alertas]);
+  }, [activeSlides, dados.alertas, haAgora]);
 
   // Tamanho da tela para ampliar o desenho (feito em 1280×720) até caber na TV
   const [janela, setJanela] = useState({ w: window.innerWidth, h: window.innerHeight });
