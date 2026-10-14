@@ -4,9 +4,12 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { useTheme } from "@/hooks/useTheme";
 import { usePageTracking } from "@/hooks/usePageTracking";
-import { SplashScreen } from "@/components/SplashScreen";
+import { HotelSplash } from "@/components/hotel/HotelSplash";
 import { useState, useEffect, lazy, Suspense } from "react";
 import Home from "./pages/Home";
+import HotelHome from "./pages/hotel/HotelHome";
+const HotelInfo = lazy(() => import("./pages/hotel/HotelInfo"));
+const HotelAvisos = lazy(() => import("./pages/hotel/HotelAvisos"));
 import Schedule from "./pages/Schedule";
 import Activities from "./pages/Activities";
 const Auth = lazy(() => import("./pages/Auth"));
@@ -31,7 +34,10 @@ const AppRoutes = () => {
   return (
     <Suspense fallback={<div className="min-h-screen bg-background" />}>
     <Routes>
-      <Route path="/" element={<Home />} />
+      <Route path="/" element={<HotelHome />} />
+      <Route path="/recreacao" element={<Home />} />
+      <Route path="/hotel" element={<HotelInfo />} />
+      <Route path="/avisos" element={<HotelAvisos />} />
       <Route path="/programacao" element={<Schedule />} />
       <Route path="/activities/:ageGroupId" element={<Activities />} />
       <Route path="/auth" element={<Auth />} />
@@ -86,7 +92,7 @@ const AppContent = () => {
   }
 
   if (showSplash && isFirstLoad) {
-    return <SplashScreen onFinish={handleSplashFinish} />;
+    return <HotelSplash onFinish={handleSplashFinish} />;
   }
   
   return (

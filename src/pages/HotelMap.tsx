@@ -14,7 +14,7 @@ const HotelMap = () => {
   return (
     <div className="min-h-screen bg-[var(--gradient-bg)] flex flex-col">
       <div className="max-w-6xl w-full mx-auto px-4 pt-4 pb-2 flex items-center justify-between gap-2">
-        <Button variant="ghost" size="sm" onClick={() => navigate("/")}>
+        <Button variant="ghost" size="sm" onClick={() => navigate("/hotel")}>
           <ArrowLeft className="h-4 w-4 mr-2" />
           Voltar
         </Button>

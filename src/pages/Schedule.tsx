@@ -129,7 +129,7 @@ const Index = () => {
             <Button
               variant="ghost"
               size="sm"
-              onClick={() => navigate("/")}
+              onClick={() => navigate("/recreacao")}
               className="hover:bg-accent/50"
             >
               <ArrowLeft className="h-5 w-5 mr-2" />

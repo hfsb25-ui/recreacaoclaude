@@ -206,6 +206,19 @@ const Home = () => {
 
   return (
     <div className="min-h-screen bg-[var(--gradient-bg)] overflow-x-hidden w-full">
+      {/* Volta para o início do app do hotel */}
+      <div className="w-full bg-[#1F4D3A] text-white">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6">
+          <button
+            type="button"
+            onClick={() => navigate("/")}
+            className="flex min-h-[40px] items-center gap-1 text-sm font-bold"
+          >
+            <ChevronRight className="h-4 w-4 rotate-180" />
+            Início do hotel
+          </button>
+        </div>
+      </div>
       {/* Header */}
       <header className="border-b border-border/50 backdrop-blur-sm bg-background/80 w-full">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 py-4 sm:py-6 w-full">

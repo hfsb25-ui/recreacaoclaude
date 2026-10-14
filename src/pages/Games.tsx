@@ -112,7 +112,7 @@ const Games = () => {
       <div className="max-w-2xl mx-auto space-y-6">
         {/* Header */}
         <div className="flex items-center justify-between">
-          <Button variant="ghost" size="sm" onClick={() => navigate("/")}>
+          <Button variant="ghost" size="sm" onClick={() => navigate("/recreacao")}>
             <ArrowLeft className="h-4 w-4 mr-2" />
             Voltar
           </Button>
