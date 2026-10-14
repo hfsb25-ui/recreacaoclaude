@@ -2588,7 +2588,7 @@ GRANT EXECUTE ON FUNCTION public.guest_use_pms_phone(uuid, uuid) TO anon, authen
 
 -- ===== 20261013210000_limite_login.sql =====
 -- Limite de tentativas no login do hóspede.
--- Depois de 5 erros no mesmo apto em 15 min, aquele apto fica bloqueado por 15 minutos.
+-- Depois de 3 erros no mesmo apto em 15 min, aquele apto fica bloqueado por 15 minutos.
 -- Uma mesma rede (IP) também é barrada com 20 erros em 15 min (folga porque o Wi-Fi do hotel é compartilhado). Acertar o login limpa os erros daquele IP/apto.
 
 CREATE TABLE IF NOT EXISTS public.guest_login_attempts (
@@ -2650,7 +2650,7 @@ BEGIN
            WHERE ip = v_ip AND NOT ok AND created_at > now() - interval '15 minutes');
   n_uh := (SELECT count(*) FROM public.guest_login_attempts
            WHERE uh = v_uh AND NOT ok AND created_at > now() - interval '15 minutes');
-  RETURN (v_ip <> 'desconhecido' AND n_ip >= 20) OR n_uh >= 5;
+  RETURN (v_ip <> 'desconhecido' AND n_ip >= 20) OR n_uh >= 3;
 END;
 $$;
 
