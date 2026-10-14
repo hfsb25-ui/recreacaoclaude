@@ -1,11 +1,14 @@
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 
 /** Tela de carregamento do app do hotel: foto do hotel escurecida, logo e barra de progresso. */
 export const HotelSplash = ({ onFinish, duracao = 1800 }: { onFinish: () => void; duracao?: number }) => {
+  // Guarda a função num ref para o tempo não reiniciar quando a tela redesenha
+  const fim = useRef(onFinish);
+  fim.current = onFinish;
   useEffect(() => {
-    const t = setTimeout(onFinish, duracao);
+    const t = setTimeout(() => fim.current(), duracao);
     return () => clearTimeout(t);
-  }, [onFinish, duracao]);
+  }, [duracao]);
 
   return (
     <div

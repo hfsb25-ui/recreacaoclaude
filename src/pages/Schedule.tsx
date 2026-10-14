@@ -24,10 +24,11 @@ interface Atividade {
   is_master: boolean;
 }
 
-const hm = (t: string) => t.slice(0, 5);
-const minutos = (t: string) => {
+const hm = (t: string | null | undefined) => (t ?? "").slice(0, 5);
+const minutos = (t: string | null | undefined) => {
+  if (!t) return 0;
   const [h, m] = t.split(":").map(Number);
-  return h * 60 + m;
+  return (h || 0) * 60 + (m || 0);
 };
 const agoraMin = () => {
   const d = new Date();
@@ -52,32 +53,48 @@ const Schedule = () => {
   }, []);
 
   useEffect(() => {
+    let ativo = true;
+    // Se o servidor demorar demais, mostra o que tiver em vez de ficar carregando para sempre
+    const limite = setTimeout(() => ativo && setCarregando(false), 8000);
     (async () => {
-      const [{ data: g }, { data: a }] = await Promise.all([
-        supabase.from("age_groups").select("*").eq("is_active", true).order("sort_order", { ascending: true }),
-        supabase
-          .from("activities")
-          .select("id, name, start_time, end_time, age_group_id, is_master")
-          .eq("activity_date", getLocalDateString())
-          .order("start_time", { ascending: true }),
-      ]);
-      setFaixas((g as AgeGroup[]) ?? []);
-      setAtividades((a as Atividade[]) ?? []);
-      setCarregando(false);
+      try {
+        const [g, a] = await Promise.all([
+          supabase.from("age_groups").select("*").eq("is_active", true).order("sort_order", { ascending: true }),
+          supabase
+            .from("activities")
+            .select("id, name, start_time, end_time, age_group_id, is_master")
+            .eq("activity_date", getLocalDateString())
+            .order("start_time", { ascending: true }),
+        ]);
+        if (g.error) console.error("Erro ao buscar faixas:", g.error);
+        if (a.error) console.error("Erro ao buscar atividades:", a.error);
+        if (!ativo) return;
+        setFaixas((g.data as AgeGroup[]) ?? []);
+        setAtividades((a.data as Atividade[]) ?? []);
+      } catch (e) {
+        console.error("Erro ao carregar a programação:", e);
+      } finally {
+        if (ativo) setCarregando(false);
+      }
 
-      const { data: cfg } = await supabase
-        .from("site_settings")
-        .select("weather_latitude, weather_longitude")
-        .eq("id", "00000000-0000-0000-0000-000000000001")
-        .maybeSingle();
-      if (cfg?.weather_latitude && cfg?.weather_longitude) {
-        try {
-          setTempo((await fetchForecast(cfg.weather_latitude, cfg.weather_longitude, 1)).current);
-        } catch {
-          // sem clima
+      try {
+        const { data: cfg } = await supabase
+          .from("site_settings")
+          .select("weather_latitude, weather_longitude")
+          .eq("id", "00000000-0000-0000-0000-000000000001")
+          .maybeSingle();
+        if (cfg?.weather_latitude && cfg?.weather_longitude) {
+          const f = await fetchForecast(cfg.weather_latitude, cfg.weather_longitude, 1);
+          if (ativo) setTempo(f.current);
         }
+      } catch {
+        // sem clima
       }
     })();
+    return () => {
+      ativo = false;
+      clearTimeout(limite);
+    };
   }, []);
 
   const faixaPorId = useMemo(() => Object.fromEntries(faixas.map((f) => [f.id, f])), [faixas]);
