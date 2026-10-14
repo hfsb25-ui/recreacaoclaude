@@ -204,12 +204,8 @@ const GuestAuth = () => {
               {loading ? "Entrando…" : mode === "register" ? "Cadastrar e ganhar 50 pontos" : "Entrar"}
             </button>
 
-            <div className="flex flex-col items-center gap-2 pt-1 text-sm">
-              {mode === "stay" ? (
-                <button type="button" onClick={() => setMode("pin")} className="font-bold text-[#1F4D3A] underline">
-                  Já tem PIN ou não está hospedado?
-                </button>
-              ) : (
+            {mode !== "stay" && (
+              <div className="flex flex-col items-center gap-2 pt-1 text-sm">
                 <>
                   <button
                     type="button"
@@ -222,8 +218,8 @@ const GuestAuth = () => {
                     Entrar com apartamento e sobrenome
                   </button>
                 </>
-              )}
-            </div>
+              </div>
+            )}
           </form>
 
           <section aria-labelledby="sem-login" className="flex flex-col gap-2.5">
