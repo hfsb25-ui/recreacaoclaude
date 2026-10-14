@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft, Download, Loader2 } from "lucide-react";
+import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useGuestAuth } from "@/hooks/useGuestAuth";
@@ -10,6 +10,9 @@ import { Dialog, DialogContent, DialogTitle, DialogDescription } from "@/compone
 import { PetArt, PET_SPECIES, PET_STAGES, stageFromXp, type PetSpecies } from "@/components/pet/PetArt";
 import { shareOrDownloadCertificate } from "@/components/pet/petCertificate";
 import { InteractivePet } from "@/components/pet/InteractivePet";
+import { HotelLayout, HotelPageHeader } from "@/components/hotel/HotelLayout";
+
+const VERDE = "#10B981";
 
 interface PetData {
   id: string;
@@ -24,6 +27,7 @@ interface PetData {
 
 const db = supabase as any;
 const display = { fontFamily: "'Baloo 2', system-ui, sans-serif" };
+const cartao = "rounded-[20px] bg-white p-4 shadow-[0_2px_10px_rgba(20,40,30,0.07)]";
 
 const CARE = [
   { emoji: "🍎", action: "Participar de uma atividade", effect: "come e cresce", xp: 15 },
@@ -33,9 +37,9 @@ const CARE = [
 
 /** Cenário do pasto com cerca de madeira */
 const Pasture = ({ children }: { children: React.ReactNode }) => (
-  <div className="relative w-full overflow-hidden rounded-3xl" style={{ background: "linear-gradient(#CFEAF7 0%, #EAF6FB 58%, #9BCB5B 58%)" }}>
+  <div className="relative w-full overflow-hidden rounded-[24px]" style={{ background: "linear-gradient(#DCEEFB 0%, #EAF6FB 56%, #B7F0CF 56%)" }}>
     <svg className="absolute inset-x-0 bottom-0 w-full" viewBox="0 0 400 60" preserveAspectRatio="none" aria-hidden>
-      <path d="M0 18 Q200 -6 400 18 V60 H0 Z" fill="#9BCB5B" />
+      <path d="M0 18 Q200 -6 400 18 V60 H0 Z" fill="#9DDFB6" />
       <g fill="#A0673B">
         {Array.from({ length: 9 }, (_, i) => (
           <rect key={i} x={10 + i * 48} y={4} width={8} height={40} rx={2} />
@@ -144,32 +148,29 @@ const Pet = () => {
 
   if (guestLoading || loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-[#EAF6FB]">
-        <Loader2 className="h-6 w-6 animate-spin text-[#3B2A1A]" />
-      </div>
+      <HotelLayout>
+        <HotelPageHeader title="Meu bichinho" back="/recreacao" cor={VERDE} />
+        <div className="flex justify-center py-16">
+          <Loader2 className="h-7 w-7 animate-spin text-[#10B981]" />
+        </div>
+      </HotelLayout>
     );
   }
 
   return (
-    <div className="min-h-screen bg-[#F3FAEC] text-[#3B2A1A] px-4 py-4">
-      <div className="max-w-md mx-auto space-y-5">
-        <Button variant="ghost" size="sm" onClick={() => navigate(-1)} className="-ml-2">
-          <ArrowLeft className="h-4 w-4 mr-2" />
-          Voltar
-        </Button>
+    <HotelLayout>
+      <HotelPageHeader
+        title={pet ? "Meu bichinho" : "Adote um bichinho"}
+        subtitle={pet ? "Ele cresce com cada atividade da família." : "Ele vai crescer junto com vocês: cada atividade é um cuidado."}
+        back="/recreacao"
+        cor={VERDE}
+      />
+      <div className="space-y-4 px-4 pt-4">
 
         {!pet ? (
           /* ---------- ADOÇÃO ---------- */
           <>
-            <div className="text-center space-y-1">
-              <h1 className="text-3xl font-extrabold" style={display}>
-                Adote um bichinho
-              </h1>
-              <p className="text-[15px] text-[#5C4630]">
-                Ele vai crescer junto com vocês: cada atividade da recreação é um cuidado.
-              </p>
-            </div>
-
+            <p className="text-[15px] font-bold">Escolha o seu bichinho:</p>
             <div className="grid grid-cols-2 gap-3">
               {PET_SPECIES.map((s) => {
                 const selected = choice === s.id;
@@ -180,7 +181,7 @@ const Pet = () => {
                     onClick={() => setChoice(s.id)}
                     aria-pressed={selected}
                     className={`rounded-2xl p-2 pb-3 text-center transition-colors focus-visible:outline focus-visible:outline-4 focus-visible:outline-[#2E7BC4] ${
-                      selected ? "bg-[#FFF3C4] ring-4 ring-[#F2C14E]" : "bg-white ring-1 ring-[#E3D7C3]"
+                      selected ? "bg-[#ECFDF5] ring-4 ring-[#10B981]" : "bg-white shadow-[0_2px_10px_rgba(20,40,30,0.07)]"
                     }`}
                   >
                     <div className="flex justify-center">
@@ -195,7 +196,7 @@ const Pet = () => {
             </div>
 
             {choice && (
-              <div className="space-y-3 rounded-2xl bg-white p-4 ring-1 ring-[#E3D7C3]">
+              <div className={`space-y-3 ${cartao}`}>
                 <label htmlFor="pet-name" className="block font-semibold">
                   Qual vai ser o nome do seu {PET_SPECIES.find((s) => s.id === choice)?.label.toLowerCase()}?
                 </label>
@@ -210,7 +211,7 @@ const Pet = () => {
                 <Button
                   onClick={adopt}
                   disabled={adopting}
-                  className="w-full h-12 text-lg bg-[#5E9E2E] hover:bg-[#4E8A24] text-white"
+                  className="w-full h-12 rounded-2xl text-lg font-extrabold bg-[#1F4D3A] hover:bg-[#173B2C] text-white"
                 >
                   {adopting ? <Loader2 className="h-5 w-5 animate-spin" /> : "Adotar"}
                 </Button>
@@ -233,13 +234,14 @@ const Pet = () => {
                   name={pet.name}
                   frame={(petNode) => (
                     <Pasture>
-                      <div className="flex flex-col items-center pt-5 pb-8">
-                        <div className="rounded-xl bg-[#C98B57] px-5 py-1 shadow-[0_3px_0_#A0673B]">
-                          <h1 className="text-3xl font-extrabold text-[#FFF8EC] leading-tight" style={display}>
-                            {pet.name}
-                          </h1>
-                        </div>
+                      <div className="flex flex-col items-center pt-4 pb-10">
                         {petNode}
+                        <h2 className="-mt-2 text-[32px] font-extrabold leading-tight text-[#1D2A22]" style={display}>
+                          {pet.name}
+                        </h2>
+                        <span className="rounded-full bg-white/85 px-3 py-0.5 text-sm font-extrabold text-[#1F4D3A]">
+                          {species.label} · Fase {stage + 1} de {PET_STAGES.length}
+                        </span>
                       </div>
                     </Pasture>
                   )}
@@ -249,33 +251,43 @@ const Pet = () => {
                   <PetArt species={pet.species} stage={stage} size={240} eyes={stage === 0 ? "sleep" : "open"} />
                 </div>
 
-                <div className="space-y-2">
+                <section className={cartao}>
                   <div className="flex items-baseline justify-between">
-                    <p className="text-xl font-extrabold" style={display}>
-                      {species.label} {current.name.toLowerCase()}
-                    </p>
-                    {next && <p className="text-sm text-[#5C4630]">Próxima fase: {next.name}</p>}
+                    <h2 className="text-lg font-extrabold" style={display}>
+                      {next ? "Crescendo" : "Fase final"}
+                    </h2>
+                    <span className="text-sm font-extrabold text-[#1F4D3A]">
+                      {next ? `${pet.xp - current.minXp} de ${next.minXp - current.minXp} ⭐` : "🏆"}
+                    </span>
                   </div>
                   <div
-                    className="h-4 w-full rounded-full bg-[#E8DCC6] overflow-hidden"
+                    className="mt-2 h-3 w-full overflow-hidden rounded-full bg-[#E8ECE6]"
                     role="progressbar"
                     aria-valuemin={0}
                     aria-valuemax={100}
                     aria-valuenow={Math.round(progress)}
                     aria-label={`Progresso até ${next?.name ?? "a fase final"}`}
                   >
-                    <div className="h-full rounded-full bg-[#F2C14E]" style={{ width: `${Math.min(100, progress)}%` }} />
+                    <div
+                      className="h-full rounded-full"
+                      style={{ width: `${Math.min(100, progress)}%`, background: "linear-gradient(90deg,#10B981,#34D399)" }}
+                    />
                   </div>
-                  <p className="text-sm text-[#5C4630]">
-                    {next
-                      ? `Faltam ${next.minXp - pet.xp} de carinho para ${pet.name} virar ${next.name}.`
-                      : `${pet.name} chegou à fase final. Que orgulho! 🏆`}
+                  <p className="mt-2 text-sm text-[#5B6B60]">
+                    {next ? (
+                      <>
+                        Faltam {next.minXp - pet.xp} estrelas para virar <b className="text-[#1D2A22]">{next.name}</b>
+                        {stage + 1 === PET_STAGES.length - 1 ? " 🏆" : ""}
+                      </>
+                    ) : (
+                      `${pet.name} chegou à fase final. Que orgulho! 🏆`
+                    )}
                   </p>
-                </div>
+                </section>
 
-                <div className="rounded-2xl bg-white p-4 ring-1 ring-[#E3D7C3]">
+                <section className={cartao}>
                   <h2 className="text-lg font-extrabold mb-2" style={display}>
-                    Como cuidar de {pet.name}
+                    Como ganhar estrelas
                   </h2>
                   <ul className="space-y-2.5">
                     {CARE.map((c) => (
@@ -285,25 +297,34 @@ const Pet = () => {
                         </span>
                         <span className="flex-1 leading-snug">
                           {c.action}
-                          <span className="block text-sm text-[#5C4630]">{pet.name} {c.effect}</span>
+                          <span className="block text-sm text-[#5B6B60]">{pet.name} {c.effect}</span>
                         </span>
-                        <span className="font-bold text-[#5E9E2E]">+{c.xp}</span>
+                        <span className="whitespace-nowrap font-extrabold">+{c.xp} ⭐</span>
                       </li>
                     ))}
                   </ul>
-                  <Button onClick={() => navigate("/programacao")} className="w-full mt-4 bg-[#5E9E2E] hover:bg-[#4E8A24] text-white">
-                    Ver a programação
-                  </Button>
-                </div>
+                  <button
+                    type="button"
+                    onClick={() => navigate("/programacao")}
+                    className="mt-4 h-11 w-full rounded-2xl bg-[#ECFDF5] font-extrabold text-[#1F4D3A]"
+                  >
+                    Ver a programação de hoje
+                  </button>
+                </section>
 
-                <p className="text-sm text-[#5C4630] text-center">
+                <p className="text-sm text-[#5B6B60] text-center">
                   Os {species.plural} de verdade moram no {species.place}. Que tal fazer uma visita?
                 </p>
 
-                <Button variant="outline" onClick={downloadCertificate} disabled={saving} className="w-full h-11 border-[#A0673B] text-[#3B2A1A]">
-                  {saving ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Download className="h-4 w-4 mr-2" />}
-                  Baixar a Certidão de Adoção
-                </Button>
+                <button
+                  type="button"
+                  onClick={downloadCertificate}
+                  disabled={saving}
+                  className="flex h-12 w-full items-center justify-center gap-2 rounded-2xl bg-[#1F4D3A] text-[17px] font-extrabold text-white disabled:opacity-60"
+                >
+                  {saving ? <Loader2 className="h-5 w-5 animate-spin" /> : <span aria-hidden>📜</span>}
+                  Certidão do bichinho
+                </button>
               </>
             );
           })()
@@ -330,7 +351,7 @@ const Pet = () => {
           )}
         </DialogContent>
       </Dialog>
-    </div>
+    </HotelLayout>
   );
 };
 

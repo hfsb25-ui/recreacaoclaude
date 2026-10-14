@@ -3,6 +3,9 @@ import { Link, useLocation, useNavigate } from "react-router-dom";
 import { ChevronLeft, Home, Sparkles, Hotel, User, Receipt } from "lucide-react";
 import { useGuestAuth } from "@/hooks/useGuestAuth";
 
+/** Páginas que fazem parte da Recreação (a aba "Recreação" fica acesa nelas). */
+const PAGINAS_RECREACAO = ["/programacao", "/activities", "/games", "/bichinho", "/ranking", "/hall-of-fame", "/mapa"];
+
 const FONTE_TITULO = { fontFamily: "'Baloo 2', system-ui, sans-serif" };
 
 export const HotelLogo = ({ size = 48 }: { size?: number }) => (
@@ -15,10 +18,20 @@ export const HotelLogo = ({ size = 48 }: { size?: number }) => (
 );
 
 /** Cabeçalho verde das páginas internas (com botão voltar). */
-export const HotelPageHeader = ({ title, subtitle, back = "/" }: { title: string; subtitle?: string; back?: string }) => {
+export const HotelPageHeader = ({
+  title,
+  subtitle,
+  back = "/",
+  cor = "#1F4D3A",
+}: {
+  title: string;
+  subtitle?: string;
+  back?: string;
+  cor?: string;
+}) => {
   const navigate = useNavigate();
   return (
-    <header className="rounded-b-[28px] bg-[#1F4D3A] px-5 pb-6 pt-5 text-white">
+    <header className="rounded-b-[28px] px-5 pb-6 pt-5 text-white" style={{ background: cor }}>
       <div className="flex items-center gap-2">
         <button
           type="button"
@@ -64,7 +77,10 @@ export const HotelLayout = ({ children }: { children: ReactNode }) => {
       >
         <div className="mx-auto grid h-[68px] max-w-md grid-cols-4">
           {itens.map(({ to, label, Icon }) => {
-            const ativo = to === "/" ? pathname === "/" : pathname.startsWith(to);
+            const ativo =
+              to === "/"
+                ? pathname === "/"
+                : pathname.startsWith(to) || (to === "/recreacao" && PAGINAS_RECREACAO.some((p) => pathname.startsWith(p)));
             return (
               <Link
                 key={to}

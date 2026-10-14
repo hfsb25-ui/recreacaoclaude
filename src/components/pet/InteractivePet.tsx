@@ -260,16 +260,16 @@ export const InteractivePet = ({ species, stage, name, size = 240, frame = (pet)
       </div>
       )}
 
-      <p className="mt-1 text-sm text-[#5C4630]">
+      <p className="mt-2 text-sm text-[#5B6B60]">
         {sleepingNow ? `${name} está dormindo. Volte amanhã cedo!` : `Toque em ${name} ou faça carinho com o dedo`}
       </p>
 
-      <div className="mt-3 flex gap-2">
+      <div className="mt-3 flex w-full gap-3">
         <button
           type="button"
           onClick={feed}
           disabled={sleepingNow || prop !== null}
-          className="rounded-full bg-white px-4 py-2 font-semibold text-[#3B2A1A] ring-1 ring-[#E3D7C3] disabled:opacity-50 focus-visible:outline focus-visible:outline-4 focus-visible:outline-[#2E7BC4]"
+          className="h-12 flex-1 rounded-2xl bg-white px-4 font-extrabold text-[#1D2A22] shadow-[0_2px_10px_rgba(20,40,30,0.07)] disabled:opacity-50 focus-visible:outline focus-visible:outline-4 focus-visible:outline-[#2E7BC4]"
         >
           🍎 Dar comida
         </button>
@@ -277,7 +277,7 @@ export const InteractivePet = ({ species, stage, name, size = 240, frame = (pet)
           type="button"
           onClick={ball}
           disabled={sleepingNow || prop !== null}
-          className="rounded-full bg-white px-4 py-2 font-semibold text-[#3B2A1A] ring-1 ring-[#E3D7C3] disabled:opacity-50 focus-visible:outline focus-visible:outline-4 focus-visible:outline-[#2E7BC4]"
+          className="h-12 flex-1 rounded-2xl bg-white px-4 font-extrabold text-[#1D2A22] shadow-[0_2px_10px_rgba(20,40,30,0.07)] disabled:opacity-50 focus-visible:outline focus-visible:outline-4 focus-visible:outline-[#2E7BC4]"
         >
           🎾 Brincar
         </button>

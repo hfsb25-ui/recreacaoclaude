@@ -1,174 +1,218 @@
 import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
+import { Loader2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
-import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
-import { ArrowLeft, Trophy, Sparkles } from "lucide-react";
 import { useGuestAuth } from "@/hooks/useGuestAuth";
+import { HotelLayout, HotelPageHeader, FONTE_TITULO } from "@/components/hotel/HotelLayout";
+import { familia } from "@/lib/familia";
 
 interface RankingGuest {
   id: string;
   name: string;
-  room_number: string;
   total_points: number;
-  current_level: number;
 }
 
 interface RankingPeriod {
-  id: string;
   start_date: string;
   end_date: string;
 }
 
+const AZUL = "#2563EB";
+
+const dataCurta = (d: string) => {
+  const [, m, dia] = d.slice(0, 10).split("-");
+  return `${dia}/${m}`;
+};
+
+const diasAte = (fim: string) => {
+  const [a, m, d] = fim.slice(0, 10).split("-").map(Number);
+  const alvo = new Date(a, m - 1, d);
+  const hoje = new Date();
+  hoje.setHours(0, 0, 0, 0);
+  return Math.round((alvo.getTime() - hoje.getTime()) / 86400000);
+};
+
+const PODIO = [
+  { pos: 2, medalha: "🥈", fundo: "#DBEAFE", altura: "h-24" },
+  { pos: 1, medalha: "🥇", fundo: "#F2B13B", altura: "h-32" },
+  { pos: 3, medalha: "🥉", fundo: "#FFE4D2", altura: "h-20" },
+];
+
 const Ranking = () => {
   const navigate = useNavigate();
   const { guest } = useGuestAuth();
-  const [guests, setGuests] = useState<RankingGuest[]>([]);
+  const [lista, setLista] = useState<RankingGuest[]>([]);
   const [period, setPeriod] = useState<RankingPeriod | null>(null);
+  const [minhaPos, setMinhaPos] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetchRanking();
+    let ativo = true;
+    (async () => {
+      try {
+        const [{ data: p }, { data: g }] = await Promise.all([
+          supabase.from("ranking_periods").select("start_date, end_date").eq("is_active", true).maybeSingle(),
+          supabase
+            .from("guests")
+            .select("id, name, total_points")
+            .gt("total_points", 0)
+            .order("total_points", { ascending: false })
+            .limit(10),
+        ]);
+        if (!ativo) return;
+        if (p) setPeriod(p as RankingPeriod);
+        setLista((g as RankingGuest[]) ?? []);
+      } catch (e) {
+        console.error("Erro ao carregar o ranking:", e);
+      } finally {
+        if (ativo) setLoading(false);
+      }
+    })();
+    return () => {
+      ativo = false;
+    };
   }, []);
 
-  const fetchRanking = async () => {
-    // Fetch active period
-    const { data: periodData } = await supabase
-      .from("ranking_periods")
-      .select("*")
-      .eq("is_active", true)
-      .single();
-
-    if (periodData) {
-      setPeriod(periodData);
+  useEffect(() => {
+    if (!guest || guest.total_points <= 0) {
+      setMinhaPos(null);
+      return;
     }
-
-    // Fetch top guests
-    const { data: guestsData } = await supabase
+    supabase
       .from("guests")
-      .select("*")
-      .order("total_points", { ascending: false })
-      .limit(10);
+      .select("id", { count: "exact", head: true })
+      .gt("total_points", guest.total_points)
+      .then(({ count }) => setMinhaPos((count ?? 0) + 1));
+  }, [guest]);
 
-    if (guestsData) {
-      setGuests(guestsData);
-    }
+  const subtitulo = period
+    ? (() => {
+        const dias = diasAte(period.end_date);
+        const fim = dias > 1 ? `termina em ${dias} dias` : dias === 1 ? "termina amanhã" : dias === 0 ? "termina hoje" : "";
+        return `Semana de ${dataCurta(period.start_date)} a ${dataCurta(period.end_date)}${fim ? ` · ${fim}` : ""}`;
+      })()
+    : "Quem está na frente esta semana";
 
-    setLoading(false);
-  };
-
-  const getMedalEmoji = (position: number) => {
-    switch (position) {
-      case 1:
-        return "🥇";
-      case 2:
-        return "🥈";
-      case 3:
-        return "🥉";
-      default:
-        return "";
-    }
-  };
+  const top3 = lista.slice(0, 3);
+  const resto = lista.slice(3);
+  const euNaLista = guest ? lista.some((g) => g.id === guest.id) : false;
 
   return (
-    <div className="min-h-screen bg-[var(--gradient-bg)] p-6">
-      <div className="max-w-4xl mx-auto">
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={() => navigate("/guest-profile")}
-          className="mb-6"
-        >
-          <ArrowLeft className="h-4 w-4 mr-2" />
-          Voltar ao Perfil
-        </Button>
+    <HotelLayout>
+      <HotelPageHeader title="Ranking" subtitle={subtitulo} back="/recreacao" cor={AZUL} />
 
-        <Card className="p-8">
-          <div className="text-center mb-8">
-            <Trophy className="h-16 w-16 mx-auto mb-4 text-primary" />
-            <h1 className="text-3xl font-bold mb-2">Ranking Semanal</h1>
-            {period && (
-              <p className="text-muted-foreground">
-                Período: {new Date(period.start_date).toLocaleDateString("pt-BR")} -{" "}
-                {new Date(period.end_date).toLocaleDateString("pt-BR")}
-              </p>
-            )}
+      <div className="space-y-4 px-4 pt-4">
+        {loading ? (
+          <div className="flex justify-center py-16">
+            <Loader2 className="h-7 w-7 animate-spin text-[#2563EB]" />
           </div>
-
-          {loading ? (
-            <p className="text-center text-muted-foreground">Carregando ranking...</p>
-          ) : guests.length === 0 ? (
-            <p className="text-center text-muted-foreground">
-              Nenhum hóspede cadastrado ainda
+        ) : lista.length === 0 ? (
+          <section className="rounded-[20px] bg-white p-6 text-center shadow-[0_2px_10px_rgba(20,40,30,0.07)]">
+            <p className="text-4xl" aria-hidden>
+              🏁
             </p>
-          ) : (
-            <div className="space-y-3">
-              {guests.map((guest, index) => (
-                <div
-                  key={guest.id}
-                  className={`flex items-center justify-between p-4 rounded-lg ${
-                    index < 3
-                      ? "bg-gradient-to-r from-primary/20 to-primary/5"
-                      : "bg-muted"
-                  }`}
-                >
-                  <div className="flex items-center gap-4">
-                    <div className="text-2xl font-bold w-8">
-                      {getMedalEmoji(index + 1) || `${index + 1}º`}
-                    </div>
-                    <div>
-                      <p className="font-semibold">{guest.name}</p>
-                      <p className="text-sm text-muted-foreground">
-                        Quarto {guest.room_number} • Nível {guest.current_level}
-                      </p>
-                    </div>
-                  </div>
-                  <div className="text-right">
-                    <p className="text-2xl font-bold text-primary">
-                      {guest.total_points}
-                    </p>
-                    <p className="text-sm text-muted-foreground">pontos</p>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-
-          {/* Banner de incentivo para visitantes não logados */}
-          {!guest && (
-            <Card className="mt-8 p-6 bg-gradient-to-r from-primary/10 via-primary/5 to-transparent border-primary/30">
-              <div className="text-center">
-                <div className="flex items-center justify-center gap-2 mb-3">
-                  <Sparkles className="h-5 w-5 text-primary" />
-                  <h3 className="text-lg font-bold text-foreground">
-                    Quer aparecer no ranking?
-                  </h3>
-                  <Sparkles className="h-5 w-5 text-primary" />
-                </div>
-                <p className="text-muted-foreground mb-4">
-                  Cadastre-se e participe das atividades para ganhar pontos e concorrer a prêmios!
-                </p>
-                <Button
-                  onClick={() => navigate("/guest-auth")}
-                  className="bg-primary hover:bg-primary/90"
-                >
-                  🚀 Cadastre-se Agora
-                </Button>
-              </div>
-            </Card>
-          )}
-
-          <div className="mt-8 text-center">
-            <Button
-              onClick={() => navigate("/hall-of-fame")}
-              variant="outline"
+            <p className="mt-2 font-extrabold" style={FONTE_TITULO}>
+              O ranking desta semana ainda está vazio
+            </p>
+            <p className="text-sm text-[#5B6B60]">Faça check-in numa atividade e seja o primeiro!</p>
+          </section>
+        ) : (
+          <>
+            {/* Pódio */}
+            <section
+              className="overflow-hidden rounded-[20px] px-3 pt-4 shadow-[0_2px_10px_rgba(20,40,30,0.07)]"
+              style={{ background: "linear-gradient(180deg,#EFF6FF 0%,#FFFFFF 100%)" }}
+              aria-label="Os três primeiros"
             >
-              🏆 Ver Hall da Fama
-            </Button>
-          </div>
-        </Card>
+              <div className="grid grid-cols-3 items-end gap-2">
+                {PODIO.map(({ pos, medalha, fundo, altura }) => {
+                  const g = top3[pos - 1];
+                  if (!g) return <div key={pos} />;
+                  const souEu = guest?.id === g.id;
+                  return (
+                    <div key={pos} className="flex flex-col items-center text-center">
+                      <span className={pos === 1 ? "text-4xl" : "text-3xl"} aria-hidden>
+                        {medalha}
+                      </span>
+                      <span className="mt-1 line-clamp-2 px-1 text-[13px] font-extrabold leading-tight">
+                        {souEu ? "Você" : familia(g.name)}
+                      </span>
+                      <div
+                        className={`mt-2 flex w-full flex-col items-center justify-center rounded-t-2xl ${altura}`}
+                        style={{ background: fundo }}
+                      >
+                        <span className="text-[26px] font-extrabold leading-none" style={FONTE_TITULO}>
+                          {pos}º
+                        </span>
+                        <span className="text-[13px] font-extrabold">{g.total_points} pts</span>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </section>
+
+            {/* Lista */}
+            {(resto.length > 0 || (guest && minhaPos && !euNaLista)) && (
+              <section className="overflow-hidden rounded-[20px] bg-white shadow-[0_2px_10px_rgba(20,40,30,0.07)]">
+                <ul className="divide-y divide-[#E1E6DE]">
+                  {resto.map((g, i) => {
+                    const souEu = guest?.id === g.id;
+                    return (
+                      <li
+                        key={g.id}
+                        className={`flex items-center gap-3 px-4 py-3 ${souEu ? "bg-[#FFF5E0] outline-dashed outline-2 -outline-offset-2 outline-[#F2B13B]" : ""}`}
+                      >
+                        <span className="w-8 font-extrabold text-[#5B6B60]">{i + 4}º</span>
+                        <span className="flex-1 font-extrabold">{souEu ? `Você · ${familia(g.name)}` : familia(g.name)}</span>
+                        <span className="font-extrabold">{g.total_points} pts</span>
+                      </li>
+                    );
+                  })}
+                  {guest && minhaPos && !euNaLista && (
+                    <li className="flex items-center gap-3 bg-[#FFF5E0] px-4 py-3 outline-dashed outline-2 -outline-offset-2 outline-[#F2B13B]">
+                      <span className="w-8 font-extrabold">{minhaPos}º</span>
+                      <span className="flex-1 font-extrabold">Você · {familia(guest.name)}</span>
+                      <span className="font-extrabold">{guest.total_points} pts</span>
+                    </li>
+                  )}
+                </ul>
+              </section>
+            )}
+          </>
+        )}
+
+        {guest ? (
+          <section className="rounded-[20px] bg-white p-4 shadow-[0_2px_10px_rgba(20,40,30,0.07)]">
+            <h2 className="text-lg font-extrabold" style={FONTE_TITULO}>
+              Como subir no ranking
+            </h2>
+            <p className="text-[15px] text-[#5B6B60]">✅ Check-in nas atividades · ⭐ Avaliar · 🎮 Jogos</p>
+          </section>
+        ) : (
+          <section className="rounded-[20px] bg-white p-4 text-center shadow-[0_2px_10px_rgba(20,40,30,0.07)]">
+            <h2 className="text-lg font-extrabold" style={FONTE_TITULO}>
+              Quer aparecer no ranking?
+            </h2>
+            <p className="text-[15px] text-[#5B6B60]">Entre com o seu apartamento e participe das atividades.</p>
+            <button
+              type="button"
+              onClick={() => navigate("/guest-auth")}
+              className="mt-3 h-12 w-full rounded-2xl bg-[#1F4D3A] font-extrabold text-white"
+            >
+              Entrar e ganhar 50 pontos
+            </button>
+          </section>
+        )}
+
+        <Link
+          to="/hall-of-fame"
+          className="flex h-12 items-center justify-center rounded-2xl bg-white font-extrabold shadow-[0_2px_10px_rgba(20,40,30,0.07)]"
+        >
+          ⭐ Ver o Hall da Fama
+        </Link>
       </div>
-    </div>
+    </HotelLayout>
   );
 };
 
