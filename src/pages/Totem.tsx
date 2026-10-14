@@ -1,13 +1,7 @@
-import { useEffect, useState, useCallback, useRef } from "react";
+import { useEffect, useState, useCallback, useRef, useMemo } from "react";
 import { useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
-import { TotemSlideSchedule } from "@/components/totem/TotemSlideSchedule";
-import { TotemSlideRanking } from "@/components/totem/TotemSlideRanking";
-import { TotemSlideAnnouncements } from "@/components/totem/TotemSlideAnnouncements";
-import { TotemSlideWeather } from "@/components/totem/TotemSlideWeather";
-import { TotemSlideQRCode } from "@/components/totem/TotemSlideQRCode";
-import { TotemSlideNextActivity } from "@/components/totem/TotemSlideNextActivity";
-import { TotemHeader } from "@/components/totem/TotemHeader";
+import { TelaTotem, useDadosTotem, type SlideNovo } from "@/components/totem/TotemNovo";
 import { cn } from "@/lib/utils";
 import { Shield, Play } from "lucide-react";
 
@@ -242,15 +236,6 @@ interface TotemConfig {
   resolution: string;
 }
 
-const slideComponents: Record<string, React.ComponentType<{ isActive: boolean }>> = {
-  schedule: TotemSlideSchedule,
-  ranking: TotemSlideRanking,
-  announcements: TotemSlideAnnouncements,
-  weather: TotemSlideWeather,
-  qrcode: TotemSlideQRCode,
-  nextactivity: TotemSlideNextActivity,
-};
-
 const Totem = () => {
   const [searchParams] = useSearchParams();
   const [config, setConfig] = useState<TotemConfig | null>(null);
@@ -264,6 +249,27 @@ const Totem = () => {
 
   // Keep screen awake
   const { useVideoFallback, isActive: wakeLockActive, activeMethod } = useWakeLock();
+
+  // Dados das telas (programação, ranking, tempo, destaques e avisos importantes)
+  const dados = useDadosTotem();
+
+  // Sequência de telas: avisos importantes ativos primeiro, depois as telas ligadas no painel
+  const rotacao = useMemo<SlideNovo[]>(() => {
+    const tipos = ["nextactivity", "schedule", "weather", "announcements", "ranking", "qrcode"] as const;
+    const normais: SlideNovo[] = activeSlides
+      .filter((s) => (tipos as readonly string[]).includes(s.type))
+      .map((s) => ({ tipo: s.type as (typeof tipos)[number], duracao: s.duration || 10 }));
+    const alertas: SlideNovo[] = dados.alertas.map((a) => ({ tipo: "alerta", duracao: a.duration_seconds || 10, alerta: a }));
+    return [...alertas, ...normais];
+  }, [activeSlides, dados.alertas]);
+
+  // Tamanho da tela para ampliar o desenho (feito em 1280×720) até caber na TV
+  const [janela, setJanela] = useState({ w: window.innerWidth, h: window.innerHeight });
+  useEffect(() => {
+    const aoMudar = () => setJanela({ w: window.innerWidth, h: window.innerHeight });
+    window.addEventListener("resize", aoMudar);
+    return () => window.removeEventListener("resize", aoMudar);
+  }, []);
 
   const fetchConfig = useCallback(async () => {
     try {
@@ -332,10 +338,10 @@ const Totem = () => {
 
   // Slide rotation with transition
   useEffect(() => {
-    if (activeSlides.length === 0) return;
+    if (rotacao.length === 0) return;
 
-    const currentSlide = activeSlides[currentSlideIndex];
-    const duration = (currentSlide?.duration || 10) * 1000;
+    const currentSlide = rotacao[currentSlideIndex % rotacao.length];
+    const duration = (currentSlide?.duracao || 10) * 1000;
 
     const timer = setTimeout(() => {
       // Start transition
@@ -344,7 +350,7 @@ const Totem = () => {
       
       // After fade out, change slide
       transitionTimeoutRef.current = setTimeout(() => {
-        setCurrentSlideIndex((prev) => (prev + 1) % activeSlides.length);
+        setCurrentSlideIndex((prev) => (prev + 1) % rotacao.length);
         setIsTransitioning(false);
         setPreviousSlideIndex(null);
       }, 500); // Match CSS transition duration
@@ -356,7 +362,7 @@ const Totem = () => {
         clearTimeout(transitionTimeoutRef.current);
       }
     };
-  }, [currentSlideIndex, activeSlides]);
+  }, [currentSlideIndex, rotacao]);
 
   // Fullscreen on click
   const handleFullscreen = () => {
@@ -423,67 +429,34 @@ const Totem = () => {
     );
   }
 
-  const currentSlide = activeSlides[currentSlideIndex];
-  const SlideComponent = currentSlide ? slideComponents[currentSlide.type] : null;
+  const slideAtual = rotacao.length ? rotacao[currentSlideIndex % rotacao.length] : null;
 
-  // Parse resolution
-  const getResolutionStyle = () => {
-    if (!config.resolution || config.resolution === "auto") {
-      return { width: "100vw", height: "100vh" };
-    }
-    const [width, height] = config.resolution.split("x").map(Number);
-    return { width: `${width}px`, height: `${height}px` };
-  };
-
-  const resolutionStyle = getResolutionStyle();
-  const isFixedResolution = config.resolution && config.resolution !== "auto";
+  // Área da TV: resolução fixa do painel ou a tela inteira
+  const [resW, resH] =
+    config.resolution && config.resolution !== "auto" ? config.resolution.split("x").map(Number) : [janela.w, janela.h];
+  const largura = Math.min(resW || janela.w, janela.w);
+  const altura = Math.min(resH || janela.h, janela.h);
+  const escala = Math.min(largura / 1280, altura / 720);
 
   return (
-    <div className="min-h-screen min-w-screen flex items-center justify-center bg-black">
+    <div className="min-h-screen min-w-screen flex items-center justify-center bg-black overflow-hidden">
       <div
         onClick={handleFullscreen}
-        className={`overflow-hidden flex flex-col ${
-          config.theme === "dark" ? "dark" : ""
-        } bg-background text-foreground`}
-        style={isFixedResolution ? resolutionStyle : { width: '100vw', height: '100vh' }}
+        className="relative overflow-hidden bg-[#F4F6F0]"
+        style={{ width: largura, height: altura }}
       >
-      <TotemHeader qrCodeUrl={config.qr_code_url} />
-
-      {/* Main Content Area - flex-1 with min-h-0 to prevent overflow */}
-      <main className="flex-1 min-h-0 flex items-center justify-center p-4 md:p-6 lg:p-8 overflow-hidden relative">
-        <div 
-          className={cn(
-            "w-full h-full max-w-full transition-all duration-500 ease-in-out",
-            isTransitioning ? "opacity-0 scale-95 blur-sm" : "opacity-100 scale-100 blur-0"
-          )}
+        <div
+          className="absolute left-1/2 top-1/2"
+          style={{ width: 1280, height: 720, transform: `translate(-50%, -50%) scale(${escala})` }}
         >
-          {SlideComponent && (
-            <SlideComponent 
-              key={`${currentSlide.type}-${currentSlideIndex}`} 
-              isActive={!isTransitioning} 
-            />
-          )}
-        </div>
-      </main>
-
-      {/* Slide Indicators */}
-      <footer className="py-3 flex-shrink-0 flex justify-center gap-2">
-        {activeSlides.map((slide, index) => (
-          <button
-            key={slide.type}
-            onClick={(e) => {
-              e.stopPropagation();
-              setCurrentSlideIndex(index);
-            }}
-            className={`w-2 h-2 md:w-3 md:h-3 rounded-full transition-all duration-300 ${
-              index === currentSlideIndex
-                ? "bg-primary w-6 md:w-8"
-                : "bg-muted-foreground/30 hover:bg-muted-foreground/50"
-            }`}
-            aria-label={`Ir para slide ${slide.type}`}
+          <TelaTotem
+            key={slideAtual?.tipo === "alerta" ? slideAtual.alerta.id : `${slideAtual?.tipo}-${currentSlideIndex}`}
+            dados={dados}
+            slide={slideAtual}
+            qrUrl={config.qr_code_url || window.location.origin}
+            saindo={isTransitioning}
           />
-        ))}
-      </footer>
+        </div>
 
       {/* Wake Lock Status Indicator */}
       {wakeLockActive && (
