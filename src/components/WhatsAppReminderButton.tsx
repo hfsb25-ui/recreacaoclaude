@@ -10,9 +10,12 @@ interface WhatsAppReminderButtonProps {
   activityId: string;
   activityStartTime: string;
   activityDate: string;
+  /** "hotel" = visual novo do app do hotel */
+  estilo?: "hotel";
 }
 
-const WhatsAppReminderButton = ({ activityId, activityStartTime, activityDate }: WhatsAppReminderButtonProps) => {
+const WhatsAppReminderButton = ({ activityId, activityStartTime, activityDate, estilo }: WhatsAppReminderButtonProps) => {
+  const hotel = estilo === "hotel";
   const { guest, refreshGuest } = useGuestAuth();
   const [askPhone, setAskPhone] = useState(false);
   const [phoneInput, setPhoneInput] = useState("");
@@ -197,7 +200,11 @@ const WhatsAppReminderButton = ({ activityId, activityStartTime, activityDate }:
     <Button
       variant={reminderSet ? "secondary" : "outline"}
       size="sm"
-      className={`w-full ${reminderSet ? "bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 border-green-300 dark:border-green-700" : ""}`}
+      className={
+        hotel
+          ? `w-full h-11 rounded-xl border-0 font-extrabold ${reminderSet ? "bg-[#1E8E4E] text-white hover:bg-[#187A42]" : "bg-[#E7F6EC] text-[#14532D] hover:bg-[#d6efdf]"}`
+          : `w-full ${reminderSet ? "bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 border-green-300 dark:border-green-700" : ""}`
+      }
       onClick={handleToggleReminder}
       disabled={loading}
     >
@@ -208,7 +215,7 @@ const WhatsAppReminderButton = ({ activityId, activityStartTime, activityDate }:
       ) : (
         <MessageSquare className="h-4 w-4 mr-2" />
       )}
-      {reminderSet ? "Lembrete Ativado ✓" : "Lembrar no WhatsApp"}
+      {reminderSet ? "Lembrete Ativado ✓" : hotel ? "Me lembrar no WhatsApp" : "Lembrar no WhatsApp"}
     </Button>
   );
 };

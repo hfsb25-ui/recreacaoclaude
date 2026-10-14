@@ -13,6 +13,8 @@ interface CheckInButtonProps {
   activityStartTime: string;
   activityEndTime: string;
   activityDate: string;
+  /** "hotel" = visual novo do app do hotel */
+  estilo?: "hotel";
 }
 
 const CheckInButton = ({
@@ -20,7 +22,9 @@ const CheckInButton = ({
   activityStartTime,
   activityEndTime,
   activityDate,
+  estilo,
 }: CheckInButtonProps) => {
+  const hotel = estilo === "hotel";
   const navigate = useNavigate();
   const { guest, refreshGuest } = useGuestAuth();
   const { grantSpin } = useGameSpins();
@@ -109,7 +113,7 @@ const CheckInButton = ({
 
   if (hasCheckedIn) {
     return (
-      <Button variant="outline" disabled className="w-full">
+      <Button variant="outline" disabled className={hotel ? "w-full h-12 rounded-xl border-[#1E8E4E] text-[#1E6B3E] font-extrabold opacity-100" : "w-full"}>
         <Check className="h-4 w-4 mr-2" />
         Check-in realizado ✓
       </Button>
@@ -118,7 +122,7 @@ const CheckInButton = ({
 
   if (!isActivityTime) {
     return (
-      <Button variant="outline" disabled className="w-full">
+      <Button variant="outline" disabled className={hotel ? "w-full h-11 rounded-xl" : "w-full"}>
         Check-in disponível durante a atividade
       </Button>
     );
@@ -128,8 +132,13 @@ const CheckInButton = ({
     <Button
       onClick={handleCheckIn}
       disabled={loading || !guest}
-      className="w-full bg-primary hover:bg-primary/90"
+      className={
+        hotel
+          ? "w-full h-[50px] rounded-xl bg-[#1E8E4E] text-base font-extrabold text-white hover:bg-[#187A42]"
+          : "w-full bg-primary hover:bg-primary/90"
+      }
     >
+      {hotel && !loading && <Check className="h-5 w-5 mr-2" />}
       {loading ? "Processando..." : guest ? "Fazer Check-in (+10 pts)" : "Entre para fazer Check-in"}
     </Button>
   );
