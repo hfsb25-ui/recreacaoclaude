@@ -7,6 +7,7 @@ import { Card } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
 import { Plus, Trash2, Edit, ChevronUp, ChevronDown, Eye, EyeOff, Users } from "lucide-react";
+import { SUGESTOES_EMOJI, emojiDaFaixa } from "@/lib/faixas";
 import {
   Dialog,
   DialogContent,
@@ -21,6 +22,7 @@ interface AgeGroup {
   color: string;
   sort_order: number;
   is_active: boolean;
+  emoji?: string | null;
 }
 
 interface AgeGroupRecreador {
@@ -34,6 +36,7 @@ const AgeGroupsManager = () => {
   const [editingGroup, setEditingGroup] = useState<AgeGroup | null>(null);
   const [name, setName] = useState("");
   const [color, setColor] = useState("#00BCD4");
+  const [emoji, setEmoji] = useState("");
   const [recreadorNames, setRecreadorNames] = useState("");
   const [ageGroupRecreadores, setAgeGroupRecreadores] = useState<Record<string, AgeGroupRecreador[]>>({});
 
@@ -81,10 +84,14 @@ const AgeGroupsManager = () => {
 
     try {
       if (editingGroup) {
-        const { error } = await supabase
+        let { error } = await supabase
           .from("age_groups")
-          .update({ name, color })
+          .update({ name, color, emoji: emoji.trim() || null } as any)
           .eq("id", editingGroup.id);
+        if (error && /emoji/i.test(error.message)) {
+          toast.warning("O emoji ainda não pode ser salvo: falta rodar o SQL do campo emoji.");
+          ({ error } = await supabase.from("age_groups").update({ name, color }).eq("id", editingGroup.id));
+        }
 
         if (error) throw error;
 
@@ -93,11 +100,19 @@ const AgeGroupsManager = () => {
         
         toast.success("Faixa etária atualizada!");
       } else {
-        const { data, error } = await supabase
+        let { data, error } = await supabase
           .from("age_groups")
-          .insert([{ name, color, sort_order: ageGroups.length }])
+          .insert([{ name, color, sort_order: ageGroups.length, emoji: emoji.trim() || null } as any])
           .select()
           .single();
+        if (error && /emoji/i.test(error.message)) {
+          toast.warning("O emoji ainda não pode ser salvo: falta rodar o SQL do campo emoji.");
+          ({ data, error } = await supabase
+            .from("age_groups")
+            .insert([{ name, color, sort_order: ageGroups.length }])
+            .select()
+            .single());
+        }
 
         if (error) throw error;
 
@@ -164,6 +179,7 @@ const AgeGroupsManager = () => {
     setEditingGroup(group);
     setName(group.name);
     setColor(group.color);
+    setEmoji(group.emoji || "");
     // Load existing recreadores for this group as comma-separated names
     const existing = ageGroupRecreadores[group.id] || [];
     setRecreadorNames(existing.map(r => r.recreador_name).join(", "));
@@ -175,6 +191,7 @@ const AgeGroupsManager = () => {
     setEditingGroup(null);
     setName("");
     setColor("#00BCD4");
+    setEmoji("");
     setRecreadorNames("");
   };
 
@@ -282,6 +299,35 @@ const AgeGroupsManager = () => {
                 />
               </div>
             </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="emoji">Emoji</Label>
+              <div className="flex items-center gap-2">
+                <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-muted text-2xl" aria-hidden="true">
+                  {emojiDaFaixa(name, emoji)}
+                </span>
+                <Input
+                  id="emoji"
+                  value={emoji}
+                  onChange={(e) => setEmoji(e.target.value.slice(0, 8))}
+                  placeholder="Vazio = escolhe pelo nome"
+                />
+              </div>
+              <div className="flex flex-wrap gap-1.5">
+                {SUGESTOES_EMOJI.map((e) => (
+                  <button
+                    key={e}
+                    type="button"
+                    onClick={() => setEmoji(e)}
+                    aria-label={`Usar ${e}`}
+                    className={`h-9 w-9 rounded-md border text-xl ${emoji === e ? "border-primary bg-primary/10" : "border-border"}`}
+                  >
+                    {e}
+                  </button>
+                ))}
+              </div>
+              <p className="text-xs text-muted-foreground">Aparece no cartão da faixa na Programação.</p>
+            </div>
             
             {/* Recreadores - Manual Input */}
             <div className="space-y-2">
@@ -364,7 +410,7 @@ const AgeGroupsManager = () => {
                 }`}
                 style={{ backgroundColor: group.color }}
               >
-                <h3 className="font-semibold text-white break-words w-full">{group.name}</h3>
+                <h3 className="font-semibold text-white break-words w-full">{emojiDaFaixa(group.name, group.emoji)} {group.name}</h3>
               </div>
               
               {/* Show assigned recreadores */}

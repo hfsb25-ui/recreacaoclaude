@@ -2832,3 +2832,8 @@ REVOKE ALL ON FUNCTION public.guest_login_pms(text, text) FROM public;
 GRANT EXECUTE ON FUNCTION public.guest_login_pms(text, text) TO anon, authenticated;
 REVOKE ALL ON FUNCTION public.guest_login_pin(text, text) FROM public;
 GRANT EXECUTE ON FUNCTION public.guest_login_pin(text, text) TO anon, authenticated;
+
+
+-- ===== 20261014120000_emoji_faixa.sql =====
+-- Emoji de cada faixa etária (aparece no cartão da Programação). Vazio = o app escolhe pelo nome.
+ALTER TABLE public.age_groups ADD COLUMN IF NOT EXISTS emoji text;

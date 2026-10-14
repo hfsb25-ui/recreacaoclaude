@@ -1,262 +1,272 @@
-import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useEffect, useMemo, useState } from "react";
+import { Link, useNavigate } from "react-router-dom";
+import { ChevronLeft, ChevronRight, List } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
-import { Card } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Settings, Sun, Waves, Users, ArrowLeft, User } from "lucide-react";
-import { useGuestAuth } from "@/hooks/useGuestAuth";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+import { HotelLayout, FONTE_TITULO } from "@/components/hotel/HotelLayout";
+import { getLocalDateString } from "@/lib/utils";
+import { corClara, emojiDaFaixa } from "@/lib/faixas";
+import { describeWeather, fetchForecast, type CurrentWeather } from "@/lib/weather";
 
 interface AgeGroup {
   id: string;
   name: string;
   color: string;
   sort_order: number;
+  emoji?: string | null;
 }
 
-const Index = () => {
+interface Atividade {
+  id: string;
+  name: string;
+  start_time: string;
+  end_time: string;
+  age_group_id: string;
+  is_master: boolean;
+}
+
+const hm = (t: string) => t.slice(0, 5);
+const minutos = (t: string) => {
+  const [h, m] = t.split(":").map(Number);
+  return h * 60 + m;
+};
+const agoraMin = () => {
+  const d = new Date();
+  return d.getHours() * 60 + d.getMinutes();
+};
+
+const DIAS = ["domingo", "segunda", "terça", "quarta", "quinta", "sexta", "sábado"];
+
+/** Programação do dia: faixas etárias cadastradas, com a próxima atividade de cada uma. */
+const Schedule = () => {
   const navigate = useNavigate();
-  const { guest, currentLevel, logout } = useGuestAuth();
-  const [ageGroups, setAgeGroups] = useState<AgeGroup[]>([]);
-  const [siteName, setSiteName] = useState("Recreação Hotel");
-  const [loading, setLoading] = useState(true);
+  const [faixas, setFaixas] = useState<AgeGroup[]>([]);
+  const [atividades, setAtividades] = useState<Atividade[]>([]);
+  const [carregando, setCarregando] = useState(true);
+  const [tempo, setTempo] = useState<CurrentWeather | null>(null);
+  const [verTudo, setVerTudo] = useState(false);
+  const [agora, setAgora] = useState(agoraMin());
 
   useEffect(() => {
-    fetchAgeGroups();
-    fetchSiteName();
+    const t = setInterval(() => setAgora(agoraMin()), 60000);
+    return () => clearInterval(t);
   }, []);
 
-  const fetchSiteName = async () => {
-    try {
-      const { data } = await supabase
+  useEffect(() => {
+    (async () => {
+      const [{ data: g }, { data: a }] = await Promise.all([
+        supabase.from("age_groups").select("*").eq("is_active", true).order("sort_order", { ascending: true }),
+        supabase
+          .from("activities")
+          .select("id, name, start_time, end_time, age_group_id, is_master")
+          .eq("activity_date", getLocalDateString())
+          .order("start_time", { ascending: true }),
+      ]);
+      setFaixas((g as AgeGroup[]) ?? []);
+      setAtividades((a as Atividade[]) ?? []);
+      setCarregando(false);
+
+      const { data: cfg } = await supabase
         .from("site_settings")
-        .select("site_name")
-        .single();
-
-      if (data?.site_name) {
-        setSiteName(data.site_name);
+        .select("weather_latitude, weather_longitude")
+        .eq("id", "00000000-0000-0000-0000-000000000001")
+        .maybeSingle();
+      if (cfg?.weather_latitude && cfg?.weather_longitude) {
+        try {
+          setTempo((await fetchForecast(cfg.weather_latitude, cfg.weather_longitude, 1)).current);
+        } catch {
+          // sem clima
+        }
       }
-    } catch (error) {
-      console.error("Error fetching site name:", error);
-    }
-  };
+    })();
+  }, []);
 
-  const fetchAgeGroups = async () => {
-    try {
-      const { data } = await supabase
-        .from("age_groups")
-        .select("*")
-        .eq("is_active", true)
-        .order("sort_order", { ascending: true });
+  const faixaPorId = useMemo(() => Object.fromEntries(faixas.map((f) => [f.id, f])), [faixas]);
 
-      if (data) setAgeGroups(data);
-    } catch (error) {
-      console.error("Error fetching age groups:", error);
-    } finally {
-      setLoading(false);
-    }
-  };
+  const daFaixa = (id: string) => atividades.filter((a) => a.age_group_id === id || a.is_master);
 
-  if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background to-muted">
-        <p className="text-foreground text-lg">Carregando...</p>
-      </div>
-    );
-  }
+  const agoraAcontecendo = atividades.find((a) => minutos(a.start_time) <= agora && agora < minutos(a.end_time));
+
+  const hoje = new Date();
+  const dataLabel = `${DIAS[hoje.getDay()]}, ${hoje.toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" })}`;
+  const clima = tempo ? describeWeather(tempo.weatherCode, tempo.isDay) : null;
+
+  const faixaDoAgora = agoraAcontecendo
+    ? agoraAcontecendo.is_master
+      ? null
+      : faixaPorId[agoraAcontecendo.age_group_id]
+    : null;
 
   return (
-    <div className="min-h-screen bg-background overflow-x-hidden w-full">
-      {/* Header */}
-      <header className="sticky top-0 z-50 border-b border-border/40 backdrop-blur-md bg-background/95 shadow-sm">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          {guest && (
-            <div className="flex items-center justify-center py-2">
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" className="gap-2 hover:bg-primary/10">
-                    <User className="h-4 w-4 text-primary" />
-                    <span className="text-sm font-medium text-foreground">
-                      Olá, {guest.name}!
-                    </span>
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="center" className="w-56 bg-background z-50">
-                  <div className="px-2 py-3 space-y-2">
-                    <div className="flex items-center gap-2 px-2">
-                      <User className="h-5 w-5 text-primary" />
-                      <div>
-                        <p className="font-semibold text-foreground">{guest.name}</p>
-                        <p className="text-xs text-muted-foreground">Quarto {guest.room_number}</p>
-                      </div>
-                    </div>
-                    <div className="border-t border-border my-2"></div>
-                    <div className="px-2 space-y-1">
-                      <div className="flex items-center justify-between">
-                        <span className="text-sm text-muted-foreground">Pontos:</span>
-                        <span className="font-bold text-primary">{guest.total_points}</span>
-                      </div>
-                      {currentLevel && (
-                        <div className="flex items-center justify-between">
-                          <span className="text-sm text-muted-foreground">Nível:</span>
-                          <span className="font-bold text-foreground">
-                            {currentLevel.badge_emoji} {currentLevel.name}
-                          </span>
-                        </div>
-                      )}
-                    </div>
-                    <div className="border-t border-border my-2"></div>
-                    <DropdownMenuItem 
-                      onClick={() => {
-                        logout();
-                        navigate("/");
-                      }}
-                      className="cursor-pointer text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-950"
-                    >
-                      Sair
-                    </DropdownMenuItem>
-                  </div>
-                </DropdownMenuContent>
-              </DropdownMenu>
-            </div>
-          )}
-          <div className="flex justify-between items-center h-20">
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => navigate("/recreacao")}
-              className="hover:bg-accent/50"
-            >
-              <ArrowLeft className="h-5 w-5 mr-2" />
-              Voltar
-            </Button>
-            <div className="flex items-center gap-4">
-              <div className="relative">
-                <div className="absolute inset-0 bg-primary/20 blur-xl rounded-full"></div>
-                <div className="relative p-3 bg-gradient-to-br from-primary to-primary/80 rounded-2xl shadow-lg">
-                  <Waves className="h-7 w-7 text-primary-foreground" />
-                </div>
-              </div>
-              <div>
-                <h1 className="text-2xl sm:text-3xl font-bold text-foreground tracking-tight">
-                  {siteName}
-                </h1>
-                <p className="text-sm text-muted-foreground">Programação do dia</p>
-              </div>
-            </div>
-            <div className="w-24"></div>
+    <HotelLayout>
+      <header className="flex items-center justify-between rounded-b-[28px] bg-[#1F4D3A] px-5 pb-5 pt-5 text-white">
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => navigate("/recreacao")}
+            aria-label="Voltar"
+            className="flex h-11 w-11 items-center justify-center rounded-full bg-white/15"
+          >
+            <ChevronLeft className="h-6 w-6" />
+          </button>
+          <div className="flex flex-col">
+            <h1 className="text-[26px] font-extrabold leading-none" style={FONTE_TITULO}>
+              Programação
+            </h1>
+            <span className="text-sm text-white/90">Hoje · {dataLabel}</span>
           </div>
         </div>
+        {tempo && clima && (
+          <span className="flex items-center gap-1.5 rounded-full bg-white/15 px-3 py-1.5 text-sm font-extrabold">
+            <clima.Icon className="h-[18px] w-[18px] text-[#F2B13B]" />
+            {Math.round(tempo.temperature)}°
+          </span>
+        )}
       </header>
 
-      {/* Hero Section */}
-      <section className="relative py-16 sm:py-20 lg:py-24 px-4 sm:px-6 lg:px-8 overflow-hidden">
-        <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-secondary/5"></div>
-        <div className="absolute top-20 right-10 w-72 h-72 bg-primary/10 rounded-full blur-3xl"></div>
-        <div className="absolute bottom-10 left-10 w-96 h-96 bg-secondary/10 rounded-full blur-3xl"></div>
-        
-        <div className="relative max-w-5xl mx-auto text-center">
-          <div className="inline-flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-accent/20 to-accent/10 border border-accent/30 rounded-full mb-8 shadow-sm">
-            <Sun className="h-5 w-5 text-accent-foreground" />
-            <span className="font-semibold text-sm text-accent-foreground">
-              Diversão para todas as idades
+      <main className="flex flex-col gap-4 px-5 pb-6 pt-[18px]">
+        {agoraAcontecendo && (
+          <Link
+            to={`/activities/${agoraAcontecendo.is_master ? faixas[0]?.id ?? "" : agoraAcontecendo.age_group_id}`}
+            className="flex items-center gap-3 rounded-[20px] bg-[#1D2A22] p-4 text-white"
+          >
+            <span className="relative flex h-3 w-3 shrink-0">
+              <span className="absolute inset-0 animate-ping rounded-full bg-[#4ADE80] opacity-60" />
+              <span className="relative h-3 w-3 rounded-full bg-[#4ADE80]" />
             </span>
-          </div>
-          
-          <h2 className="text-4xl sm:text-5xl lg:text-6xl font-bold mb-6 text-foreground tracking-tight">
-            Escolha sua{" "}
-            <span className="bg-gradient-to-r from-primary via-primary/90 to-secondary bg-clip-text text-transparent">
-              faixa etária
+            <span className="flex min-w-0 flex-1 flex-col">
+              <span className="text-xs font-extrabold uppercase tracking-wider text-[#A7F3C0]">Acontecendo agora</span>
+              <span className="truncate text-lg font-bold leading-tight" style={FONTE_TITULO}>
+                {agoraAcontecendo.name}
+              </span>
+              <span className="text-[13px] text-white/85">
+                {faixaDoAgora ? faixaDoAgora.name : "Todas as idades"} · até {hm(agoraAcontecendo.end_time)}
+              </span>
             </span>
-          </h2>
-          
-          <p className="text-lg sm:text-xl text-muted-foreground max-w-2xl mx-auto leading-relaxed">
-            Selecione sua idade e descubra todas as atividades incríveis programadas para hoje
-          </p>
-        </div>
-      </section>
+            <span className="shrink-0 rounded-xl bg-[#F2B13B] px-3 py-2 text-sm font-extrabold text-[#3A2600]">Check-in</span>
+          </Link>
+        )}
 
-      {/* Age Groups Grid */}
-      <section className="px-4 sm:px-6 lg:px-8 pb-20">
-        <div className="max-w-7xl mx-auto">
-          {ageGroups.length === 0 ? (
-            <Card className="p-12 sm:p-16 text-center shadow-lg border-border/50 bg-card/50 backdrop-blur-sm">
-              <div className="w-20 h-20 mx-auto mb-6 rounded-full bg-muted flex items-center justify-center">
-                <Users className="w-10 h-10 text-muted-foreground" />
-              </div>
-              <p className="text-muted-foreground text-lg mb-6">
-                Nenhuma faixa etária cadastrada ainda.
-              </p>
-              <Button
-                onClick={() => navigate("/auth")}
-                className="bg-gradient-to-r from-primary to-primary/90 hover:opacity-90 shadow-lg"
-              >
-                Cadastrar primeira faixa etária
-              </Button>
-            </Card>
-          ) : (
-            <div className="grid gap-6 sm:gap-8 md:grid-cols-2 lg:grid-cols-3">
-              {ageGroups.map((group, index) => (
-                <Card
-                  key={group.id}
-                  onClick={() => navigate(`/activities/${group.id}`)}
-                  className="group relative p-6 sm:p-8 cursor-pointer border-border/50 bg-card/50 backdrop-blur-sm hover:shadow-2xl hover:-translate-y-1 transition-all duration-300 overflow-hidden"
-                  style={{
-                    animationDelay: `${index * 100}ms`,
-                  }}
-                >
-                  {/* Background gradient effect */}
-                  <div 
-                    className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300"
-                    style={{
-                      background: `radial-gradient(circle at top right, ${group.color}15, transparent 70%)`,
-                    }}
-                  ></div>
-                  
-                  {/* Icon */}
-                  <div className="relative mb-6">
-                    <div 
-                      className="absolute inset-0 blur-xl opacity-50 group-hover:opacity-70 transition-opacity duration-300"
-                      style={{ backgroundColor: group.color }}
-                    ></div>
-                    <div
-                      className="relative w-16 h-16 sm:w-20 sm:h-20 rounded-2xl flex items-center justify-center text-white shadow-lg group-hover:scale-110 transition-transform duration-300"
-                      style={{ backgroundColor: group.color }}
-                    >
-                      <Users className="w-8 h-8 sm:w-10 sm:h-10" />
-                    </div>
-                  </div>
-                  
-                  {/* Content */}
-                  <div className="relative">
-                    <h3 className="text-2xl sm:text-3xl font-bold mb-3 text-foreground group-hover:text-primary transition-colors duration-300">
-                      {group.name}
-                    </h3>
-                    <p className="text-muted-foreground text-sm sm:text-base mb-4">
-                      Veja todas as atividades programadas
-                    </p>
-                    
-                    {/* Arrow indicator */}
-                    <div className="flex items-center text-primary text-sm font-medium opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-                      <span>Ver programação</span>
-                      <svg className="w-4 h-4 ml-2 group-hover:translate-x-1 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                      </svg>
-                    </div>
-                  </div>
-                </Card>
-              ))}
-            </div>
+        <section aria-labelledby="quem" className="flex flex-col gap-3">
+          <h2 id="quem" className="text-xl font-bold" style={FONTE_TITULO}>
+            Para quem é?
+          </h2>
+
+          {carregando && <p className="py-6 text-center text-[#5B6B60]">Carregando…</p>}
+          {!carregando && faixas.length === 0 && (
+            <p className="rounded-[20px] bg-white p-6 text-center text-[#5B6B60]">Nenhuma faixa etária cadastrada.</p>
           )}
-        </div>
-      </section>
-    </div>
+
+          {faixas.map((f) => {
+            const lista = daFaixa(f.id);
+            // Mostra primeiro a próxima atividade da própria faixa; as "para todas as idades" já aparecem no destaque
+            const proxima =
+              lista.find((a) => !a.is_master && minutos(a.end_time) > agora) ??
+              lista.find((a) => minutos(a.end_time) > agora);
+            const emAndamento = proxima && minutos(proxima.start_time) <= agora;
+            const falta = proxima ? minutos(proxima.start_time) - agora : null;
+            const logo = falta !== null && falta > 0 && falta <= 30;
+            return (
+              <Link
+                key={f.id}
+                to={`/activities/${f.id}`}
+                className="relative flex flex-col gap-2.5 overflow-hidden rounded-[22px] bg-white p-4 pl-5 shadow-[0_2px_10px_rgba(20,40,30,0.07)]"
+              >
+                <span aria-hidden="true" className="absolute inset-y-0 left-0 w-2" style={{ background: f.color }} />
+                <div className="flex items-center gap-3">
+                  <span
+                    aria-hidden="true"
+                    className="flex h-14 w-14 shrink-0 items-center justify-center rounded-[18px] text-[30px]"
+                    style={{ background: corClara(f.color) }}
+                  >
+                    {emojiDaFaixa(f.name, f.emoji)}
+                  </span>
+                  <span className="flex-1 text-[21px] font-extrabold leading-tight" style={FONTE_TITULO}>
+                    {f.name}
+                  </span>
+                  <span
+                    className="shrink-0 rounded-full px-2.5 py-1 text-[13px] font-extrabold text-[#1D2A22]"
+                    style={{ background: corClara(f.color, 0.22) }}
+                  >
+                    {lista.length} hoje
+                  </span>
+                </div>
+                {proxima ? (
+                  <div
+                    className={`flex items-center gap-2.5 rounded-[14px] px-3 py-2.5 text-sm ${
+                      emAndamento ? "bg-[#E3F2E8]" : logo ? "bg-[#FFF4DF]" : "bg-[#F4F6F0]"
+                    }`}
+                  >
+                    <span
+                      className={`font-extrabold ${emAndamento ? "text-[#1E6B3E]" : logo ? "text-[#8A5A00]" : "text-[#5B6B60]"}`}
+                    >
+                      {emAndamento ? "Agora" : logo ? `Em ${falta} min` : "Próxima"}
+                    </span>
+                    <b className="text-[17px]" style={FONTE_TITULO}>
+                      {hm(proxima.start_time)}
+                    </b>
+                    <span className="min-w-0 flex-1 truncate">{proxima.name}</span>
+                  </div>
+                ) : (
+                  <div className="rounded-[14px] bg-[#F4F6F0] px-3 py-2.5 text-sm text-[#5B6B60]">
+                    {lista.length ? "As atividades de hoje já terminaram" : "Sem atividades hoje"}
+                  </div>
+                )}
+              </Link>
+            );
+          })}
+        </section>
+
+        {atividades.length > 0 && (
+          <section className="flex flex-col gap-3">
+            <button
+              type="button"
+              onClick={() => setVerTudo((v) => !v)}
+              aria-expanded={verTudo}
+              className="flex items-center justify-between rounded-[18px] bg-white p-4 font-extrabold shadow-[0_2px_8px_rgba(20,40,30,0.06)]"
+            >
+              <span className="flex items-center gap-2.5">
+                <List className="h-[22px] w-[22px] text-[#1F4D3A]" />
+                {verTudo ? "Esconder a lista" : "Ver toda a programação de hoje"}
+              </span>
+              <ChevronRight className={`h-5 w-5 text-[#5B6B60] transition-transform ${verTudo ? "rotate-90" : ""}`} />
+            </button>
+
+            {verTudo && (
+              <ol className="flex flex-col rounded-[18px] bg-white shadow-[0_2px_8px_rgba(20,40,30,0.06)]">
+                {atividades.map((a, i) => {
+                  const f = faixaPorId[a.age_group_id];
+                  const passou = minutos(a.end_time) <= agora;
+                  return (
+                    <li
+                      key={a.id}
+                      className={`flex items-center gap-3 px-4 py-3 ${i < atividades.length - 1 ? "border-b border-[#E6EAE3]" : ""} ${
+                        passou ? "opacity-50" : ""
+                      }`}
+                    >
+                      <span className="w-12 shrink-0 text-[17px] font-extrabold" style={FONTE_TITULO}>
+                        {hm(a.start_time)}
+                      </span>
+                      <span className="flex min-w-0 flex-1 flex-col">
+                        <span className="truncate font-bold">{a.name}</span>
+                        <span className="flex items-center gap-1.5 text-[13px] text-[#5B6B60]">
+                          <span
+                            aria-hidden="true"
+                            className="h-2.5 w-2.5 rounded-full"
+                            style={{ background: a.is_master ? "#1F4D3A" : f?.color ?? "#9DB0A2" }}
+                          />
+                          {a.is_master ? "Todas as idades" : f?.name ?? "Recreação"} · até {hm(a.end_time)}
+                        </span>
+                      </span>
+                    </li>
+                  );
+                })}
+              </ol>
+            )}
+          </section>
+        )}
+      </main>
+    </HotelLayout>
   );
 };
 
-export default Index;
+export default Schedule;
