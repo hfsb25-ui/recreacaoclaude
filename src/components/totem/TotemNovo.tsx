@@ -330,57 +330,42 @@ const SlideProgramacao = ({ dados }: { dados: DadosTotem }) => {
   const agora = useAgora();
   const faixas = useFaixas(dados.faixas);
   const m = agora.getHours() * 60 + agora.getMinutes();
-  const colunas = faixas.slice(0, 4);
+  const rolando = (x: Atividade) => minutos(x.start_time) <= m && minutos(x.end_time) > m;
+  // Só as faixas com atividade acontecendo agora, e só essas atividades
+  const colunas = faixas
+    .map((f) => ({ f, lista: dados.atividades.filter((x) => (x.age_group_id === f.id || x.is_master) && rolando(x)) }))
+    .filter((c) => c.lista.length > 0)
+    .slice(0, 4);
   return (
     <>
-      <TituloSlide titulo="Programação de hoje" sub="por faixa etária" />
-      {colunas.length === 0 || dados.atividades.length === 0 ? (
-        <Vazio emoji="📅" texto="A programação de hoje ainda não foi publicada" />
+      <TituloSlide titulo="Acontecendo agora" sub="por faixa etária" />
+      {colunas.length === 0 ? (
+        <Vazio emoji="🌿" texto="Nenhuma atividade neste momento" />
       ) : (
         <div className="flex min-h-0 flex-1 gap-4">
-          {colunas.map((f) => {
-            const lista = dados.atividades.filter((a) => a.age_group_id === f.id || a.is_master);
-            // mostra a partir da última que já passou, para caber o que interessa
-            const inicio = Math.max(0, lista.findIndex((a) => minutos(a.end_time) > m) - 1);
-            const visiveis = lista.slice(inicio, inicio + 7);
-            return (
-              <div key={f.id} className={`${CARD} flex min-w-0 flex-1 flex-col overflow-hidden`}>
-                <div className="flex items-center gap-2.5 px-4 py-3" style={{ background: corClara(f.color, 0.18) }}>
-                  <span className="text-3xl">{f.emojiFinal}</span>
-                  <span className="truncate text-2xl font-extrabold" style={{ ...TITULO, color: f.color }}>
-                    {f.nome}
-                  </span>
-                </div>
-                <div className="flex flex-col gap-0.5 p-2">
-                  {visiveis.length === 0 && (
-                    <span className="p-3 text-lg font-bold" style={{ color: CINZA }}>
-                      Sem atividades hoje
-                    </span>
-                  )}
-                  {visiveis.map((a) => {
-                    const passou = minutos(a.end_time) <= m;
-                    const agoraSim = minutos(a.start_time) <= m && !passou;
-                    return agoraSim ? (
-                      <div key={a.id} className="flex items-center gap-3 rounded-[14px] bg-[#1E6B3E] px-3 py-2 text-white">
-                        <span className="w-[58px] text-xl font-extrabold" style={TITULO}>
-                          {hm(a.start_time)}
-                        </span>
-                        <span className="flex-1 text-[17px] font-extrabold leading-tight">{a.name}</span>
-                        <span className="rounded-full bg-white px-2 py-0.5 text-xs font-extrabold text-[#1E6B3E]">AGORA</span>
-                      </div>
-                    ) : (
-                      <div key={a.id} className="flex items-center gap-3 px-3 py-2" style={{ opacity: passou ? 0.45 : 1 }}>
-                        <span className="w-[58px] text-xl font-extrabold" style={TITULO}>
-                          {hm(a.start_time)}
-                        </span>
-                        <span className="text-[17px] font-bold leading-tight">{a.name}</span>
-                      </div>
-                    );
-                  })}
-                </div>
+          {colunas.map(({ f, lista }) => (
+            <div key={f.id} className={`${CARD} flex min-w-0 flex-1 flex-col overflow-hidden`}>
+              <div className="flex items-center gap-2.5 px-4 py-3" style={{ background: corClara(f.color, 0.18) }}>
+                <span className="text-3xl">{f.emojiFinal}</span>
+                <span className="truncate text-2xl font-extrabold" style={{ ...TITULO, color: f.color }}>
+                  {f.nome}
+                </span>
               </div>
-            );
-          })}
+              <div className="flex flex-col gap-2 p-2">
+                {lista.map((x) => (
+                  <div key={x.id} className="flex flex-col gap-1 rounded-[14px] bg-[#1E6B3E] px-4 py-3 text-white">
+                    <span className="self-start rounded-full bg-white px-2.5 py-0.5 text-xs font-extrabold text-[#1E6B3E]">
+                      AGORA · {hm(x.start_time)} às {hm(x.end_time)}
+                    </span>
+                    <span className="text-[22px] font-extrabold leading-tight" style={TITULO}>
+                      {x.name}
+                    </span>
+                    {x.description && <span className="line-clamp-2 text-[15px] font-bold text-white/85">📍 {x.description}</span>}
+                  </div>
+                ))}
+              </div>
+            </div>
+          ))}
         </div>
       )}
     </>
