@@ -232,6 +232,23 @@ const HotelHome = () => {
               <span className="rounded-full bg-white/70 px-3 py-1 text-sm font-extrabold">{guest.total_points} pts</span>
             )}
           </Link>
+          <Link
+            to={guest ? "/estadia" : "/guest-auth"}
+            className="flex items-center gap-3 rounded-[20px] bg-white p-4 shadow-[0_2px_8px_rgba(20,40,30,0.06)]"
+          >
+            <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-[#E7F0EA] text-[#1F4D3A]">
+              <Receipt className="h-6 w-6" />
+            </span>
+            <span className="flex flex-1 flex-col">
+              <span className="text-lg font-extrabold" style={FONTE_TITULO}>
+                Minha estadia
+              </span>
+              <span className="text-sm text-[#5B6B60]">
+                {guest ? "Datas da reserva e consumo detalhado" : "Entre com seu apartamento para ver"}
+              </span>
+            </span>
+            <ChevronRight className="h-5 w-5 text-[#5B6B60]" />
+          </Link>
           <div className="grid grid-cols-2 gap-3">
             <Link to="/hotel" className="flex flex-col gap-2 rounded-[20px] bg-white p-4 shadow-[0_2px_8px_rgba(20,40,30,0.06)]">
               <span className="flex h-11 w-11 items-center justify-center rounded-2xl bg-[#E7F0EA] text-[#1F4D3A]">
