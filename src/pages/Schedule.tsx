@@ -4,7 +4,7 @@ import { ChevronLeft, ChevronRight, List } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { HotelLayout, FONTE_TITULO } from "@/components/hotel/HotelLayout";
 import { getLocalDateString } from "@/lib/utils";
-import { corClara, emojiDaFaixa } from "@/lib/faixas";
+import { corClara, coresDistintas, emojiDaFaixa } from "@/lib/faixas";
 import { describeWeather, fetchForecast, type CurrentWeather } from "@/lib/weather";
 
 interface AgeGroup {
@@ -97,7 +97,11 @@ const Schedule = () => {
     };
   }, []);
 
-  const faixaPorId = useMemo(() => Object.fromEntries(faixas.map((f) => [f.id, f])), [faixas]);
+  const cores = useMemo(() => coresDistintas(faixas), [faixas]);
+  const faixaPorId = useMemo(
+    () => Object.fromEntries(faixas.map((f) => [f.id, { ...f, color: cores[f.id] ?? f.color }])),
+    [faixas, cores],
+  );
 
   const daFaixa = (id: string) => atividades.filter((a) => a.age_group_id === id || a.is_master);
 
@@ -173,7 +177,8 @@ const Schedule = () => {
             <p className="rounded-[20px] bg-white p-6 text-center text-[#5B6B60]">Nenhuma faixa etária cadastrada.</p>
           )}
 
-          {faixas.map((f) => {
+          {faixas.map((orig) => {
+            const f = faixaPorId[orig.id];
             const lista = daFaixa(f.id);
             // Mostra primeiro a próxima atividade da própria faixa; as "para todas as idades" já aparecem no destaque
             const proxima =
