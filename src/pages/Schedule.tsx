@@ -258,13 +258,16 @@ const Schedule = () => {
                 {atividades.map((a, i) => {
                   const f = faixaPorId[a.age_group_id];
                   const passou = minutos(a.end_time) <= agora;
+                  const agoraTa = minutos(a.start_time) <= agora && agora < minutos(a.end_time);
                   return (
                     <li
                       key={a.id}
+                      aria-current={agoraTa ? "time" : undefined}
                       className={`flex items-center gap-3 px-4 py-3 ${i < atividades.length - 1 ? "border-b border-[#E6EAE3]" : ""} ${
                         passou ? "opacity-50" : ""
-                      }`}
+                      } ${agoraTa ? "relative bg-[#E3F2E8] first:rounded-t-[18px] last:rounded-b-[18px]" : ""}`}
                     >
+                      {agoraTa && <span aria-hidden="true" className="absolute inset-y-0 left-0 w-1.5 bg-[#1E8E4E]" />}
                       <span className="w-12 shrink-0 text-[17px] font-extrabold" style={FONTE_TITULO}>
                         {hm(a.start_time)}
                       </span>
@@ -279,6 +282,15 @@ const Schedule = () => {
                           {a.is_master ? "Todas as idades" : f?.name ?? "Recreação"} · até {hm(a.end_time)}
                         </span>
                       </span>
+                      {agoraTa && (
+                        <span className="flex shrink-0 items-center gap-1.5 rounded-full bg-[#1E8E4E] px-2.5 py-1 text-xs font-extrabold uppercase text-white">
+                          <span className="relative flex h-2 w-2">
+                            <span className="absolute inset-0 animate-ping rounded-full bg-white opacity-70" />
+                            <span className="relative h-2 w-2 rounded-full bg-white" />
+                          </span>
+                          Agora
+                        </span>
+                      )}
                     </li>
                   );
                 })}
