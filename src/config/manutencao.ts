@@ -5,7 +5,7 @@
 //
 // Os links de teste da Vercel (Preview) e o computador local nunca entram em manutenção,
 // para dar para testar as mudanças.
-export const MANUTENCAO_LIGADA = true;
+export const MANUTENCAO_LIGADA = false;
 
 // Estas páginas continuam funcionando mesmo em manutenção (equipe e totem).
 const ROTAS_LIBERADAS = ["/admin", "/auth", "/totem"];
