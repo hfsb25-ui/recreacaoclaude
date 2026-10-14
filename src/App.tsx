@@ -21,6 +21,8 @@ const Games = lazy(() => import("./pages/Games"));
 const HotelMap = lazy(() => import("./pages/HotelMap"));
 const Pet = lazy(() => import("./pages/Pet"));
 import NotFound from "./pages/NotFound";
+import Manutencao from "./pages/Manutencao";
+import { deveMostrarManutencao } from "./config/manutencao";
 
 // Component that uses hooks that require Router context
 const AppRoutes = () => {
@@ -60,6 +62,7 @@ const queryClient = new QueryClient({
 
 const AppContent = () => {
   useTheme();
+  const [emManutencao] = useState(deveMostrarManutencao);
   const [showSplash, setShowSplash] = useState(true);
   const [isFirstLoad, setIsFirstLoad] = useState(true);
 
@@ -77,6 +80,10 @@ const AppContent = () => {
   const handleSplashFinish = () => {
     setShowSplash(false);
   };
+
+  if (emManutencao) {
+    return <Manutencao />;
+  }
 
   if (showSplash && isFirstLoad) {
     return <SplashScreen onFinish={handleSplashFinish} />;

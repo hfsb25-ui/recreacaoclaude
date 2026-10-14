@@ -21,6 +21,10 @@ export default defineConfig(({ mode }) => {
   const siteUrl = siteHost ? (siteHost.startsWith("http") ? siteHost : `https://${siteHost}`).replace(/\/+$/, "") : "";
 
   return {
+  // Ambiente da Vercel (production / preview) — usado pelo modo manutenção
+  define: {
+    __VERCEL_ENV__: JSON.stringify(process.env.VERCEL_ENV || "local"),
+  },
   server: {
     host: "::",
     port: 8080,
