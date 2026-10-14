@@ -1,6 +1,6 @@
 import { ReactNode } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
-import { ChevronLeft, Home, Sparkles, Hotel, User } from "lucide-react";
+import { ChevronLeft, Home, Sparkles, Hotel, User, Receipt } from "lucide-react";
 import { useGuestAuth } from "@/hooks/useGuestAuth";
 
 const FONTE_TITULO = { fontFamily: "'Baloo 2', system-ui, sans-serif" };
@@ -37,19 +37,23 @@ export const HotelPageHeader = ({ title, subtitle, back = "/" }: { title: string
   );
 };
 
-const NAV = [
-  { to: "/", label: "Início", Icon: Home },
-  { to: "/recreacao", label: "Recreação", Icon: Sparkles },
-  { to: "/hotel", label: "O hotel", Icon: Hotel },
-];
-
 /** Estrutura das telas do hotel: fundo claro, conteúdo e barra de navegação embaixo. */
 export const HotelLayout = ({ children }: { children: ReactNode }) => {
   const { pathname } = useLocation();
   const { guest } = useGuestAuth();
-  const perfil = guest
-    ? { to: "/guest-profile", label: "Perfil", Icon: User }
-    : { to: "/guest-auth", label: "Entrar", Icon: User };
+  const itens = guest
+    ? [
+        { to: "/", label: "Início", Icon: Home },
+        { to: "/recreacao", label: "Recreação", Icon: Sparkles },
+        { to: "/estadia", label: "Estadia", Icon: Receipt },
+        { to: "/guest-profile", label: "Perfil", Icon: User },
+      ]
+    : [
+        { to: "/", label: "Início", Icon: Home },
+        { to: "/recreacao", label: "Recreação", Icon: Sparkles },
+        { to: "/hotel", label: "O hotel", Icon: Hotel },
+        { to: "/guest-auth", label: "Entrar", Icon: User },
+      ];
 
   return (
     <div className="min-h-[100dvh] w-full bg-[#F4F6F0] text-[#1D2A22]" style={{ fontFamily: "'Nunito', system-ui, sans-serif" }}>
@@ -59,7 +63,7 @@ export const HotelLayout = ({ children }: { children: ReactNode }) => {
         className="fixed inset-x-0 bottom-0 z-40 border-t border-[#E1E6DE] bg-white pb-[env(safe-area-inset-bottom)]"
       >
         <div className="mx-auto grid h-[68px] max-w-md grid-cols-4">
-          {[...NAV, perfil].map(({ to, label, Icon }) => {
+          {itens.map(({ to, label, Icon }) => {
             const ativo = to === "/" ? pathname === "/" : pathname.startsWith(to);
             return (
               <Link

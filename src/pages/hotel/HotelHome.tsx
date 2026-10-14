@@ -175,7 +175,7 @@ const HotelHome = () => {
         {/* Consumo */}
         {consumo && (
           <Link
-            to="/guest-profile"
+            to="/estadia"
             aria-label={`Meu consumo até agora: ${brl(consumo.total)}. Abrir detalhes`}
             className="flex items-center gap-3 rounded-[20px] bg-white p-4 shadow-[0_2px_8px_rgba(20,40,30,0.06)]"
           >

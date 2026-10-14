@@ -10,6 +10,7 @@ import Home from "./pages/Home";
 import HotelHome from "./pages/hotel/HotelHome";
 const HotelInfo = lazy(() => import("./pages/hotel/HotelInfo"));
 const HotelAvisos = lazy(() => import("./pages/hotel/HotelAvisos"));
+const HotelEstadia = lazy(() => import("./pages/hotel/HotelEstadia"));
 import Schedule from "./pages/Schedule";
 import Activities from "./pages/Activities";
 const Auth = lazy(() => import("./pages/Auth"));
@@ -38,6 +39,7 @@ const AppRoutes = () => {
       <Route path="/recreacao" element={<Home />} />
       <Route path="/hotel" element={<HotelInfo />} />
       <Route path="/avisos" element={<HotelAvisos />} />
+      <Route path="/estadia" element={<HotelEstadia />} />
       <Route path="/programacao" element={<Schedule />} />
       <Route path="/activities/:ageGroupId" element={<Activities />} />
       <Route path="/auth" element={<Auth />} />
