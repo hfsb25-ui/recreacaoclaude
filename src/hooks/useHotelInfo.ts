@@ -14,6 +14,13 @@ export interface Ramal {
   urgente: boolean;
 }
 
+export interface Contato {
+  nome: string;
+  descricao: string;
+  whatsapp: string;
+  visivel: boolean;
+}
+
 export interface HotelInfo {
   horarios: Horario[];
   wifi_rede: string;
@@ -22,6 +29,7 @@ export interface HotelInfo {
   whatsapp: string;
   whatsapp_mensagem: string;
   ramais: Ramal[];
+  contatos: Contato[];
 }
 
 /** Valores de reserva, caso o banco ainda não tenha a tabela ou esteja fora do ar. */
@@ -33,6 +41,7 @@ export const HOTEL_INFO_PADRAO: HotelInfo = {
   whatsapp: HOTEL.whatsapp,
   whatsapp_mensagem: "",
   ramais: HOTEL.ramais,
+  contatos: [],
 };
 
 let cache: HotelInfo | null = null;
@@ -45,6 +54,7 @@ const normalizar = (d: Partial<HotelInfo> | null): HotelInfo => ({
   whatsapp: (d?.whatsapp ?? HOTEL_INFO_PADRAO.whatsapp).replace(/\D/g, ""),
   whatsapp_mensagem: d?.whatsapp_mensagem ?? "",
   ramais: Array.isArray(d?.ramais) ? (d!.ramais as Ramal[]) : HOTEL_INFO_PADRAO.ramais,
+  contatos: Array.isArray(d?.contatos) ? (d!.contatos as Contato[]) : [],
 });
 
 export const carregarHotelInfo = async (): Promise<HotelInfo> => {
@@ -90,3 +100,12 @@ export const linkWhatsapp = (info: HotelInfo, apto?: string) => {
 
 export const ramalRecepcao = (info: HotelInfo) =>
   (info.ramais.find((r) => /recep/i.test(r.nome)) ?? info.ramais.find((r) => !r.urgente) ?? info.ramais[0])?.ramal ?? "";
+
+/** Número só com dígitos e com o 55 do Brasil na frente. */
+export const numeroWhatsapp = (numero: string) => {
+  const d = numero.replace(/\D/g, "");
+  if (!d) return "";
+  return d.startsWith("55") && d.length > 11 ? d : `55${d}`;
+};
+
+export const linkContato = (c: Contato) => `https://wa.me/${numeroWhatsapp(c.whatsapp)}`;

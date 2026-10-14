@@ -11,6 +11,9 @@ import {
   carregarHotelInfo,
   formatarWhatsapp,
   linkWhatsapp,
+  linkContato,
+  numeroWhatsapp,
+  type Contato,
   type HotelInfo,
   type Horario,
   type Ramal,
@@ -46,6 +49,9 @@ const HotelInfoManager = () => {
   const setRamal = (i: number, campo: keyof Ramal, valor: string | boolean) =>
     setInfo({ ...info, ramais: info.ramais.map((r, k) => (k === i ? { ...r, [campo]: valor } : r)) });
 
+  const setContato = (i: number, campo: keyof Contato, valor: string | boolean) =>
+    setInfo({ ...info, contatos: info.contatos.map((c, k) => (k === i ? { ...c, [campo]: valor } : c)) });
+
   const digitos = telefone.replace(/\D/g, "");
   const whatsapp = digitos ? (digitos.startsWith("55") && digitos.length > 11 ? digitos : `55${digitos}`) : "";
 
@@ -61,11 +67,17 @@ const HotelInfoManager = () => {
         whatsapp,
         whatsapp_mensagem: info.whatsapp_mensagem.trim(),
         ramais: info.ramais.filter((r) => r.nome.trim()).map((r) => ({ ...r, nome: r.nome.trim(), ramal: r.ramal.trim() })),
+        contatos: info.contatos
+          .filter((c) => c.nome.trim() && numeroWhatsapp(c.whatsapp))
+          .map((c) => ({ ...c, nome: c.nome.trim(), descricao: c.descricao.trim(), whatsapp: numeroWhatsapp(c.whatsapp) })),
         updated_at: new Date().toISOString(),
       };
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const { error } = await (supabase as any).from("hotel_info").upsert(dados);
       if (error) {
+        if (/contatos/.test(error.message)) {
+          throw new Error("Falta rodar o SQL dos contatos no Supabase.");
+        }
         if (/hotel_info/.test(error.message) && /exist|schema cache/i.test(error.message)) {
           throw new Error("Falta rodar o SQL da tabela de informações do hotel no Supabase.");
         }
@@ -186,6 +198,43 @@ const HotelInfoManager = () => {
             </a>
           )}
         </p>
+      </Card>
+
+      <Card className="p-5 space-y-3">
+        <h3 className="text-lg font-semibold">Outros contatos (WhatsApp)</h3>
+        <p className="text-xs text-muted-foreground">
+          Farmácia, táxi, passeios… Aparecem em "O hotel" e o hóspede toca para abrir a conversa no WhatsApp.
+        </p>
+        {info.contatos.map((c, i) => (
+          <div key={i} className="flex flex-wrap items-center gap-2 border-b pb-3 last:border-b-0 last:pb-0">
+            <div className="flex flex-col">
+              <button type="button" aria-label="Subir" onClick={() => setInfo({ ...info, contatos: mover(info.contatos, i, -1) })} className="text-muted-foreground hover:text-foreground">
+                <ChevronUp className="h-4 w-4" />
+              </button>
+              <button type="button" aria-label="Descer" onClick={() => setInfo({ ...info, contatos: mover(info.contatos, i, 1) })} className="text-muted-foreground hover:text-foreground">
+                <ChevronDown className="h-4 w-4" />
+              </button>
+            </div>
+            <Input className="flex-1 min-w-[140px]" aria-label="Nome" placeholder="Ex.: Farmácia São José" value={c.nome} onChange={(e) => setContato(i, "nome", e.target.value)} />
+            <Input className="w-44" aria-label="WhatsApp" inputMode="tel" placeholder="(24) 99999-0000" value={c.whatsapp.startsWith("55") ? formatarWhatsapp(c.whatsapp) : c.whatsapp} onChange={(e) => setContato(i, "whatsapp", e.target.value)} />
+            <Input className="flex-1 min-w-[180px]" aria-label="Descrição" placeholder="Ex.: Entrega no hotel (opcional)" value={c.descricao} onChange={(e) => setContato(i, "descricao", e.target.value)} />
+            <div className="flex items-center gap-1.5">
+              <Switch checked={c.visivel !== false} onCheckedChange={(v) => setContato(i, "visivel", v)} aria-label="Mostrar no app" />
+              <span className="text-xs text-muted-foreground w-12">{c.visivel !== false ? "No app" : "Oculto"}</span>
+            </div>
+            {numeroWhatsapp(c.whatsapp) && (
+              <a className="text-xs underline font-medium" href={linkContato(c)} target="_blank" rel="noopener noreferrer">
+                Testar
+              </a>
+            )}
+            <Button type="button" variant="ghost" size="icon" aria-label="Remover" onClick={() => setInfo({ ...info, contatos: info.contatos.filter((_, k) => k !== i) })}>
+              <Trash2 className="h-4 w-4" />
+            </Button>
+          </div>
+        ))}
+        <Button type="button" variant="outline" size="sm" onClick={() => setInfo({ ...info, contatos: [...info.contatos, { nome: "", descricao: "", whatsapp: "", visivel: true }] })}>
+          <Plus className="h-4 w-4 mr-1" /> Adicionar contato
+        </Button>
       </Card>
 
       <div className="sticky bottom-4 flex justify-end">

@@ -2885,3 +2885,7 @@ VALUES (
     {"nome":"Emergência","ramal":"402","urgente":true}]'::jsonb
 )
 ON CONFLICT (id) DO NOTHING;
+
+-- 20261014200000_contatos_hotel.sql
+-- Outros contatos de WhatsApp (farmácia, táxi, passeios…) na tela "O hotel"
+ALTER TABLE public.hotel_info ADD COLUMN IF NOT EXISTS contatos jsonb NOT NULL DEFAULT '[]'::jsonb;

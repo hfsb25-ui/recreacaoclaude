@@ -2,12 +2,19 @@ import { useState } from "react";
 import { Link } from "react-router-dom";
 import { Check, ChevronRight, Copy, Map, Wifi } from "lucide-react";
 import { HotelLayout, HotelPageHeader, FONTE_TITULO } from "@/components/hotel/HotelLayout";
-import { useHotelInfo, linkWhatsapp, formatarWhatsapp } from "@/hooks/useHotelInfo";
+import { useHotelInfo, linkWhatsapp, formatarWhatsapp, linkContato } from "@/hooks/useHotelInfo";
 import { useGuestAuth } from "@/hooks/useGuestAuth";
+
+const IconeWhatsapp = ({ size = 28 }: { size?: number }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="#1E8E4E" aria-hidden="true">
+    <path d="M12 2a10 10 0 0 0-8.6 15.1L2 22l5-1.3A10 10 0 1 0 12 2zm5.3 14.1c-.2.6-1.3 1.2-1.8 1.2-.5.1-1 .2-3.3-.7-2.8-1.1-4.6-4-4.7-4.2-.1-.2-1.1-1.5-1.1-2.9s.7-2.1 1-2.4c.3-.3.6-.3.8-.3h.6c.2 0 .4 0 .6.5l.9 2.1c.1.2.1.4 0 .6l-.4.6-.4.4c-.1.1-.3.3-.1.6.2.3.8 1.3 1.7 2.1 1.2 1 2.1 1.3 2.4 1.5.3.1.5.1.6-.1l.9-1.1c.2-.3.4-.2.7-.1l2 1c.3.1.5.2.5.3.1.2.1.7-.1 1.3z" />
+  </svg>
+);
 
 const HotelInfo = () => {
   const info = useHotelInfo();
   const { guest } = useGuestAuth();
+  const contatos = info.contatos.filter((c) => c.visivel !== false && c.nome && c.whatsapp);
   const horarios = info.horarios.filter((h) => h.visivel !== false && h.nome && h.horario);
   const [copiado, setCopiado] = useState(false);
 
@@ -100,9 +107,7 @@ const HotelInfo = () => {
               rel="noopener noreferrer"
               className="col-span-2 flex items-center gap-3 rounded-2xl bg-[#E7F6EC] p-4 text-[#14532D] shadow-[0_2px_8px_rgba(20,40,30,0.06)]"
             >
-              <svg width="28" height="28" viewBox="0 0 24 24" fill="#1E8E4E" aria-hidden="true">
-                <path d="M12 2a10 10 0 0 0-8.6 15.1L2 22l5-1.3A10 10 0 1 0 12 2zm5.3 14.1c-.2.6-1.3 1.2-1.8 1.2-.5.1-1 .2-3.3-.7-2.8-1.1-4.6-4-4.7-4.2-.1-.2-1.1-1.5-1.1-2.9s.7-2.1 1-2.4c.3-.3.6-.3.8-.3h.6c.2 0 .4 0 .6.5l.9 2.1c.1.2.1.4 0 .6l-.4.6-.4.4c-.1.1-.3.3-.1.6.2.3.8 1.3 1.7 2.1 1.2 1 2.1 1.3 2.4 1.5.3.1.5.1.6-.1l.9-1.1c.2-.3.4-.2.7-.1l2 1c.3.1.5.2.5.3.1.2.1.7-.1 1.3z" />
-              </svg>
+              <IconeWhatsapp />
               <span className="flex flex-col">
                 <span className="font-extrabold">WhatsApp do hotel</span>
                 <span className="text-sm">{formatarWhatsapp(info.whatsapp)} · toque para abrir</span>
@@ -110,6 +115,34 @@ const HotelInfo = () => {
             </a>
           </div>
         </section>
+
+        {contatos.length > 0 && (
+          <section aria-labelledby="outros" className="flex flex-col gap-2.5">
+            <h2 id="outros" className="text-xl font-bold" style={FONTE_TITULO}>
+              Outros contatos
+            </h2>
+            <div className="rounded-[18px] bg-white shadow-[0_2px_8px_rgba(20,40,30,0.06)]">
+              {contatos.map((c, i) => (
+                <a
+                  key={`${c.nome}-${i}`}
+                  href={linkContato(c)}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className={`flex items-center gap-3 px-4 py-3.5 ${i < contatos.length - 1 ? "border-b border-[#E6EAE3]" : ""}`}
+                >
+                  <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-[#E7F6EC]">
+                    <IconeWhatsapp size={24} />
+                  </span>
+                  <span className="flex flex-1 flex-col">
+                    <span className="font-extrabold">{c.nome}</span>
+                    <span className="text-sm text-[#5B6B60]">{c.descricao || formatarWhatsapp(c.whatsapp)}</span>
+                  </span>
+                  <ChevronRight className="h-5 w-5 text-[#5B6B60]" />
+                </a>
+              ))}
+            </div>
+          </section>
+        )}
       </main>
     </HotelLayout>
   );
