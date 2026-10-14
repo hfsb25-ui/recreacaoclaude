@@ -463,21 +463,35 @@ const SlideDestaques = ({ dados, duracao }: { dados: DadosTotem; duracao: number
     <>
       <TituloSlide titulo="Destaques" sub="novidades do hotel" />
       {img ? (
-        /* Banner inteiro, sem cortar: o fundo desfocado preenche as sobras */
-        <div className={`${CARD} relative flex min-h-0 flex-1 items-center justify-center overflow-hidden bg-[#1D2A22]`}>
-          <img src={img} alt="" aria-hidden className="absolute inset-0 h-full w-full scale-110 object-cover opacity-60 blur-2xl" />
-          <img src={img} alt={a.title} className="relative h-full w-full object-contain" />
-          {lista.length > 1 && (
-            <div className="absolute bottom-3 left-1/2 flex -translate-x-1/2 gap-2 rounded-full bg-black/40 px-3 py-2">
-              {lista.map((x, k) => (
-                <span
-                  key={x.id}
-                  className="h-2.5 rounded-full"
-                  style={{ width: k === i ? 30 : 10, background: k === i ? "#FFFFFF" : "rgba(255,255,255,.5)" }}
-                />
-              ))}
+        /* Banner inteiro, sem cortar (o fundo desfocado preenche as sobras), com título e legenda embaixo */
+        <div className={`${CARD} flex min-h-0 flex-1 flex-col overflow-hidden`}>
+          <div className="relative flex min-h-0 flex-1 items-center justify-center overflow-hidden bg-[#1D2A22]">
+            <img src={img} alt="" aria-hidden className="absolute inset-0 h-full w-full scale-110 object-cover opacity-60 blur-2xl" />
+            <img src={img} alt={a.title} className="relative h-full w-full object-contain" />
+          </div>
+          <div className="flex shrink-0 items-center gap-5 px-7 py-4">
+            <div className="flex min-w-0 flex-1 flex-col gap-1">
+              <span className="truncate text-[34px] font-extrabold leading-tight" style={TITULO}>
+                {a.title}
+              </span>
+              {a.description && (
+                <span className="line-clamp-2 text-[19px] font-bold leading-snug" style={{ color: CINZA }}>
+                  {a.description}
+                </span>
+              )}
             </div>
-          )}
+            {lista.length > 1 && (
+              <div className="flex shrink-0 gap-2">
+                {lista.map((x, k) => (
+                  <span
+                    key={x.id}
+                    className="h-2.5 rounded-full"
+                    style={{ width: k === i ? 30 : 10, background: k === i ? VERDE : "#C9D2C6" }}
+                  />
+                ))}
+              </div>
+            )}
+          </div>
         </div>
       ) : (
       <div className={`${CARD} flex min-h-0 flex-1 overflow-hidden`}>
