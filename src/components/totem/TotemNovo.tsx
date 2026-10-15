@@ -695,56 +695,27 @@ const Cabecalho = ({ dados }: { dados: DadosTotem }) => {
   );
 };
 
-const Lateral = ({ dados, qrUrl }: { dados: DadosTotem; qrUrl: string }) => {
-  const agora = useAgora();
-  const faixas = useFaixas(dados.faixas);
-  const m = agora.getHours() * 60 + agora.getMinutes();
-  const porId = Object.fromEntries(faixas.map((f) => [f.id, f]));
-  const proximas = dados.atividades.filter((a) => minutos(a.start_time) > m).slice(0, 3);
-  return (
-    <aside className="flex w-[330px] shrink-0 flex-col gap-4">
-      <section className={`${CARD} min-h-0 flex-1 px-[18px] py-4`}>
-        <span className="text-[22px] font-extrabold" style={TITULO}>
-          A seguir
-        </span>
-        {proximas.length === 0 ? (
-          <p className="mt-2 text-base font-bold" style={{ color: CINZA }}>
-            Por hoje é só! Amanhã tem mais 🌙
-          </p>
-        ) : (
-          proximas.map((a, k) => {
-            const f = porId[a.age_group_id];
-            return (
-              <div key={a.id} className={`flex items-center gap-3 py-2.5 ${k < proximas.length - 1 ? "border-b border-[#E6EAE3]" : ""}`}>
-                <span className="w-16 text-[22px] font-extrabold" style={TITULO}>
-                  {hm(a.start_time)}
-                </span>
-                <span className="flex min-w-0 flex-1 flex-col leading-tight">
-                  <span className="truncate text-[17px] font-extrabold">{a.name}</span>
-                  <span className="text-[13px] font-bold" style={{ color: a.is_master ? VERDE : f?.color ?? CINZA }}>
-                    {a.is_master ? "👨‍👩‍👧 Todos" : `${f?.emojiFinal ?? "🎈"} ${f?.nome ?? "Recreação"}`}
-                  </span>
-                </span>
-              </div>
-            );
-          })
-        )}
-      </section>
-      <section className={`${CARD} flex flex-col items-center gap-2.5 p-[18px] text-center`}>
-        <span className="text-[22px] font-extrabold leading-tight" style={TITULO}>
-          Abra o app no celular
-        </span>
-        <span className="flex rounded-2xl border-[3px] p-2.5" style={{ borderColor: VERDE }}>
-          <img src={qrImagem(qrUrl, 300)} alt="QR code do app" className="h-[150px] w-[150px]" />
-        </span>
-        <span className="text-[15px] font-bold" style={{ color: CINZA }}>
-          Aponte a câmera · entre com o apto
-          <br />e <b style={{ color: VERDE }}>ganhe 50 pontos</b>
-        </span>
-      </section>
-    </aside>
-  );
-};
+/** Lateral fixa: só o QR code do app (as próximas atividades não ficam mais em todas as telas). */
+const Lateral = ({ qrUrl }: { dados: DadosTotem; qrUrl: string }) => (
+  <aside className="flex w-[330px] shrink-0 flex-col">
+    <section className={`${CARD} flex flex-1 flex-col items-center justify-center gap-4 p-6 text-center`}>
+      <span className="text-[28px] font-extrabold leading-tight" style={TITULO}>
+        Abra o app no celular
+      </span>
+      <span className="flex rounded-3xl border-4 p-3" style={{ borderColor: VERDE }}>
+        <img src={qrImagem(qrUrl, 400)} alt="QR code do app" className="h-[230px] w-[230px]" />
+      </span>
+      <span className="text-lg font-bold leading-snug" style={{ color: CINZA }}>
+        Aponte a câmera e entre
+        <br />
+        com o apartamento
+      </span>
+      <span className="rounded-full bg-[#FFF4E0] px-4 py-2 text-lg font-extrabold" style={{ color: VERDE }}>
+        ⭐ Ganhe 50 pontos
+      </span>
+    </section>
+  </aside>
+);
 
 const Rodape = ({ hotel }: { hotel: HotelInfo }) => {
   const itens: ReactNode[] = [];
