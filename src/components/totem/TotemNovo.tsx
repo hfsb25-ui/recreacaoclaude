@@ -210,7 +210,10 @@ const useAgora = () => {
 /** "Kids (4 a 8 anos)" → { nome: "Kids", idade: "4 a 8 anos" } */
 const partesFaixa = (nome: string) => {
   const m = /^(.*?)\s*\((.*)\)\s*$/.exec(nome);
-  return m ? { nome: m[1], idade: m[2] } : { nome, idade: "" };
+  if (m) return { nome: m[1], idade: m[2] };
+  // "Baby 3 à 5 anos" → { nome: "Baby", idade: "3 à 5 anos" }
+  const d = /^(.*?\D)\s+(\d.*)$/.exec(nome.trim());
+  return d ? { nome: d[1].replace(/[\s\-–·]+$/, ""), idade: d[2] } : { nome, idade: "" };
 };
 
 /** Emoji grande do tempo a partir do código do Open-Meteo */
@@ -273,104 +276,80 @@ export const temAtividadeAgora = (dados: DadosTotem, quando = new Date()) => {
   return dados.atividades.some((a) => minutos(a.start_time) <= m && minutos(a.end_time) > m);
 };
 
-const SlideAgora = ({ dados }: { dados: DadosTotem }) => {
-  const agora = useAgora();
-  const faixas = useFaixas(dados.faixas);
-  const m = agora.getHours() * 60 + agora.getMinutes();
-
-  // Só as faixas que têm atividade neste momento
-  const cartoes = faixas
-    .map((f) => ({ f, a: atividadeAgora(dados, f.id, m) }))
-    .filter((x): x is { f: (typeof faixas)[number]; a: Atividade } => Boolean(x.a))
-    .slice(0, 4);
-  return (
-    <>
-      <TituloSlide titulo="Acontecendo agora" sub="Venha participar!" />
-      {cartoes.length === 0 ? (
-        <Vazio emoji="🌿" texto="Nenhuma atividade neste momento" />
-      ) : (
-        <div className="flex min-h-0 flex-1 gap-4">
-          {cartoes.map(({ f, a }) => (
-            <div key={f.id} className={`${CARD} flex min-w-0 flex-1 flex-col overflow-hidden`}>
-              <div className="flex items-center gap-3 px-[18px] py-4" style={{ background: corClara(f.color, 0.18) }}>
-                <span className="text-[44px] leading-none">{f.emojiFinal}</span>
-                <span className="flex min-w-0 flex-col leading-tight">
-                  <span className="truncate text-[26px] font-extrabold" style={{ ...TITULO, color: f.color }}>
-                    {f.nome}
-                  </span>
-                  {f.idade && <span className="text-sm font-bold" style={{ color: CINZA }}>{f.idade}</span>}
-                </span>
-              </div>
-              <div className="flex flex-1 flex-col gap-2 px-[18px] py-4">
-                <span className="inline-flex items-center gap-1.5 self-start rounded-full bg-[#1E6B3E] px-3 py-1 text-sm font-extrabold text-white">
-                  ● AGORA · até {hm(a.end_time)}
-                </span>
-                <span className="text-[30px] font-extrabold leading-[1.05]" style={TITULO}>
-                  {a.name}
-                </span>
-                {a.description && (
-                  <span className="line-clamp-3 text-[17px] font-bold" style={{ color: CINZA }}>
-                    📍 {a.description}
-                  </span>
-                )}
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
-      <div className={`${CARD} flex items-center gap-3.5 bg-[#FFF4E0] px-5 py-3.5`}>
-        <span className="text-3xl">⭐</span>
-        <span className="text-[19px] font-extrabold">Faça check-in pelo app em cada atividade e ganhe pontos para o ranking da semana!</span>
-      </div>
-    </>
-  );
-};
-
-const SlideProgramacao = ({ dados }: { dados: DadosTotem }) => {
+/** Faixas com o que está acontecendo agora, uma linha por faixa (nome inteiro + atividade grande). */
+const ListaAgora = ({ dados }: { dados: DadosTotem }) => {
   const agora = useAgora();
   const faixas = useFaixas(dados.faixas);
   const m = agora.getHours() * 60 + agora.getMinutes();
   const rolando = (x: Atividade) => minutos(x.start_time) <= m && minutos(x.end_time) > m;
-  // Só as faixas com atividade acontecendo agora, e só essas atividades
-  const colunas = faixas
-    .map((f) => ({ f, lista: dados.atividades.filter((x) => (x.age_group_id === f.id || x.is_master) && rolando(x)) }))
-    .filter((c) => c.lista.length > 0)
-    .slice(0, 4);
+  const linhas = faixas
+    .map((f) => {
+      const proprias = dados.atividades.filter((x) => x.age_group_id === f.id && !x.is_master && rolando(x));
+      const todos = dados.atividades.filter((x) => x.is_master && rolando(x));
+      return { f, lista: (proprias.length ? proprias : todos).slice(0, 2) };
+    })
+    .filter((l) => l.lista.length > 0)
+    .slice(0, 5);
+
+  if (linhas.length === 0) return <Vazio emoji="🌿" texto="Nenhuma atividade neste momento" />;
+
+  const compacto = linhas.length >= 4;
   return (
-    <>
-      <TituloSlide titulo="Acontecendo agora" sub="por faixa etária" />
-      {colunas.length === 0 ? (
-        <Vazio emoji="🌿" texto="Nenhuma atividade neste momento" />
-      ) : (
-        <div className="flex min-h-0 flex-1 gap-4">
-          {colunas.map(({ f, lista }) => (
-            <div key={f.id} className={`${CARD} flex min-w-0 flex-1 flex-col overflow-hidden`}>
-              <div className="flex items-center gap-2.5 px-4 py-3" style={{ background: corClara(f.color, 0.18) }}>
-                <span className="text-3xl">{f.emojiFinal}</span>
-                <span className="truncate text-2xl font-extrabold" style={{ ...TITULO, color: f.color }}>
-                  {f.nome}
+    <div className="flex min-h-0 flex-1 flex-col gap-3">
+      {linhas.map(({ f, lista }) => (
+        <div key={f.id} className={`${CARD} flex min-h-0 flex-1 overflow-hidden`} style={{ maxHeight: 190 }}>
+          <div
+            className={`flex shrink-0 items-center gap-4 ${compacto ? "w-[330px] px-5" : "w-[360px] px-6"}`}
+            style={{ background: corClara(f.color, 0.2), borderLeft: `10px solid ${f.color}` }}
+          >
+            <span className={compacto ? "text-[46px] leading-none" : "text-[60px] leading-none"}>{f.emojiFinal}</span>
+            <span className="flex min-w-0 flex-col leading-[1.05]">
+              <span className={`line-clamp-2 font-extrabold ${compacto ? "text-[30px]" : "text-[36px]"}`} style={{ ...TITULO, color: f.color }}>
+                {f.nome}
+              </span>
+              {f.idade && (
+                <span className={`font-extrabold ${compacto ? "text-[17px]" : "text-[20px]"}`} style={{ color: CINZA }}>
+                  {f.idade}
                 </span>
+              )}
+            </span>
+          </div>
+          <div className="flex min-w-0 flex-1 divide-x divide-[#E6EAE3]">
+            {lista.map((x) => (
+              <div key={x.id} className={`flex min-w-0 flex-1 flex-col justify-center gap-1.5 ${compacto ? "px-6" : "px-8"}`}>
+                <span className="inline-flex items-center gap-1.5 self-start rounded-full bg-[#1E6B3E] px-3 py-1 text-[15px] font-extrabold text-white">
+                  ● AGORA · {hm(x.start_time)} às {hm(x.end_time)}
+                </span>
+                <span className={`line-clamp-2 font-extrabold leading-[1.05] ${compacto ? "text-[32px]" : "text-[40px]"}`} style={TITULO}>
+                  {x.name}
+                </span>
+                {x.description && (
+                  <span className={`truncate font-bold ${compacto ? "text-[17px]" : "text-[20px]"}`} style={{ color: CINZA }}>
+                    📍 {x.description}
+                  </span>
+                )}
               </div>
-              <div className="flex flex-col gap-2 p-2">
-                {lista.map((x) => (
-                  <div key={x.id} className="flex flex-col gap-1 rounded-[14px] bg-[#1E6B3E] px-4 py-3 text-white">
-                    <span className="self-start rounded-full bg-white px-2.5 py-0.5 text-xs font-extrabold text-[#1E6B3E]">
-                      AGORA · {hm(x.start_time)} às {hm(x.end_time)}
-                    </span>
-                    <span className="text-[22px] font-extrabold leading-tight" style={TITULO}>
-                      {x.name}
-                    </span>
-                    {x.description && <span className="line-clamp-2 text-[15px] font-bold text-white/85">📍 {x.description}</span>}
-                  </div>
-                ))}
-              </div>
-            </div>
-          ))}
+            ))}
+          </div>
         </div>
-      )}
-    </>
+      ))}
+    </div>
   );
 };
+
+const SlideAgora = ({ dados }: { dados: DadosTotem }) => (
+  <>
+    <TituloSlide titulo="Acontecendo agora" sub="Venha participar!" />
+    <ListaAgora dados={dados} />
+  </>
+);
+
+const SlideProgramacao = ({ dados }: { dados: DadosTotem }) => (
+  <>
+    <TituloSlide titulo="Acontecendo agora" sub="por faixa etária" />
+    <ListaAgora dados={dados} />
+  </>
+);
 
 const SlideTempo = ({ dados }: { dados: DadosTotem }) => {
   const f = dados.tempo;
