@@ -112,7 +112,14 @@ const Pet = () => {
     });
     setAdopting(false);
     if (error || !data) {
-      toast.error("Não foi possível adotar agora. Tente de novo.");
+      console.error("Erro ao adotar:", error);
+      const motivo = error?.message ?? "";
+      toast.error(
+        /Hóspede não encontrado/.test(motivo)
+          ? "Seu acesso expirou. Entre de novo com o apartamento e o sobrenome."
+          : `Não foi possível adotar agora.${motivo ? ` (${motivo})` : ""}`,
+        { duration: 10000 },
+      );
       return;
     }
     try {
