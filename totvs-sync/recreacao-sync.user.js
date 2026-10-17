@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Recreação HFSB – Sincronizar hóspedes e consumo do PMS
 // @namespace    https://github.com/hfsb25-ui/recreacaoclaude
-// @version      1.5.1
+// @version      1.5.2
 // @description  Envia ao app de Recreação os hóspedes na casa (2 vezes por dia: manhã e 20h, relatório "Hóspedes na Casa") e o consumo por apartamento (a cada 30 min) do TOTVS PMS SaaS.
 // @match        https://gestaopms.totvshospitalidade.com/*
 // @run-at       document-start
@@ -607,46 +607,52 @@
   };
 
   // ---------- 4) Aviso discreto no canto da tela ----------
-  // Fica só uma bolinha pequena e meio transparente; passando o mouse mostra o texto completo.
-  let badge;
+  // Só uma bolinha verde (tudo certo) ou vermelha (problema). Clicando, abre o texto e o botão de sincronizar.
+  let badge, dot, panel, panelText;
   let lastText = "";
   let lastOk = true;
-  let expanded = false;
+  let open = false;
   const refreshBadge = () => lastText && show(lastText, lastOk);
+  const build = () => {
+    badge = document.createElement("div");
+    badge.style.cssText =
+      "position:fixed;right:10px;bottom:10px;z-index:2147483647;font:12px/1.35 system-ui,sans-serif;" +
+      "display:flex;flex-direction:column;align-items:flex-end;gap:6px";
+    panel = document.createElement("div");
+    panel.style.cssText =
+      "display:none;max-width:340px;padding:8px 10px;border-radius:10px;background:#fff;color:#1d2a22;" +
+      "box-shadow:0 4px 14px rgba(0,0,0,.18);border:1px solid #e1e6de";
+    panelText = document.createElement("div");
+    const btn = document.createElement("button");
+    btn.textContent = "Sincronizar agora";
+    btn.style.cssText =
+      "margin-top:6px;padding:4px 10px;border:0;border-radius:6px;background:#1F4D3A;color:#fff;font:600 12px system-ui,sans-serif;cursor:pointer";
+    btn.addEventListener("click", (e) => {
+      e.stopPropagation();
+      run(true);
+      runConsumption(true);
+    });
+    panel.append(panelText, btn);
+    dot = document.createElement("div");
+    dot.style.cssText = "width:12px;height:12px;border-radius:50%;cursor:pointer;box-shadow:0 0 0 2px #fff,0 1px 4px rgba(0,0,0,.3)";
+    dot.addEventListener("click", () => {
+      open = !open;
+      panel.style.display = open ? "block" : "none";
+    });
+    badge.append(panel, dot);
+    document.body.appendChild(badge);
+  };
   const show = (text, ok) => {
     lastText = text;
     lastOk = ok;
     if (!document.body) return;
-    if (!badge) {
-      badge = document.createElement("div");
-      badge.style.cssText =
-        "position:fixed;right:8px;bottom:8px;z-index:2147483647;font:11px/1.2 system-ui,sans-serif;" +
-        "padding:3px 7px;border-radius:999px;box-shadow:0 1px 4px rgba(0,0,0,.15);cursor:pointer;" +
-        "opacity:.45;transition:opacity .15s;white-space:nowrap;max-width:60vw;overflow:hidden;text-overflow:ellipsis";
-      badge.addEventListener("mouseenter", () => {
-        expanded = true;
-        badge.style.opacity = "1";
-        refreshBadge();
-      });
-      badge.addEventListener("mouseleave", () => {
-        expanded = false;
-        badge.style.opacity = ".45";
-        refreshBadge();
-      });
-      badge.addEventListener("click", () => {
-        run(true);
-        runConsumption(true);
-      });
-      document.body.appendChild(badge);
-    }
+    if (!badge) build();
     const allOk = ok && consumptionOk;
     const full = consumptionStatus ? `${text} · ${consumptionStatus}` : text;
-    badge.style.background = allOk ? "#e8f7ee" : "#fdecea";
-    badge.style.color = allOk ? "#14532d" : "#7f1d1d";
-    badge.title = `${full}\nClique para sincronizar agora`;
-    // Fechado: só um ícone e "Rec."; com problema, mostra um aviso curto para chamar atenção
-    const icone = (text.match(/^\S+/) || ["•"])[0];
-    badge.textContent = expanded ? full : allOk ? `${icone} Rec.` : "⚠️ Rec.";
+    const working = /^🔄/.test(text);
+    dot.style.background = working ? "#F2B13B" : allOk ? "#16a34a" : "#dc2626";
+    dot.title = `${full}\n(clique para ver detalhes)`;
+    panelText.textContent = `Recreação HFSB — ${full}`;
   };
 
   let running = false;
