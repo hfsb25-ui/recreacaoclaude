@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Recreação HFSB – Sincronizar hóspedes e consumo do PMS
 // @namespace    https://github.com/hfsb25-ui/recreacaoclaude
-// @version      1.5.0
+// @version      1.5.1
 // @description  Envia ao app de Recreação os hóspedes na casa (2 vezes por dia: manhã e 20h, relatório "Hóspedes na Casa") e o consumo por apartamento (a cada 30 min) do TOTVS PMS SaaS.
 // @match        https://gestaopms.totvshospitalidade.com/*
 // @run-at       document-start
@@ -607,9 +607,11 @@
   };
 
   // ---------- 4) Aviso discreto no canto da tela ----------
+  // Fica só uma bolinha pequena e meio transparente; passando o mouse mostra o texto completo.
   let badge;
   let lastText = "";
   let lastOk = true;
+  let expanded = false;
   const refreshBadge = () => lastText && show(lastText, lastOk);
   const show = (text, ok) => {
     lastText = text;
@@ -618,9 +620,19 @@
     if (!badge) {
       badge = document.createElement("div");
       badge.style.cssText =
-        "position:fixed;right:12px;bottom:12px;z-index:2147483647;font:12px/1.3 system-ui,sans-serif;" +
-        "padding:6px 10px;border-radius:8px;box-shadow:0 2px 8px rgba(0,0,0,.2);cursor:pointer;opacity:.9";
-      badge.title = "Clique para sincronizar agora";
+        "position:fixed;right:8px;bottom:8px;z-index:2147483647;font:11px/1.2 system-ui,sans-serif;" +
+        "padding:3px 7px;border-radius:999px;box-shadow:0 1px 4px rgba(0,0,0,.15);cursor:pointer;" +
+        "opacity:.45;transition:opacity .15s;white-space:nowrap;max-width:60vw;overflow:hidden;text-overflow:ellipsis";
+      badge.addEventListener("mouseenter", () => {
+        expanded = true;
+        badge.style.opacity = "1";
+        refreshBadge();
+      });
+      badge.addEventListener("mouseleave", () => {
+        expanded = false;
+        badge.style.opacity = ".45";
+        refreshBadge();
+      });
       badge.addEventListener("click", () => {
         run(true);
         runConsumption(true);
@@ -628,9 +640,13 @@
       document.body.appendChild(badge);
     }
     const allOk = ok && consumptionOk;
+    const full = consumptionStatus ? `${text} · ${consumptionStatus}` : text;
     badge.style.background = allOk ? "#e8f7ee" : "#fdecea";
     badge.style.color = allOk ? "#14532d" : "#7f1d1d";
-    badge.textContent = consumptionStatus ? `${text} · ${consumptionStatus}` : text;
+    badge.title = `${full}\nClique para sincronizar agora`;
+    // Fechado: só um ícone e "Rec."; com problema, mostra um aviso curto para chamar atenção
+    const icone = (text.match(/^\S+/) || ["•"])[0];
+    badge.textContent = expanded ? full : allOk ? `${icone} Rec.` : "⚠️ Rec.";
   };
 
   let running = false;
