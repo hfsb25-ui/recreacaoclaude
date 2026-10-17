@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
@@ -9,7 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { PetArt, PET_SPECIES, PET_STAGES, stageFromXp, type PetSpecies } from "@/components/pet/PetArt";
 import { shareOrDownloadCertificate } from "@/components/pet/petCertificate";
-import { InteractivePet } from "@/components/pet/InteractivePet";
+import { PetCasa, prepararCuidados, XP_CUIDADO_MAX, type Cuidados } from "@/components/pet/PetCasa";
 import { HotelLayout, HotelPageHeader } from "@/components/hotel/HotelLayout";
 
 const VERDE = "#10B981";
@@ -23,6 +23,8 @@ interface PetData {
   checkins: number;
   ratings: number;
   games: number;
+  cuidados?: Partial<Cuidados> | null;
+  cuidados_em?: string | null;
 }
 
 const db = supabase as any;
@@ -30,27 +32,21 @@ const display = { fontFamily: "'Baloo 2', system-ui, sans-serif" };
 const cartao = "rounded-[20px] bg-white p-4 shadow-[0_2px_10px_rgba(20,40,30,0.07)]";
 
 const CARE = [
-  { emoji: "🍎", action: "Participar de uma atividade", effect: "come e cresce", xp: 15 },
-  { emoji: "💬", action: "Avaliar uma atividade", effect: "conversa com você", xp: 10 },
-  { emoji: "🎾", action: "Jogar na Roda da Sorte ou nos jogos", effect: "brinca", xp: 5 },
+  { emoji: "✅", action: "Fazer check-in numa atividade", effect: "cresce e ganha 5 moedas", xp: "+15" },
+  { emoji: "💬", action: "Avaliar uma atividade", effect: "conversa com você", xp: "+10" },
+  { emoji: "🎰", action: "Jogar na Roda da Sorte ou nos jogos", effect: "brinca", xp: "+5" },
+  { emoji: "💚", action: "Cuidar dele aqui todo dia", effect: "comer, banho, dormir e brincar", xp: `até +${XP_CUIDADO_MAX}` },
 ];
 
-/** Cenário do pasto com cerca de madeira */
-const Pasture = ({ children }: { children: React.ReactNode }) => (
-  <div className="relative w-full overflow-hidden rounded-[24px]" style={{ background: "linear-gradient(#DCEEFB 0%, #EAF6FB 56%, #B7F0CF 56%)" }}>
-    <svg className="absolute inset-x-0 bottom-0 w-full" viewBox="0 0 400 60" preserveAspectRatio="none" aria-hidden>
-      <path d="M0 18 Q200 -6 400 18 V60 H0 Z" fill="#9DDFB6" />
-      <g fill="#A0673B">
-        {Array.from({ length: 9 }, (_, i) => (
-          <rect key={i} x={10 + i * 48} y={4} width={8} height={40} rx={2} />
-        ))}
-        <rect x={0} y={12} width={400} height={6} rx={2} />
-        <rect x={0} y={26} width={400} height={6} rx={2} />
-      </g>
-    </svg>
-    <div className="relative">{children}</div>
-  </div>
-);
+/** Cuidados salvos no celular quando o banco não respondeu (usa o mais recente). */
+const cuidadosLocais = (guestId: string) => {
+  try {
+    const x = JSON.parse(localStorage.getItem(`pet-cuidados-${guestId}`) ?? "null");
+    return x && x.c && x.em ? (x as { c: Partial<Cuidados>; em: string }) : null;
+  } catch {
+    return null;
+  }
+};
 
 const familyOf = (name: string) => {
   const p = name.trim().split(/\s+/);
@@ -67,6 +63,8 @@ const Pet = () => {
   const [adopting, setAdopting] = useState(false);
   const [grewTo, setGrewTo] = useState<number | null>(null);
   const [saving, setSaving] = useState(false);
+  const [cuidados, setCuidados] = useState<Cuidados | null>(null);
+  const aoMudarCuidados = useCallback((c: Cuidados) => setCuidados(c), []);
   const artRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -79,8 +77,13 @@ const Pet = () => {
       const { data } = await db.rpc("get_pet", { p_guest_id: guest.id });
       if (data && !Array.isArray(data) && data.species) {
         setPet(data as PetData);
+        const local = cuidadosLocais(guest.id);
+        const doBanco = data.cuidados_em ? { c: data.cuidados, em: data.cuidados_em } : null;
+        const usar = local && (!doBanco || local.em > doBanco.em) ? local : doBanco;
+        const c = prepararCuidados(usar?.c, usar?.em, data.checkins ?? 0);
+        setCuidados(c);
         // comemora quando o bichinho mudou de fase desde a última visita
-        const stage = stageFromXp(data.xp);
+        const stage = stageFromXp(data.xp + Math.min(XP_CUIDADO_MAX, c.xp));
         const key = `pet-stage-${data.id}`;
         let seen = -1;
         try {
@@ -118,8 +121,24 @@ const Pet = () => {
       /* ignora */
     }
     setPet(data as PetData);
+    setCuidados(prepararCuidados(null, null, data.checkins ?? 0));
     toast.success(`${data.name} agora é seu! 💚`);
   };
+
+  const xpTotal = (pet?.xp ?? 0) + Math.min(XP_CUIDADO_MAX, cuidados?.xp ?? 0);
+  const faseAtual = stageFromXp(xpTotal);
+  // comemora quando cresce enquanto a família está cuidando
+  useEffect(() => {
+    if (!pet) return;
+    const key = `pet-stage-${pet.id}`;
+    try {
+      const visto = Number(localStorage.getItem(key) ?? "-1");
+      if (visto >= 0 && faseAtual > visto) setGrewTo(faseAtual);
+      localStorage.setItem(key, String(faseAtual));
+    } catch {
+      /* sem armazenamento */
+    }
+  }, [pet, faseAtual]);
 
   const downloadCertificate = async () => {
     if (!pet || !guest) return;
@@ -131,7 +150,7 @@ const Pet = () => {
         svgMarkup: svgEl.outerHTML,
         petName: pet.name,
         species: pet.species,
-        stage: stageFromXp(pet.xp),
+        stage: stageFromXp(xpTotal),
         familyName: familyOf(guest.name),
         roomNumber: guest.room_number,
         adoptedAt: pet.created_at,
@@ -221,31 +240,32 @@ const Pet = () => {
         ) : (
           /* ---------- BICHINHO ---------- */
           (() => {
-            const stage = stageFromXp(pet.xp);
+            const stage = faseAtual;
             const next = PET_STAGES[stage + 1];
             const current = PET_STAGES[stage];
-            const progress = next ? ((pet.xp - current.minXp) / (next.minXp - current.minXp)) * 100 : 100;
+            const progress = next ? ((xpTotal - current.minXp) / (next.minXp - current.minXp)) * 100 : 100;
             const species = PET_SPECIES.find((s) => s.id === pet.species)!;
             return (
               <>
-                <InteractivePet
-                  species={pet.species}
-                  stage={stage}
-                  name={pet.name}
-                  frame={(petNode) => (
-                    <Pasture>
-                      <div className="flex flex-col items-center pt-4 pb-10">
-                        {petNode}
-                        <h2 className="-mt-2 text-[32px] font-extrabold leading-tight text-[#1D2A22]" style={display}>
-                          {pet.name}
-                        </h2>
-                        <span className="rounded-full bg-white/85 px-3 py-0.5 text-sm font-extrabold text-[#1F4D3A]">
-                          {species.label} · Fase {stage + 1} de {PET_STAGES.length}
-                        </span>
-                      </div>
-                    </Pasture>
-                  )}
-                />
+                <div className="flex items-end justify-between gap-2 px-1">
+                  <h2 className="text-[30px] font-extrabold leading-none" style={display}>
+                    {pet.name}
+                  </h2>
+                  <span className="rounded-full bg-[#ECFDF5] px-3 py-1 text-sm font-extrabold text-[#1F4D3A]">
+                    {species.label} · Fase {stage + 1} de {PET_STAGES.length}
+                  </span>
+                </div>
+                {cuidados && guest && (
+                  <PetCasa
+                    guestId={guest.id}
+                    species={pet.species}
+                    stage={stage}
+                    nome={pet.name}
+                    checkins={pet.checkins}
+                    inicial={cuidados}
+                    onChange={aoMudarCuidados}
+                  />
+                )}
                 {/* versão estática (sempre de olhos abertos) usada na certidão */}
                 <div ref={artRef} className="hidden" aria-hidden>
                   <PetArt species={pet.species} stage={stage} size={240} eyes={stage === 0 ? "sleep" : "open"} />
@@ -257,7 +277,7 @@ const Pet = () => {
                       {next ? "Crescendo" : "Fase final"}
                     </h2>
                     <span className="text-sm font-extrabold text-[#1F4D3A]">
-                      {next ? `${pet.xp - current.minXp} de ${next.minXp - current.minXp} ⭐` : "🏆"}
+                      {next ? `${Math.floor(xpTotal - current.minXp)} de ${next.minXp - current.minXp} ⭐` : "🏆"}
                     </span>
                   </div>
                   <div
@@ -276,7 +296,7 @@ const Pet = () => {
                   <p className="mt-2 text-sm text-[#5B6B60]">
                     {next ? (
                       <>
-                        Faltam {next.minXp - pet.xp} estrelas para virar <b className="text-[#1D2A22]">{next.name}</b>
+                        Faltam {Math.ceil(next.minXp - xpTotal)} estrelas para virar <b className="text-[#1D2A22]">{next.name}</b>
                         {stage + 1 === PET_STAGES.length - 1 ? " 🏆" : ""}
                       </>
                     ) : (
@@ -287,7 +307,7 @@ const Pet = () => {
 
                 <section className={cartao}>
                   <h2 className="text-lg font-extrabold mb-2" style={display}>
-                    Como ganhar estrelas
+                    Como fazer {pet.name} crescer
                   </h2>
                   <ul className="space-y-2.5">
                     {CARE.map((c) => (
@@ -299,7 +319,7 @@ const Pet = () => {
                           {c.action}
                           <span className="block text-sm text-[#5B6B60]">{pet.name} {c.effect}</span>
                         </span>
-                        <span className="whitespace-nowrap font-extrabold">+{c.xp} ⭐</span>
+                        <span className="whitespace-nowrap font-extrabold">{c.xp} ⭐</span>
                       </li>
                     ))}
                   </ul>

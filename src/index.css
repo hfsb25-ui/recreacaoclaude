@@ -224,3 +224,8 @@ All colors MUST be HSL.
   .pet-breathe, .pet-hop, .pet-hop-twice, .pet-wiggle, .pet-chomp, .pet-drop, .pet-ball { animation: none; }
   .pet-heart { animation-duration: 0.01s; }
 }
+
+/* ---------- Casinha do bichinho ---------- */
+@keyframes casa-sobe { to { transform: translateY(-80px) scale(1.3); opacity: 0; } }
+@keyframes casa-bolha { to { transform: translateY(-50px) scale(1.4); opacity: 0; } }
+@keyframes casa-cai { to { transform: translateY(460px); } }
