@@ -552,12 +552,6 @@ const SlideRanking = ({ dados }: { dados: DadosTotem }) => {
                 <span className="text-lg font-extrabold">{g.total_points} pts</span>
               </div>
             ))}
-            <div className="flex-1" />
-            {dados.campeao && (
-              <div className="rounded-[14px] bg-[#FCE7F3] px-3.5 py-2.5 text-base font-extrabold">
-                👑 Campeão da semana passada: {familia(dados.campeao.guest_name)}
-              </div>
-            )}
           </div>
         </div>
       )}
