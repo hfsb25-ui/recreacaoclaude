@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { useGuestAuth } from "@/hooks/useGuestAuth";
+import { useGuestAuth, hospedeNaoExiste, AVISO_SESSAO_EXPIRADA } from "@/hooks/useGuestAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
@@ -26,7 +26,7 @@ const CheckInButton = ({
 }: CheckInButtonProps) => {
   const hotel = estilo === "hotel";
   const navigate = useNavigate();
-  const { guest, refreshGuest } = useGuestAuth();
+  const { guest, refreshGuest, logout } = useGuestAuth();
   const { grantSpin } = useGameSpins();
   const [hasCheckedIn, setHasCheckedIn] = useState(false);
   const [isActivityTime, setIsActivityTime] = useState(false);
@@ -92,7 +92,15 @@ const CheckInButton = ({
         points_earned: 10,
       });
 
-      if (error) throw error;
+      if (error) {
+        if (hospedeNaoExiste(error)) {
+          logout();
+          toast.info(AVISO_SESSAO_EXPIRADA, { id: "sessao-expirada", duration: 8000 });
+          navigate("/guest-auth");
+          return;
+        }
+        throw error;
+      }
 
       setHasCheckedIn(true);
       await refreshGuest();

@@ -1,5 +1,32 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
+
+/** Mensagem quando o cadastro salvo no celular não existe mais (ex.: depois de fechar a semana do ranking). */
+export const AVISO_SESSAO_EXPIRADA = "Seu acesso expirou. Entre de novo com o apartamento e o sobrenome.";
+
+/** Erro de chave estrangeira do hóspede: o cadastro foi apagado do banco. */
+export const hospedeNaoExiste = (error: { code?: string; message?: string } | null | undefined) =>
+  Boolean(error && (error.code === "23503" || /guest_id_fkey/.test(error.message ?? "")));
+
+// Confere uma vez por abertura do app se o hóspede salvo no celular ainda existe no banco
+const conferencias = new Map<string, Promise<boolean>>();
+const hospedeExiste = (id: string) => {
+  let conferencia = conferencias.get(id);
+  if (!conferencia) {
+    conferencia = (async () => {
+      try {
+        const { data, error } = await supabase.from("guests").select("id").eq("id", id).maybeSingle();
+        if (error) return true; // sem internet ou erro do banco: não desloga à toa
+        return Boolean(data);
+      } catch {
+        return true;
+      }
+    })();
+    conferencias.set(id, conferencia);
+  }
+  return conferencia;
+};
 
 interface Guest {
   id: string;
@@ -39,6 +66,17 @@ export const useGuestAuth = () => {
       const parsedGuest = JSON.parse(guestData);
       setGuest(parsedGuest);
       fetchLevelInfo(parsedGuest.current_level, parsedGuest.total_points);
+      hospedeExiste(parsedGuest.id).then((existe) => {
+        if (existe) return;
+        // O cadastro foi apagado (a semana do ranking fechou): pede para entrar de novo
+        if (localStorage.getItem("guest")) {
+          localStorage.removeItem("guest");
+          toast.info(AVISO_SESSAO_EXPIRADA, { id: "sessao-expirada", duration: 8000 });
+        }
+        setGuest(null);
+        setCurrentLevel(null);
+        setNextLevel(null);
+      });
     }
     setLoading(false);
   }, []);
