@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { MascoteAvatar } from "@/components/hotel/Mascote";
 import { supabase } from "@/integrations/supabase/client";
 import { HotelLayout, HotelPageHeader, FONTE_TITULO } from "@/components/hotel/HotelLayout";
 
@@ -33,7 +34,11 @@ const HotelAvisos = () => {
       <main className="flex flex-col gap-3.5 p-5">
         {avisos === null && <p className="text-center text-[#5B6B60]">Carregando…</p>}
         {avisos?.length === 0 && (
-          <p className="rounded-[18px] bg-white p-6 text-center text-[#5B6B60]">Nenhum aviso no momento.</p>
+          <div className="flex flex-col items-center gap-3 rounded-[18px] bg-white p-6 text-center text-[#5B6B60]">
+            <MascoteAvatar size={88} className="ring-[#F4F6F0]" />
+            <p className="font-bold">Nenhum aviso no momento.</p>
+            <p className="text-sm">Quando tiver novidade no hotel, ela aparece aqui.</p>
+          </div>
         )}
         {avisos?.map((a) => {
           const img = imagem(a.image_url);

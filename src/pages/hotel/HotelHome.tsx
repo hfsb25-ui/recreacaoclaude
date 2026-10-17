@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import { Bell, CalendarDays, ChevronRight, Hotel, LogIn, Megaphone, Receipt, Sparkles } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useGuestAuth } from "@/hooks/useGuestAuth";
+import { MascoteAvatar } from "@/components/hotel/Mascote";
 import { HotelLayout, HotelLogo, FONTE_TITULO } from "@/components/hotel/HotelLayout";
 import { useHotelInfo } from "@/hooks/useHotelInfo";
 import { describeWeather, fetchForecast, type CurrentWeather } from "@/lib/weather";
@@ -124,13 +125,16 @@ const HotelHome = () => {
             {qtdAvisos > 0 && <span className="absolute right-2.5 top-2.5 h-2.5 w-2.5 rounded-full bg-[#F2B13B]" />}
           </Link>
         </div>
-        <div className="mt-5">
+        <div className="mt-5 flex items-center gap-3">
+          <div className="min-w-0 flex-1">
           <h1 className="text-[28px] font-extrabold leading-tight" style={FONTE_TITULO}>
             {primeiroNome ? `${saudacao()}, ${primeiroNome}!` : `${saudacao()}!`}
           </h1>
           <p className="text-[15px] text-white/90">
             {guest ? `Apto ${guest.room_number} · aproveite a estadia` : "Bem-vindo ao Hotel Fazenda Santa Bárbara"}
           </p>
+          </div>
+          <MascoteAvatar size={68} />
         </div>
       </header>
 

@@ -1,4 +1,5 @@
 import { useEffect, useRef } from "react";
+import { MascoteCorpo } from "@/components/hotel/Mascote";
 
 /** Tela de carregamento do app do hotel: foto do hotel escurecida, logo e barra de progresso. */
 export const HotelSplash = ({ onFinish, duracao = 1800 }: { onFinish: () => void; duracao?: number }) => {
@@ -40,7 +41,8 @@ export const HotelSplash = ({ onFinish, duracao = 1800 }: { onFinish: () => void
       <div aria-hidden="true" className="absolute inset-x-0 top-[26vh] h-[46vh] bg-gradient-to-b from-transparent to-[#1F4D3A]" />
 
       <div className="hs-rise relative z-10 mt-auto flex flex-col items-center gap-5 px-8 pb-16 text-center">
-        <div className="flex h-28 w-28 items-center justify-center rounded-[30px] bg-white p-2.5 shadow-2xl">
+        <MascoteCorpo className="-mb-2 h-[34vh] max-h-72 w-auto" />
+        <div className="flex h-20 w-20 items-center justify-center rounded-[24px] bg-white p-2 shadow-2xl">
           <img src="/logo-hotel.svg" alt="Hotel Fazenda Santa Bárbara" className="h-full w-full object-contain" />
         </div>
         <div className="flex flex-col" style={{ fontFamily: "'Baloo 2', system-ui, sans-serif" }}>

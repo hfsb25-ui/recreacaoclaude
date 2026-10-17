@@ -5,6 +5,7 @@ import { useGuestAuth } from "@/hooks/useGuestAuth";
 import { toast } from "sonner";
 import { CelebrationModal } from "@/components/CelebrationModal";
 import { HotelLogo, FONTE_TITULO } from "@/components/hotel/HotelLayout";
+import { MascoteCorpo } from "@/components/hotel/Mascote";
 import { useHotelInfo, linkWhatsapp, ramalRecepcao } from "@/hooks/useHotelInfo";
 
 const campo =
@@ -75,7 +76,8 @@ const GuestAuth = () => {
   return (
     <div className="min-h-[100dvh] w-full bg-[#F4F6F0] text-[#1D2A22]" style={{ fontFamily: "'Nunito', system-ui, sans-serif" }}>
       <div className="mx-auto w-full max-w-md">
-        <header className="flex flex-col gap-5 rounded-b-[32px] bg-[#1F4D3A] px-6 pb-9 pt-6 text-white">
+        <header className="relative flex flex-col gap-5 overflow-hidden rounded-b-[32px] bg-[#1F4D3A] px-6 pb-9 pt-6 text-white">
+          <MascoteCorpo className="absolute -bottom-3 right-1 h-[230px] w-auto" />
           <button
             type="button"
             onClick={() => navigate("/")}
@@ -93,7 +95,7 @@ const GuestAuth = () => {
               <span className="text-[15px] text-white/85">Santa Bárbara</span>
             </div>
           </div>
-          <div className="flex flex-col gap-1.5">
+          <div className="relative flex max-w-[64%] flex-col gap-1.5">
             <h1 className="text-[30px] font-extrabold leading-tight" style={FONTE_TITULO}>
               Bem-vindo à fazenda!
             </h1>
