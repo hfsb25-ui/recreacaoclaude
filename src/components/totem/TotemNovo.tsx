@@ -791,7 +791,8 @@ export const TelaTotem = ({
         >
           {conteudo}
         </main>
-        <Lateral dados={dados} qrUrl={qrUrl} />
+        {/* QR na lateral só nas telas em que faz sentido (não nas de atividades nem na do próprio QR) */}
+        {slide && !["nextactivity", "schedule", "qrcode"].includes(slide.tipo) && <Lateral dados={dados} qrUrl={qrUrl} />}
       </div>
       <Rodape hotel={dados.hotel} />
     </div>
