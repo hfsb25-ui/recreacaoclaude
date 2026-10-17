@@ -94,7 +94,7 @@ const AppContent = () => {
   }
 
   if (showSplash && isFirstLoad) {
-    return <HotelSplash onFinish={handleSplashFinish} />;
+    return <HotelSplash onFinish={handleSplashFinish} duracao={3500} />;
   }
   
   return (

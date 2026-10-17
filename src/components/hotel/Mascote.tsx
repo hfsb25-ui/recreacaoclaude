@@ -20,13 +20,13 @@ export const MascoteAnimado = ({ className = "" }: { className?: string }) => (
   <div className={`mascote-anim relative aspect-[475/1043] ${className}`}>
     <style>{`
       @keyframes masc-entra { 0% { transform: translateY(40px) scale(.9); opacity: 0 } 60% { transform: translateY(-8px) scale(1.02); opacity: 1 } 100% { transform: none; opacity: 1 } }
-      @keyframes masc-balanca { 0%, 100% { transform: rotate(-1.6deg) } 50% { transform: rotate(1.6deg) } }
-      @keyframes masc-respira { 0%, 100% { transform: scale(1, 1) } 50% { transform: scale(1.012, .988) } }
-      @keyframes masc-pisca { 0%, 27%, 40%, 100% { transform: scaleY(0) } 31%, 35% { transform: scaleY(1) } }
+      @keyframes masc-balanca { 0%, 100% { transform: rotate(-3.5deg) } 50% { transform: rotate(3.5deg) } }
+      @keyframes masc-respira { 0%, 100% { transform: scale(1, 1) translateY(0) } 50% { transform: scale(1.03, .97) translateY(2%) } }
+      @keyframes masc-pisca { 0%, 40%, 56%, 100% { transform: scaleY(0) } 46%, 50% { transform: scaleY(1) } }
       .mascote-anim { animation: masc-entra .9s cubic-bezier(.3,1.4,.5,1) both }
-      .mascote-anim .balanca { animation: masc-balanca 3.4s ease-in-out .9s infinite; transform-origin: 50% 98% }
-      .mascote-anim .respira { animation: masc-respira 2.2s ease-in-out infinite; transform-origin: 50% 100% }
-      .mascote-anim .palpebra { animation: masc-pisca 3s ease-in-out infinite; transform-origin: 50% 0; transform: scaleY(0) }
+      .mascote-anim .balanca { animation: masc-balanca 1.8s ease-in-out .7s infinite; transform-origin: 50% 98% }
+      .mascote-anim .respira { animation: masc-respira 1.2s ease-in-out infinite; transform-origin: 50% 100% }
+      .mascote-anim .palpebra { animation: masc-pisca 1.6s ease-in-out .3s infinite; transform-origin: 50% 0; transform: scaleY(0) }
       @media (prefers-reduced-motion: reduce) { .mascote-anim, .mascote-anim .balanca, .mascote-anim .respira, .mascote-anim .palpebra { animation: none } }
     `}</style>
     <div className="balanca absolute inset-0">
