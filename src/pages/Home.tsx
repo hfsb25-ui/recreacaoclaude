@@ -4,7 +4,6 @@ import { CalendarDays, ChevronLeft, ChevronRight, LogIn } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useGuestAuth } from "@/hooks/useGuestAuth";
 import { HotelLayout, FONTE_TITULO } from "@/components/hotel/HotelLayout";
-import { MascoteCorpo } from "@/components/hotel/Mascote";
 import { InstallBanner } from "@/components/InstallBanner";
 import { getLocalDateString } from "@/lib/utils";
 import { describeWeather, fetchForecast, type CurrentWeather } from "@/lib/weather";
@@ -122,8 +121,7 @@ const Home = () => {
 
   return (
     <HotelLayout>
-      <header className="relative flex flex-col gap-3.5 rounded-b-[28px] bg-[#F2B13B] px-5 pb-[70px] pt-5 text-[#3A2600]">
-        <MascoteCorpo className="absolute bottom-[44px] right-3 h-[118px] w-auto" />
+      <header className="flex flex-col gap-3.5 rounded-b-[28px] bg-[#F2B13B] px-5 pb-[70px] pt-5 text-[#3A2600]">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <button
@@ -145,7 +143,7 @@ const Home = () => {
             </span>
           )}
         </div>
-        <p className="max-w-[68%] text-[15px] font-bold">Diversão para todas as idades, o dia todo.</p>
+        <p className="text-[15px] font-bold">Diversão para todas as idades, o dia todo.</p>
       </header>
 
       <main className="-mt-[52px] flex flex-col gap-4 px-5 pb-6">
