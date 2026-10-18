@@ -54,7 +54,7 @@ const AppRoutes = () => {
       <Route path="/games" element={<Games />} />
       <Route path="/mapa" element={<HotelMap />} />
       <Route path="/regiao" element={<HotelRegiao />} />
-      <Route path="/regiao/:tipo/:id" element={<HotelRegiao />} />
+      <Route path="/regiao/:id" element={<HotelRegiao />} />
       <Route path="/bichinho" element={<Pet />} />
       {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
       <Route path="*" element={<NotFound />} />
