@@ -108,23 +108,39 @@ BEGIN
 END $$;
 REVOKE ALL ON FUNCTION public.pms_telefone_titular(text, text, text) FROM public, anon, authenticated;
 
--- 5) Cada reserva sincronizada vira (ou atualiza) um lead
+-- 5) Só vira lead quem tem telefone. Roda quando a reserva chega e quando chega o telefone
+--    (a lista de pessoas do apto chega depois da reserva).
+CREATE OR REPLACE FUNCTION public.pms_salvar_lead(p_reserva text, p_uh text)
+RETURNS void LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $$
+DECLARE
+  s record;
+  tel text;
+BEGIN
+  FOR s IN SELECT * FROM public.pms_stays WHERE reservation_code = p_reserva AND uh = p_uh LIMIT 1 LOOP
+    tel := public.pms_telefone_titular(s.reservation_code, s.uh, s.guest_name);
+    IF tel IS NULL THEN
+      RETURN;
+    END IF;
+    INSERT INTO public.leads (origem, reservation_code, room_number, guest_name, phone,
+                              arrival_date, departure_date, adults, children)
+    VALUES ('pms', s.reservation_code, s.uh, initcap(lower(s.guest_name)), tel,
+            s.arrival_date, s.departure_date, s.adults, s.children)
+    ON CONFLICT (reservation_code, room_number) WHERE origem = 'pms' DO UPDATE SET
+      guest_name = excluded.guest_name,
+      phone = excluded.phone,
+      arrival_date = excluded.arrival_date,
+      departure_date = excluded.departure_date,
+      adults = excluded.adults,
+      children = excluded.children,
+      updated_at = now();
+  END LOOP;
+END $$;
+REVOKE ALL ON FUNCTION public.pms_salvar_lead(text, text) FROM public, anon, authenticated;
+
 CREATE OR REPLACE FUNCTION public.pms_lead_da_reserva()
 RETURNS trigger LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $$
 BEGIN
-  INSERT INTO public.leads (origem, reservation_code, room_number, guest_name, phone,
-                            arrival_date, departure_date, adults, children)
-  VALUES ('pms', NEW.reservation_code, NEW.uh, initcap(lower(NEW.guest_name)),
-          public.pms_telefone_titular(NEW.reservation_code, NEW.uh, NEW.guest_name),
-          NEW.arrival_date, NEW.departure_date, NEW.adults, NEW.children)
-  ON CONFLICT (reservation_code, room_number) WHERE origem = 'pms' DO UPDATE SET
-    guest_name = excluded.guest_name,
-    phone = coalesce(excluded.phone, leads.phone),
-    arrival_date = excluded.arrival_date,
-    departure_date = excluded.departure_date,
-    adults = excluded.adults,
-    children = excluded.children,
-    updated_at = now();
+  PERFORM public.pms_salvar_lead(NEW.reservation_code, NEW.uh);
   RETURN NEW;
 END $$;
 
@@ -133,25 +149,11 @@ CREATE TRIGGER trg_pms_lead_da_reserva
   AFTER INSERT OR UPDATE ON public.pms_stays
   FOR EACH ROW EXECUTE FUNCTION public.pms_lead_da_reserva();
 
--- A lista de pessoas do apto chega depois da reserva: completa o telefone do titular
 CREATE OR REPLACE FUNCTION public.pms_lead_telefone()
 RETURNS trigger LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $$
-DECLARE
-  tel text;
 BEGIN
-  IF coalesce(NEW.phone, '') = '' THEN
-    RETURN NEW;
-  END IF;
-  tel := (
-    SELECT public.pms_telefone_titular(s.reservation_code, s.uh, s.guest_name)
-    FROM public.pms_stays s
-    WHERE s.reservation_code = NEW.reservation_code AND s.uh = NEW.uh
-    LIMIT 1
-  );
-  IF tel IS NOT NULL THEN
-    UPDATE public.leads SET phone = tel, updated_at = now()
-    WHERE origem = 'pms' AND reservation_code = NEW.reservation_code AND room_number = NEW.uh
-      AND phone IS DISTINCT FROM tel;
+  IF coalesce(NEW.phone, '') <> '' THEN
+    PERFORM public.pms_salvar_lead(NEW.reservation_code, NEW.uh);
   END IF;
   RETURN NEW;
 END $$;
@@ -162,4 +164,5 @@ CREATE TRIGGER trg_pms_lead_telefone
   FOR EACH ROW EXECUTE FUNCTION public.pms_lead_telefone();
 
 -- 6) Já cria os leads de quem está hospedado agora
+DELETE FROM public.leads WHERE origem = 'pms' AND phone IS NULL;
 UPDATE public.pms_stays SET status = status;

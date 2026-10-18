@@ -4,7 +4,7 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Download, RefreshCw, Search, Users, Phone, CalendarRange, Trash2, MessageCircle } from "lucide-react";
+import { Download, RefreshCw, Search, Users, Baby, CalendarRange, Trash2, MessageCircle } from "lucide-react";
 import { toast } from "sonner";
 import { format, startOfMonth, endOfMonth, subMonths } from "date-fns";
 import {
@@ -65,7 +65,6 @@ export const LeadsManager = () => {
   const [leads, setLeads] = useState<Lead[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
-  const [filterType, setFilterType] = useState<"all" | "with_phone" | "without_phone">("all");
   const [atalho, setAtalho] = useState<Atalho>("tudo");
   const [de, setDe] = useState("");
   const [ate, setAte] = useState("");
@@ -132,13 +131,9 @@ export const LeadsManager = () => {
         lead.guest_name.toLowerCase().includes(termo) ||
         lead.room_number.toLowerCase().includes(termo) ||
         (digitos.length >= 3 && !!lead.phone && lead.phone.includes(digitos));
-      const matchesFilter =
-        filterType === "all" ||
-        (filterType === "with_phone" && !!lead.phone) ||
-        (filterType === "without_phone" && !lead.phone);
-      return matchesSearch && matchesFilter;
+      return matchesSearch;
     });
-  }, [leads, search, filterType]);
+  }, [leads, search]);
 
   const exportCSV = () => {
     if (filtered.length === 0) {
@@ -169,7 +164,7 @@ export const LeadsManager = () => {
     toast.success(`${filtered.length} leads exportados!`);
   };
 
-  const withPhone = leads.filter((l) => l.phone).length;
+  const comCriancas = leads.filter((l) => l.children > 0).length;
   const totalPessoas = leads.reduce((s, l) => s + l.adults + l.children, 0);
 
   const ATALHOS: { id: Atalho; label: string }[] = [
@@ -190,10 +185,10 @@ export const LeadsManager = () => {
           </div>
         </Card>
         <Card className="p-4 flex items-center gap-3">
-          <Phone className="h-8 w-8 text-green-500" />
+          <Baby className="h-8 w-8 text-green-500" />
           <div>
-            <p className="text-2xl font-bold text-foreground">{withPhone}</p>
-            <p className="text-xs text-muted-foreground">Com telefone</p>
+            <p className="text-2xl font-bold text-foreground">{comCriancas}</p>
+            <p className="text-xs text-muted-foreground">Com crianças</p>
           </div>
         </Card>
         <Card className="p-4 flex items-center gap-3">
@@ -261,25 +256,6 @@ export const LeadsManager = () => {
                 className="pl-9"
               />
             </div>
-            <div className="flex gap-1">
-              <Button variant={filterType === "all" ? "default" : "outline"} size="sm" onClick={() => setFilterType("all")}>
-                Todos
-              </Button>
-              <Button
-                variant={filterType === "with_phone" ? "default" : "outline"}
-                size="sm"
-                onClick={() => setFilterType("with_phone")}
-              >
-                Com tel.
-              </Button>
-              <Button
-                variant={filterType === "without_phone" ? "default" : "outline"}
-                size="sm"
-                onClick={() => setFilterType("without_phone")}
-              >
-                Sem tel.
-              </Button>
-            </div>
           </div>
           <div className="flex gap-2">
             <Button variant="outline" size="sm" onClick={fetchLeads} disabled={loading}>
@@ -318,7 +294,7 @@ export const LeadsManager = () => {
               ) : filtered.length === 0 ? (
                 <TableRow>
                   <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
-                    Nenhum lead neste período. Os leads entram sozinhos a cada sincronização do PMS.
+                    Nenhum lead neste período. Os leads entram sozinhos a cada sincronização do PMS (só quem tem telefone).
                   </TableCell>
                 </TableRow>
               ) : (
