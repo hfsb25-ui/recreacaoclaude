@@ -379,6 +379,13 @@ export type Database = {
       }
       leads: {
         Row: {
+          adults: number
+          arrival_date: string | null
+          children: number
+          departure_date: string | null
+          origem: string
+          reservation_code: string | null
+          updated_at: string
           created_at: string
           guest_name: string
           id: string
@@ -391,6 +398,13 @@ export type Database = {
           total_ratings: number | null
         }
         Insert: {
+          adults?: number
+          arrival_date?: string | null
+          children?: number
+          departure_date?: string | null
+          origem?: string
+          reservation_code?: string | null
+          updated_at?: string
           created_at?: string
           guest_name: string
           id?: string
@@ -403,6 +417,13 @@ export type Database = {
           total_ratings?: number | null
         }
         Update: {
+          adults?: number
+          arrival_date?: string | null
+          children?: number
+          departure_date?: string | null
+          origem?: string
+          reservation_code?: string | null
+          updated_at?: string
           created_at?: string
           guest_name?: string
           id?: string
