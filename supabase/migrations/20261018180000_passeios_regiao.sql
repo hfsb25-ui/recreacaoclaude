@@ -45,3 +45,34 @@ SELECT v.* FROM (VALUES
    'Fazenda Cachoeira Grande Vassouras RJ', true, true, true, false, 16)
 ) AS v(nome, cidade, categoria, resumo, descricao, distancia, duracao, funcionamento, preco, dicas, mapa, criancas, chuva, agendar, ativo, ordem)
 WHERE NOT EXISTS (SELECT 1 FROM public.passeios p WHERE p.nome = v.nome);
+
+-- Troca pedida pelo hotel: sai Feira do Vale, Cachoeirão e Fazenda Cachoeira Grande; entram Terra dos Dinos e Rua Torta
+DELETE FROM public.passeios WHERE nome IN ('Feira do Vale', 'Cachoeirão', 'Fazenda Cachoeira Grande');
+
+UPDATE public.passeios SET
+  descricao = E'Um dos cartões-postais de Miguel Pereira, com caminho ao redor do lago, bancos e quiosques.\nCostuma ter pedalinho para as crianças.',
+  preco = 'Gratuito · pedalinho pago à parte'
+WHERE nome = 'Lago de Javary';
+
+INSERT INTO public.passeios (nome, cidade, categoria, resumo, descricao, distancia, duracao, funcionamento, preco, dicas, mapa, criancas, chuva, agendar, ativo, ordem)
+SELECT v.* FROM (VALUES
+  ('Terra dos Dinos', 'Governador Portela · Miguel Pereira', 'aventura',
+   'Parque com cerca de 40 dinossauros em tamanho real no meio da Mata Atlântica.',
+   E'Os dinossauros ficam espalhados por trilhas na mata, separados pelos períodos triássico, jurássico e cretáceo.\nTambém tem tirolesa de 300 m, trenó de montanha, trilha suspensa, lanchonete e lojinhas. As atrações extras são pagas à parte.',
+   '≈ 35 min de carro', 'Meio dia', 'Quinta a terça, das 9h às 17h (entrada até 16h). Em janeiro abre todos os dias.', 'Pago · compre no site oficial · atrações extras à parte',
+   E'Compre o ingresso antes pelo site, principalmente nas férias\nUse tênis: o passeio é em trilhas na mata\nMoradores do estado do RJ pagam meia com comprovante\nAniversariante do dia não paga se levar 2 acompanhantes pagantes',
+   'Terra dos Dinos, RJ-125, 42281, Governador Portela, Miguel Pereira', true, false, false, false, 20),
+  ('Rua Torta e Rua Coberta', 'Centro · Miguel Pereira', 'gastronomia',
+   'A rua sinuosa inspirada em Gramado, com jardins e luzes, ao lado do polo gastronômico.',
+   E'No centro de Miguel Pereira, a Rua Torta tem paisagismo, iluminação e é ótima para fotos, de dia ou à noite.\nLogo ao lado fica a Rua Coberta, com restaurantes, cafés e docerias para almoçar ou fazer um lanche.',
+   '≈ 30 min de carro', '1 a 2 horas', 'Todos os dias', 'Gratuito',
+   E'À noite, com as luzes acesas, fica ainda mais bonita\nCombine com o Lago de Javary no mesmo passeio',
+   'Rua Torta, Centro, Miguel Pereira RJ', true, false, false, false, 21),
+  ('Lago de Javary', 'Miguel Pereira', 'natureza',
+   'Lago cercado de verde, bom para caminhar e fazer piquenique.',
+   E'Um dos cartões-postais de Miguel Pereira, com caminho ao redor do lago, bancos e quiosques.\nCostuma ter pedalinho para as crianças.',
+   '≈ 35 min de carro', '1 a 2 horas', 'Todos os dias, de dia', 'Gratuito · pedalinho pago à parte',
+   E'Leve repelente\nFim de tarde tem a luz mais bonita',
+   'Lago de Javary Miguel Pereira RJ', true, false, false, false, 22)
+) AS v(nome, cidade, categoria, resumo, descricao, distancia, duracao, funcionamento, preco, dicas, mapa, criancas, chuva, agendar, ativo, ordem)
+WHERE NOT EXISTS (SELECT 1 FROM public.passeios p WHERE p.nome = v.nome);
