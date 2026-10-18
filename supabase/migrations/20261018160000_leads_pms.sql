@@ -91,7 +91,7 @@ DECLARE
   digits text;
 BEGIN
   digits := (
-    SELECT regexp_replace(coalesce(g.phone, ''), '\D', '', 'g')
+    SELECT regexp_replace(coalesce(g.phone, ''), '[^0-9]', '', 'g')
     FROM public.pms_stay_guests g
     WHERE g.reservation_code = p_reserva AND g.uh = p_uh AND coalesce(g.phone, '') <> ''
       AND (g.is_main OR public.normalize_name(g.first_name || ' ' || g.surname) = public.normalize_name(p_nome))
@@ -124,11 +124,7 @@ BEGIN
     departure_date = excluded.departure_date,
     adults = excluded.adults,
     children = excluded.children,
-    updated_at = now()
-  WHERE (leads.guest_name, leads.phone, leads.arrival_date, leads.departure_date, leads.adults, leads.children)
-        IS DISTINCT FROM
-        (excluded.guest_name, coalesce(excluded.phone, leads.phone), excluded.arrival_date,
-         excluded.departure_date, excluded.adults, excluded.children);
+    updated_at = now();
   RETURN NEW;
 END $$;
 
