@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Recreação HFSB – Sincronizar hóspedes e consumo do PMS
 // @namespace    https://github.com/hfsb25-ui/recreacaoclaude
-// @version      1.5.2
+// @version      1.6.0
 // @description  Envia ao app de Recreação os hóspedes na casa (2 vezes por dia: manhã e 20h, relatório "Hóspedes na Casa") e o consumo por apartamento (a cada 30 min) do TOTVS PMS SaaS.
 // @match        https://gestaopms.totvshospitalidade.com/*
 // @run-at       document-start
@@ -19,6 +19,9 @@
   // ============ CONFIGURAÇÃO ============
   const SYNC_URL = "https://exxcevxihbcgleopekvt.supabase.co/functions/v1/pms-sync";
   const SYNC_KEY = "COLE_AQUI_A_CHAVE_SECRETA"; // a mesma do segredo PMS_SYNC_KEY no Supabase
+  // Previsão do dia (chegadas, saídas, adultos e crianças) vai direto para o banco por uma função protegida pela mesma chave
+  const PREVISAO_URL = "https://exxcevxihbcgleopekvt.supabase.co/rest/v1/rpc/pms_salvar_previsao";
+  const SUPABASE_PUBLIC_KEY = "sb_publishable_2DbqR1Z61fhuqEbaHagy0w_eiq1iD2r"; // chave pública do app (a mesma que o site usa)
   const DEFAULT_API = "https://group05.totvshospitalidade.com/pmsreport/api/reservationReport/4627";
   // Horários da sincronização dos hóspedes: a partir das 7h (manhã) e a partir das 20h (noite)
   const SYNC_SLOTS = [
@@ -43,6 +46,13 @@
       form: "BaseRate=&BirthdayEndDate=&BirthdayStartDate=&Classification=&GuestType=&MainGuestOnly=true&NoPost=" +
         "&Observations=&PensionType=&TotalizerByPensionType=&Wing=",
       looksLike: /Reserva/,
+    },
+    // Ocupação Detalhada: previsão por dia (já conta quem ainda vai chegar). Datas preenchidas na hora.
+    ocupacao: {
+      filtersUrl: "https://ebs.totvshospitalidade.com/report/api/FiltersReport/dc927f0d-0dc7-405c-b47f-f11313fb767c?culture=pt-BR",
+      page: "OccupationDetailedDaily",
+      form: "",
+      looksLike: /Ocupa[çc][ãa]o|Pax/,
     },
     hospedes: {
       filtersUrl: "https://ebs.totvshospitalidade.com/report/api/FiltersReport/76e5fa87-1619-4ed5-ba4e-4a2ef2334079?culture=pt-BR",
@@ -392,7 +402,33 @@
   };
 
   // Exposto só para teste
-  if (typeof module !== "undefined") module.exports = { buildStays, parseComposition, parseConsumptionCsv, mergeAccounts, parseGuestsCsv, buildStaysFromInHouse };
+  // ----- Previsão: leitura do CSV da "Ocupação Detalhada" (parte "Relatório Sintético") -----
+  const PREV_CAMPOS = { "Occ": "ocupados", "In.H.": "in_house", "In": "chegadas", "Out": "saidas", "Adt": "adultos", "Chd": "criancas", "Pax": "pax" };
+  const parseOccupationCsv = (text) => {
+    const lines = String(text).split(/\r?\n/);
+    const ini = lines.findIndex((l) => /Relat[óo]rio Sint[ée]tico/i.test(l));
+    if (ini < 0) throw new Error("não achei a parte Sintética do relatório de ocupação");
+    const cells = (l) => l.split(";").map((c) => c.trim()).filter(Boolean);
+    const head = lines.slice(ini + 1).find((l) => /\bOcc\b/.test(l) && /Pax/.test(l));
+    if (!head) throw new Error("não achei as colunas do relatório de ocupação");
+    const nomes = cells(head);
+    const out = [];
+    for (const l of lines.slice(lines.indexOf(head) + 1)) {
+      const c = cells(l);
+      const m = (c[0] || "").match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+      if (!m) continue;
+      const nums = c.slice(2); // depois da data e do dia da semana
+      const dia = { dia: `${m[3]}-${m[2]}-${m[1]}` };
+      nomes.forEach((n, i) => {
+        if (PREV_CAMPOS[n] && nums[i] != null) dia[PREV_CAMPOS[n]] = parseInt(nums[i].replace(/\./g, ""), 10) || 0;
+      });
+      if (dia.chegadas != null) out.push(dia);
+    }
+    if (!out.length) throw new Error("o relatório de ocupação veio sem dias");
+    return out;
+  };
+
+  if (typeof module !== "undefined") module.exports = { parseOccupationCsv, buildStays, parseComposition, parseConsumptionCsv, mergeAccounts, parseGuestsCsv, buildStaysFromInHouse };
 
   // ---------- 3) Busca no PMS e envia ao app ----------
   const fetchReport = async () => {
@@ -606,6 +642,31 @@
     }
   };
 
+  // ---------- Previsão de hoje e amanhã ----------
+  let previsaoStatus = "";
+  const runPrevisao = async () => {
+    if (SYNC_KEY.startsWith("COLE_AQUI") || !authHeaders) return;
+    try {
+      const hoje = new Date();
+      const amanha = new Date(hoje.getTime() + 864e5);
+      const form = `Analitic=&EndDate=${ymd(amanha)}&RevenueExcludePension=&StartDate=${ymd(hoje)}&Synthetic=&TypeUH=`;
+      const dias = parseOccupationCsv(await fetchReportCsv({ ...REPORTS.ocupacao, form }));
+      const r = await gmRequest({
+        method: "POST",
+        url: PREVISAO_URL,
+        headers: { "Content-Type": "application/json", apikey: SUPABASE_PUBLIC_KEY, Authorization: `Bearer ${SUPABASE_PUBLIC_KEY}` },
+        data: JSON.stringify({ p_chave: SYNC_KEY, p_dias: dias }),
+      });
+      if (r.status < 200 || r.status >= 300) throw new Error(`banco respondeu ${r.status}`);
+      const d0 = dias.find((d) => d.dia === ymd(hoje)) || dias[0];
+      previsaoStatus = `previsão: ${d0.chegadas} chegadas hoje`;
+    } catch (e) {
+      console.warn("[Recreação] previsão", e);
+      previsaoStatus = `previsão: ${e.message}`;
+    }
+    refreshBadge();
+  };
+
   // ---------- 4) Aviso discreto no canto da tela ----------
   // Só uma bolinha verde (tudo certo) ou vermelha (problema). Clicando, abre o texto e o botão de sincronizar.
   let badge, dot, panel, panelText;
@@ -648,7 +709,7 @@
     if (!document.body) return;
     if (!badge) build();
     const allOk = ok && consumptionOk;
-    const full = consumptionStatus ? `${text} · ${consumptionStatus}` : text;
+    const full = [text, consumptionStatus, previsaoStatus].filter(Boolean).join(" · ");
     const working = /^🔄/.test(text);
     dot.style.background = working ? "#F2B13B" : allOk ? "#16a34a" : "#dc2626";
     dot.title = `${full}\n(clique para ver detalhes)`;
@@ -720,6 +781,7 @@
         source = " (método antigo)";
       }
       const result = await send(stays);
+      runPrevisao(); // em paralelo: não atrasa nem derruba a sincronização dos hóspedes
       GM_setValue("lastSync", Date.now());
       const done = currentSlot();
       if (done) GM_setValue("lastSyncSlot", done.key);
