@@ -2,38 +2,30 @@ import { useEffect } from "react";
 import { useLocation } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 
-// Generate a unique session ID for this browser session
-const getSessionId = (): string => {
-  let sessionId = sessionStorage.getItem("tracking-session-id");
-  if (!sessionId) {
-    sessionId = crypto.randomUUID();
-    sessionStorage.setItem("tracking-session-id", sessionId);
+/** É a primeira visita deste navegador hoje? (para contar visitantes, não só páginas) */
+const primeiraDoDia = () => {
+  try {
+    const hoje = new Date().toISOString().slice(0, 10);
+    if (localStorage.getItem("visita-dia") === hoje) return false;
+    localStorage.setItem("visita-dia", hoje);
+    return true;
+  } catch {
+    return false;
   }
-  return sessionId;
 };
 
+/** Conta a visita num contador por hora e página (não grava uma linha nova a cada visita). */
 export const usePageTracking = () => {
   const location = useLocation();
 
   useEffect(() => {
-    const trackVisit = async () => {
+    (async () => {
       try {
-        const sessionId = getSessionId();
-        const guestId = localStorage.getItem("guest_id");
-
-        await supabase.from("site_visits").insert({
-          session_id: sessionId,
-          page_path: location.pathname,
-          user_agent: navigator.userAgent,
-          referrer: document.referrer || null,
-          guest_id: guestId || null,
-        });
-      } catch (error) {
-        // Silently fail - tracking shouldn't break the app
-        console.error("Error tracking page visit:", error);
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        await (supabase as any).rpc("registrar_visita", { p_pagina: location.pathname, p_novo: primeiraDoDia() });
+      } catch {
+        // contar visita nunca pode atrapalhar o app
       }
-    };
-
-    trackVisit();
+    })();
   }, [location.pathname]);
 };

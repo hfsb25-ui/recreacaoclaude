@@ -150,7 +150,7 @@ export const StatisticsManager = () => {
         getActivityStats(),
         getAgeGroupStats(),
         totalCheckinsAllTime(),
-        supabase.from("site_visits").select("id", { count: "exact", head: true }),
+        getVisitTotals("2000-01-01T00:00:00Z", now.toISOString()),
         supabase.from("guests").select("id", { count: "exact", head: true }),
         supabase.from("activities").select("id", { count: "exact", head: true }).eq("activity_date", todayStr),
         supabase.from("age_groups").select("id, name, color"),
@@ -166,7 +166,7 @@ export const StatisticsManager = () => {
       const todayRow = daily.find((d) => d.day === todayStr);
       setVisitsToday(visitsToday.visits);
       setUniqueVisitorsToday(visitsToday.visitors);
-      setTotalVisits(totalVisitsResult.count || 0);
+      setTotalVisits(totalVisitsResult.visits || 0);
       setNewGuestsToday(todayRow?.signups ?? 0);
       setTotalGuests(guestsResult.count || 0);
       setTotalActivities(activitiesTodayResult.count || 0);
