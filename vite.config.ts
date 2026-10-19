@@ -37,7 +37,7 @@ export default defineConfig(({ mode }) => {
     },
     VitePWA({
       registerType: 'autoUpdate',
-      includeAssets: ['icon-192x192.png', 'icon-512x512.png', 'apple-touch-icon.png'],
+      includeAssets: ['icon-192x192.png', 'icon-512x512.png', 'apple-touch-icon.png', 'badge-96.png'],
       devOptions: {
         enabled: true
       },
@@ -47,6 +47,8 @@ export default defineConfig(({ mode }) => {
         globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2}'],
         // O visualizador 3D é grande: só baixa quando alguém abre "Animais em 3D"
         globIgnores: ['**/Animais3D-*.js'],
+        // Recebe e mostra as notificações push (public/push-sw.js)
+        importScripts: ['/push-sw.js'],
         runtimeCaching: [
           {
             urlPattern: restPattern,
