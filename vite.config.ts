@@ -66,6 +66,8 @@ export default defineConfig(({ mode }) => {
       },
       workbox: {
         globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2}'],
+        // O visualizador 3D é grande: só baixa quando alguém abre "Animais em 3D"
+        globIgnores: ['**/Animais3D-*.js'],
         runtimeCaching: [
           {
             urlPattern: restPattern,
