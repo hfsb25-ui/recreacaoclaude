@@ -146,11 +146,14 @@ const GuestAuth = () => {
               <input
                 className={campo}
                 type="text"
-                inputMode="numeric"
-                placeholder="Ex.: 213"
+                autoCapitalize="characters"
+                autoCorrect="off"
+                autoComplete="off"
+                spellCheck={false}
+                placeholder="Ex.: 213 ou C02"
                 value={roomNumber}
                 onChange={(e) => {
-                  setRoomNumber(e.target.value);
+                  setRoomNumber(e.target.value.toUpperCase().replace(/[^0-9A-Z -]/g, "").slice(0, 10));
                   setNotFound(false);
                 }}
                 required

@@ -195,10 +195,10 @@ const NotificacoesManager = () => {
                   <Label htmlFor="push-apto">Apartamento</Label>
                   <Input
                     id="push-apto"
-                    inputMode="numeric"
+                    autoCapitalize="characters"
                     value={apto}
-                    onChange={(e) => setApto(e.target.value.replace(/[^0-9A-Za-z]/g, "").slice(0, 10))}
-                    placeholder="Ex.: 104"
+                    onChange={(e) => setApto(e.target.value.toUpperCase().replace(/[^0-9A-Z -]/g, "").slice(0, 10))}
+                    placeholder="Ex.: 104 ou C02"
                   />
                 </div>
               ) : null}

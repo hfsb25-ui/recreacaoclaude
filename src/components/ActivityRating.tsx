@@ -350,11 +350,12 @@ export const ActivityRating = ({ activityId, activityName, onSuccess }: Activity
           !useManualSignup ? (
             <div className="space-y-2">
               <Input
-                placeholder="Número do apartamento"
+                placeholder="Apartamento (ex.: 213 ou C02)"
                 value={roomNumber}
-                onChange={(e) => setRoomNumber(e.target.value)}
+                onChange={(e) => setRoomNumber(e.target.value.toUpperCase().replace(/[^0-9A-Z -]/g, "").slice(0, 10))}
                 type="text"
-                inputMode="numeric"
+                autoCapitalize="characters"
+                autoCorrect="off"
               />
               <Input
                 placeholder="Sobrenome do titular da reserva"
