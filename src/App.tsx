@@ -11,6 +11,7 @@ import HotelHome from "./pages/hotel/HotelHome";
 const HotelInfo = lazy(() => import("./pages/hotel/HotelInfo"));
 const HotelRegiao = lazy(() => import("./pages/hotel/HotelRegiao"));
 const Animais3D = lazy(() => import("./pages/Animais3D"));
+const Privacidade = lazy(() => import("./pages/hotel/Privacidade"));
 const HotelAvisos = lazy(() => import("./pages/hotel/HotelAvisos"));
 const HotelEstadia = lazy(() => import("./pages/hotel/HotelEstadia"));
 import Schedule from "./pages/Schedule";
@@ -55,6 +56,7 @@ const AppRoutes = () => {
       <Route path="/games" element={<Games />} />
       <Route path="/mapa" element={<HotelMap />} />
       <Route path="/animais" element={<Animais3D />} />
+      <Route path="/privacidade" element={<Privacidade />} />
       <Route path="/regiao" element={<HotelRegiao />} />
       <Route path="/regiao/:id" element={<HotelRegiao />} />
       <Route path="/bichinho" element={<Pet />} />
