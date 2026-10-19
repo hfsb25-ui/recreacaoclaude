@@ -70,13 +70,6 @@
       "type": "image/webp",
       "form_factor": "narrow",
       "label": "Passeios na região"
-    },
-    {
-      "src": "/screenshots/5-animais.webp",
-      "sizes": "540x960",
-      "type": "image/webp",
-      "form_factor": "narrow",
-      "label": "Animais em 3D"
     }
   ],
   "shortcuts": [

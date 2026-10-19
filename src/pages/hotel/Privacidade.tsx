@@ -55,13 +55,6 @@ const Privacidade = () => {
           </ul>
         </Secao>
 
-        <Secao titulo="Câmera">
-          <p>
-            A câmera só é usada em <b>Animais em 3D</b>, para mostrar o bichinho no seu ambiente. Isso acontece no próprio
-            celular: nenhuma imagem é enviada ou guardada pelo hotel.
-          </p>
-        </Secao>
-
         <Secao titulo="Com quem compartilhamos">
           <p>
             Não vendemos nem cedemos seus dados. Eles ficam guardados em serviços de hospedagem contratados pelo hotel

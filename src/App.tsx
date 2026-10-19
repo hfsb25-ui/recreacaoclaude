@@ -1,7 +1,7 @@
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { useTheme } from "@/hooks/useTheme";
 import { usePageTracking } from "@/hooks/usePageTracking";
 import { useSiteName } from "@/hooks/useSiteName";
@@ -11,7 +11,6 @@ import Home from "./pages/Home";
 import HotelHome from "./pages/hotel/HotelHome";
 const HotelInfo = lazy(() => import("./pages/hotel/HotelInfo"));
 const HotelRegiao = lazy(() => import("./pages/hotel/HotelRegiao"));
-const Animais3D = lazy(() => import("./pages/Animais3D"));
 const Privacidade = lazy(() => import("./pages/hotel/Privacidade"));
 const HotelAvisos = lazy(() => import("./pages/hotel/HotelAvisos"));
 const HotelEstadia = lazy(() => import("./pages/hotel/HotelEstadia"));
@@ -56,7 +55,8 @@ const AppRoutes = () => {
       <Route path="/totem" element={<Totem />} />
       <Route path="/games" element={<Games />} />
       <Route path="/mapa" element={<HotelMap />} />
-      <Route path="/animais" element={<Animais3D />} />
+      {/* Animais em 3D: desligado por enquanto (a página continua no código) */}
+      <Route path="/animais" element={<Navigate to="/recreacao" replace />} />
       <Route path="/privacidade" element={<Privacidade />} />
       <Route path="/regiao" element={<HotelRegiao />} />
       <Route path="/regiao/:id" element={<HotelRegiao />} />
