@@ -1,8 +1,8 @@
 {
   "id": "/",
-  "name": "Experiências HFSB",
-  "short_name": "Experiências HFSB",
-  "description": "Experiências HFSB: programação da recreação, ranking, jogos, passeios na região e informações da sua estadia no Hotel Fazenda Santa Bárbara.",
+  "name": "Meu Santa Bárbara",
+  "short_name": "Meu Santa Bárbara",
+  "description": "Meu Santa Bárbara: programação da recreação, ranking, jogos, passeios na região e informações da sua estadia no Hotel Fazenda Santa Bárbara.",
   "lang": "pt-BR",
   "dir": "ltr",
   "start_url": "/",
