@@ -5,6 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useGuestAuth } from "@/hooks/useGuestAuth";
 import { HotelLayout, HotelLogo, FONTE_TITULO } from "@/components/hotel/HotelLayout";
 import { useHotelInfo } from "@/hooks/useHotelInfo";
+import { AtivarAvisos } from "@/components/hotel/AtivarAvisos";
 import { describeWeather, fetchForecast, type CurrentWeather } from "@/lib/weather";
 
 interface ProximaAtividade {
@@ -194,6 +195,9 @@ const HotelHome = () => {
             <ChevronRight className="h-5 w-5 text-[#5B6B60]" />
           </Link>
         )}
+
+        {/* Notificações do hotel */}
+        {guest && <AtivarAvisos guestId={guest.id} />}
 
         {/* Entrar */}
         {!guest && (
