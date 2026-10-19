@@ -237,6 +237,20 @@ const Home = () => {
           <h2 id="diversao" className="text-xl font-bold" style={FONTE_TITULO}>
             Diversão
           </h2>
+          <Link
+            to="/animais"
+            className="flex items-center gap-3 rounded-[20px] bg-gradient-to-r from-[#1F4D3A] to-[#2F6B4F] p-4 text-white shadow-[0_6px_16px_rgba(31,77,58,0.25)]"
+          >
+            <span aria-hidden="true" className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-white/15 text-[28px]">
+              🐄
+            </span>
+            <span className="flex flex-1 flex-col">
+              <span className="text-lg font-extrabold leading-tight" style={FONTE_TITULO}>
+                Animais em 3D <span className="ml-1 rounded-full bg-[#F2B13B] px-2 py-0.5 align-middle text-[11px] text-[#3A2600]">NOVO</span>
+              </span>
+              <span className="text-[13px] text-white/90">Coloque uma vaca, um cavalo ou uma lhama no seu quarto pela câmera</span>
+            </span>
+          </Link>
           <div className="grid grid-cols-2 gap-3">
             {ATALHOS.map((a) => (
               <Link

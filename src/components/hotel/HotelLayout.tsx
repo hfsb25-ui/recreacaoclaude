@@ -4,7 +4,7 @@ import { ChevronLeft, Home, Sparkles, Hotel, User, Receipt } from "lucide-react"
 import { useGuestAuth } from "@/hooks/useGuestAuth";
 
 /** Páginas que fazem parte da Recreação (a aba "Recreação" fica acesa nelas). */
-const PAGINAS_RECREACAO = ["/programacao", "/activities", "/games", "/bichinho", "/ranking", "/hall-of-fame", "/mapa"];
+const PAGINAS_RECREACAO = ["/programacao", "/activities", "/games", "/bichinho", "/ranking", "/hall-of-fame", "/mapa", "/animais"];
 
 const FONTE_TITULO = { fontFamily: "'Baloo 2', system-ui, sans-serif" };
 
