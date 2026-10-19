@@ -45,6 +45,7 @@ import { LeadsManager } from "@/components/admin/LeadsManager";
 import { LoginHistoryManager } from "@/components/admin/LoginHistoryManager";
 import { MigrationManager } from "@/components/admin/MigrationManager";
 import HotelInfoManager from "@/components/admin/HotelInfoManager";
+import PasseiosManager from "@/components/admin/PasseiosManager";
 
 const Admin = () => {
   const navigate = useNavigate();
@@ -540,6 +541,7 @@ const Admin = () => {
                   <TabsTrigger value="kpis" className="whitespace-nowrap text-xs sm:text-sm px-2 sm:px-3">KPIs</TabsTrigger>
                   <TabsTrigger value="hotel-info" className="whitespace-nowrap text-xs sm:text-sm px-2 sm:px-3">Informações do hotel</TabsTrigger>
                   <TabsTrigger value="announcements" className="whitespace-nowrap text-xs sm:text-sm px-2 sm:px-3">Anúncios</TabsTrigger>
+                  <TabsTrigger value="passeios" className="whitespace-nowrap text-xs sm:text-sm px-2 sm:px-3">Passeios</TabsTrigger>
                   <TabsTrigger value="menu" className="whitespace-nowrap text-xs sm:text-sm px-2 sm:px-3">Menu</TabsTrigger>
                   <TabsTrigger value="totem" className="whitespace-nowrap text-xs sm:text-sm px-2 sm:px-3">Totem</TabsTrigger>
                   <TabsTrigger value="site-name" className="whitespace-nowrap text-xs sm:text-sm px-2 sm:px-3">Nome</TabsTrigger>
@@ -596,6 +598,9 @@ const Admin = () => {
 
               <TabsContent value="announcements" className="space-y-4">
                 <AnnouncementsManager />
+              </TabsContent>
+              <TabsContent value="passeios" className="space-y-4">
+                <PasseiosManager />
               </TabsContent>
 
               <TabsContent value="menu" className="space-y-4">

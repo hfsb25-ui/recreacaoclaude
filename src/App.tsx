@@ -9,6 +9,7 @@ import { useState, useEffect, lazy, Suspense } from "react";
 import Home from "./pages/Home";
 import HotelHome from "./pages/hotel/HotelHome";
 const HotelInfo = lazy(() => import("./pages/hotel/HotelInfo"));
+const HotelRegiao = lazy(() => import("./pages/hotel/HotelRegiao"));
 const HotelAvisos = lazy(() => import("./pages/hotel/HotelAvisos"));
 const HotelEstadia = lazy(() => import("./pages/hotel/HotelEstadia"));
 import Schedule from "./pages/Schedule";
@@ -52,6 +53,8 @@ const AppRoutes = () => {
       <Route path="/totem" element={<Totem />} />
       <Route path="/games" element={<Games />} />
       <Route path="/mapa" element={<HotelMap />} />
+      <Route path="/regiao" element={<HotelRegiao />} />
+      <Route path="/regiao/:id" element={<HotelRegiao />} />
       <Route path="/bichinho" element={<Pet />} />
       {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
       <Route path="*" element={<NotFound />} />

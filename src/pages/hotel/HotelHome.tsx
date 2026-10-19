@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { Bell, CalendarDays, ChevronRight, Hotel, LogIn, Megaphone, Receipt, Sparkles } from "lucide-react";
+import { Bell, CalendarDays, ChevronRight, Hotel, LogIn, Megaphone, Mountain, Receipt, Sparkles } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useGuestAuth } from "@/hooks/useGuestAuth";
 import { HotelLayout, HotelLogo, FONTE_TITULO } from "@/components/hotel/HotelLayout";
@@ -248,6 +248,21 @@ const HotelHome = () => {
               <span className="text-sm text-[#5B6B60]">
                 {guest ? "Datas da reserva e consumo detalhado" : "Entre com seu apartamento para ver"}
               </span>
+            </span>
+            <ChevronRight className="h-5 w-5 text-[#5B6B60]" />
+          </Link>
+          <Link
+            to="/regiao"
+            className="flex items-center gap-3 rounded-[20px] bg-white p-4 shadow-[0_2px_8px_rgba(20,40,30,0.06)]"
+          >
+            <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-[#E6F0F8] text-[#1D5C8C]">
+              <Mountain className="h-6 w-6" />
+            </span>
+            <span className="flex flex-1 flex-col">
+              <span className="text-lg font-extrabold" style={FONTE_TITULO}>
+                Passeios na região
+              </span>
+              <span className="text-sm text-[#5B6B60]">Cachoeiras, cidades históricas e roteiros</span>
             </span>
             <ChevronRight className="h-5 w-5 text-[#5B6B60]" />
           </Link>

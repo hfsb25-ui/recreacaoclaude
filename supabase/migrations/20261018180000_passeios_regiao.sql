@@ -1,0 +1,78 @@
+-- Passeios reais da região (pesquisados), entram desligados para conferir e colocar foto.
+INSERT INTO public.passeios (nome, cidade, categoria, resumo, descricao, distancia, duracao, funcionamento, preco, dicas, mapa, criancas, chuva, agendar, ativo, ordem)
+SELECT v.* FROM (VALUES
+  ('Jardim Uaná Etê', 'Sacra Família · Eng. Paulo de Frontin', 'natureza',
+   'Jardim ecológico com arte, música, lavandas e girassóis.',
+   E'Parque a céu aberto de cerca de 135 mil m², com dezenas de jardins, instalações interativas e música. Tem campo de lavanda o ano todo e girassóis em algumas épocas.\nNo começo do percurso fica o Bistrô e Quituteria, que serve feijoada de quinta a segunda.',
+   '≈ 10 min de carro', 'Meio dia ou dia inteiro', 'Quinta a segunda e feriados, das 10h às 17h (sextas e sábados até 19h). Fecha terça e quarta.', 'Pago · até 5 anos não paga · confira valores no site',
+   E'Leve chapéu, protetor solar e repelente: o parque é aberto e tem pouca sombra\nO sinal de celular é fraco: salve o ingresso antes\nNão é permitido entrar com comida\nGirassóis costumam florir em abril, junho e outubro',
+   'Uaná Etê Jardim Ecológico, RJ-121, 2265, Engenheiro Paulo de Frontin', true, false, false, false, 10),
+  ('Igreja de Nossa Senhora da Conceição', 'Sacra Família do Tinguá', 'historia',
+   'Considerada a igreja mais antiga da região, do começo do século XVIII.',
+   'Igreja histórica no distrito de Sacra Família do Tinguá, pertinho do hotel. Bom passeio curto para conhecer a praça e a história do lugar.',
+   '≈ 5 min de carro', '30 minutos', 'Confira o horário das missas na recepção', 'Gratuito',
+   E'Combine com a Feira do Vale no 4º sábado do mês, na praça de Sacra Família',
+   'Igreja Nossa Senhora da Conceição, Sacra Família do Tinguá, Engenheiro Paulo de Frontin', true, false, false, false, 11),
+  ('Feira do Vale', 'Eng. Paulo de Frontin', 'gastronomia',
+   'Feira mensal de artesanato, orgânicos, mel, doces, pães e cerveja artesanal.',
+   E'Feira dos produtores da região, com as Mulheres do Vale.\n2º sábado do mês: Praça Roger Malhardes, no Centro.\n4º sábado do mês: praça de Sacra Família, pertinho do hotel.',
+   '≈ 5 min (Sacra Família) ou 25 min (Centro)', '1 hora', '2º e 4º sábados do mês', 'Entrada gratuita',
+   E'Leve dinheiro ou Pix para as compras\nVá de manhã para encontrar mais variedade',
+   'Praça de Sacra Família do Tinguá, Engenheiro Paulo de Frontin', true, false, false, false, 12),
+  ('Doces do Zezinho', 'Morro Azul · Eng. Paulo de Frontin', 'gastronomia',
+   'Fábrica tradicional de doces e licores feitos no tacho de cobre e no fogão a lenha.',
+   'Doceria de família com doces caseiros e licores da roça, feitos do jeito antigo. Boa parada para levar uma lembrança da viagem.',
+   '', '30 minutos', 'Ligue antes: (24) 98117-6672', 'Compras no local',
+   E'Ligue antes para confirmar se está aberto',
+   'Travessa João Batista Goulart, 41, Morro Azul, Engenheiro Paulo de Frontin', true, true, false, false, 13),
+  ('Estação Ferroviária e Igreja da Soledade', 'Centro · Eng. Paulo de Frontin', 'historia',
+   'Estação de trem do século XIX em estilo inglês e a igreja da padroeira no alto da colina.',
+   E'A estação de tijolos aparentes guarda a história da ferrovia que cortou a serra e hoje abriga o centro cultural da cidade.\nDali se vê, no alto da colina, a Igreja de Nossa Senhora da Soledade, de 1868. Para uma vista de toda a cidade, suba ao Pico do Lírio.',
+   '≈ 25 min de carro', '1 a 2 horas', 'Centro cultural com horário próprio', 'Gratuito',
+   E'Os túneis Grande e 12 Bis, ligando Frontin a Mendes, são tombados e ficam no caminho da ferrovia',
+   'Estação Ferroviária Engenheiro Paulo de Frontin RJ', true, false, false, false, 14),
+  ('Cachoeirão', 'Eng. Paulo de Frontin', 'natureza',
+   'A cachoeira mais famosa da cidade: duas quedas de quase 30 metros na Mata Atlântica.',
+   E'Formada por nascentes dentro da mata, é a mais conhecida entre as cachoeiras de Frontin. Perto dela há outras quedas menores, como a Ronco d''Água, com poço natural.',
+   '', 'Meio período', 'De dia', 'Gratuito',
+   E'Pergunte o melhor caminho na recepção antes de ir\nNão entre na água depois de chuva forte\nUse tênis e leve água e lanche',
+   'Cachoeirão Engenheiro Paulo de Frontin RJ', false, false, false, false, 15),
+  ('Fazenda Cachoeira Grande', 'Vassouras', 'historia',
+   'Fazenda de café do século XIX com casarão, lago e museu de carros antigos.',
+   E'Visita guiada pelo casarão e pelos terreiros de café de uma das fazendas mais bonitas do Vale do Café. A Princesa Isabel jantou ali em 1884.\nA visita completa inclui um lanche da tarde com café, pão de queijo e bolos, e pode incluir o museu de carros e carruagens.',
+   '≈ 40 min de carro', '1h30 a 3 horas', 'Visitas guiadas todos os dias, com agendamento', 'Pago · crianças até 7 anos não pagam',
+   E'Precisa agendar antes\nA visita da tarde tem lanche incluído',
+   'Fazenda Cachoeira Grande Vassouras RJ', true, true, true, false, 16)
+) AS v(nome, cidade, categoria, resumo, descricao, distancia, duracao, funcionamento, preco, dicas, mapa, criancas, chuva, agendar, ativo, ordem)
+WHERE NOT EXISTS (SELECT 1 FROM public.passeios p WHERE p.nome = v.nome);
+
+-- Troca pedida pelo hotel: sai Feira do Vale, Cachoeirão e Fazenda Cachoeira Grande; entram Terra dos Dinos e Rua Torta
+DELETE FROM public.passeios WHERE nome IN ('Feira do Vale', 'Cachoeirão', 'Fazenda Cachoeira Grande');
+
+UPDATE public.passeios SET
+  descricao = E'Um dos cartões-postais de Miguel Pereira, com caminho ao redor do lago, bancos e quiosques.\nCostuma ter pedalinho para as crianças.',
+  preco = 'Gratuito · pedalinho pago à parte'
+WHERE nome = 'Lago de Javary';
+
+INSERT INTO public.passeios (nome, cidade, categoria, resumo, descricao, distancia, duracao, funcionamento, preco, dicas, mapa, criancas, chuva, agendar, ativo, ordem)
+SELECT v.* FROM (VALUES
+  ('Terra dos Dinos', 'Governador Portela · Miguel Pereira', 'aventura',
+   'Parque com cerca de 40 dinossauros em tamanho real no meio da Mata Atlântica.',
+   E'Os dinossauros ficam espalhados por trilhas na mata, separados pelos períodos triássico, jurássico e cretáceo.\nTambém tem tirolesa de 300 m, trenó de montanha, trilha suspensa, lanchonete e lojinhas. As atrações extras são pagas à parte.',
+   '≈ 35 min de carro', 'Meio dia', 'Quinta a terça, das 9h às 17h (entrada até 16h). Em janeiro abre todos os dias.', 'Pago · compre no site oficial · atrações extras à parte',
+   E'Compre o ingresso antes pelo site, principalmente nas férias\nUse tênis: o passeio é em trilhas na mata\nMoradores do estado do RJ pagam meia com comprovante\nAniversariante do dia não paga se levar 2 acompanhantes pagantes',
+   'Terra dos Dinos, RJ-125, 42281, Governador Portela, Miguel Pereira', true, false, false, false, 20),
+  ('Rua Torta e Rua Coberta', 'Centro · Miguel Pereira', 'gastronomia',
+   'A rua sinuosa inspirada em Gramado, com jardins e luzes, ao lado do polo gastronômico.',
+   E'No centro de Miguel Pereira, a Rua Torta tem paisagismo, iluminação e é ótima para fotos, de dia ou à noite.\nLogo ao lado fica a Rua Coberta, com restaurantes, cafés e docerias para almoçar ou fazer um lanche.',
+   '≈ 30 min de carro', '1 a 2 horas', 'Todos os dias', 'Gratuito',
+   E'À noite, com as luzes acesas, fica ainda mais bonita\nCombine com o Lago de Javary no mesmo passeio',
+   'Rua Torta, Centro, Miguel Pereira RJ', true, false, false, false, 21),
+  ('Lago de Javary', 'Miguel Pereira', 'natureza',
+   'Lago cercado de verde, bom para caminhar e fazer piquenique.',
+   E'Um dos cartões-postais de Miguel Pereira, com caminho ao redor do lago, bancos e quiosques.\nCostuma ter pedalinho para as crianças.',
+   '≈ 35 min de carro', '1 a 2 horas', 'Todos os dias, de dia', 'Gratuito · pedalinho pago à parte',
+   E'Leve repelente\nFim de tarde tem a luz mais bonita',
+   'Lago de Javary Miguel Pereira RJ', true, false, false, false, 22)
+) AS v(nome, cidade, categoria, resumo, descricao, distancia, duracao, funcionamento, preco, dicas, mapa, criancas, chuva, agendar, ativo, ordem)
+WHERE NOT EXISTS (SELECT 1 FROM public.passeios p WHERE p.nome = v.nome);
