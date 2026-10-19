@@ -4,6 +4,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { useTheme } from "@/hooks/useTheme";
 import { usePageTracking } from "@/hooks/usePageTracking";
+import { useSiteName } from "@/hooks/useSiteName";
 import { HotelSplash } from "@/components/hotel/HotelSplash";
 import { useState, useEffect, lazy, Suspense } from "react";
 import Home from "./pages/Home";
@@ -77,6 +78,7 @@ const queryClient = new QueryClient({
 
 const AppContent = () => {
   useTheme();
+  useSiteName();
   const [emManutencao] = useState(deveMostrarManutencao);
   const [showSplash, setShowSplash] = useState(true);
   const [isFirstLoad, setIsFirstLoad] = useState(true);

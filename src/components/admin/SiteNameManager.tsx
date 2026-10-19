@@ -56,7 +56,7 @@ export const SiteNameManager = () => {
 
     toast({
       title: "Nome do site atualizado",
-      description: "O nome aparecerá na página de programação",
+      description: "Aparece na aba do navegador e no totem",
     });
   };
 
@@ -66,7 +66,7 @@ export const SiteNameManager = () => {
         <div>
           <h3 className="text-lg font-semibold mb-2">Nome do Site</h3>
           <p className="text-sm text-muted-foreground mb-4">
-            Este nome aparecerá no topo da página de programação
+            Aparece na aba do navegador e no totem. O nome do app instalado no celular e na Play Store é fixo: peça para alterar.
           </p>
         </div>
         
