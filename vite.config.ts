@@ -41,29 +41,8 @@ export default defineConfig(({ mode }) => {
       devOptions: {
         enabled: true
       },
-      manifest: {
-        name: 'Recreação Hotel',
-        short_name: 'Recreação',
-        description: 'App de programação de recreação do hotel',
-        theme_color: '#00BCD4',
-        background_color: '#ffffff',
-        display: 'standalone',
-        start_url: '/',
-        icons: [
-          {
-            src: '/icon-192x192.png',
-            sizes: '192x192',
-            type: 'image/png',
-            purpose: 'any maskable'
-          },
-          {
-            src: '/icon-512x512.png',
-            sizes: '512x512',
-            type: 'image/png',
-            purpose: 'any maskable'
-          }
-        ]
-      },
+      // O manifesto fica em public/manifest.json (um só, usado também pelo app Android)
+      manifest: false,
       workbox: {
         globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2}'],
         // O visualizador 3D é grande: só baixa quando alguém abre "Animais em 3D"

@@ -143,6 +143,10 @@ const HotelInfo = () => {
             </div>
           </section>
         )}
+
+        <Link to="/privacidade" className="self-center py-2 text-sm font-bold text-[#5B6B60] underline">
+          Política de privacidade
+        </Link>
       </main>
     </HotelLayout>
   );
