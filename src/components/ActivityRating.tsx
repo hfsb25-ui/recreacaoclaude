@@ -8,6 +8,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 import { useGuestAuth } from "@/hooks/useGuestAuth";
 import { useGameSpins } from "@/hooks/useGameSpins";
+import { TRIPADVISOR_REVIEW_URL, consultarBrinde } from "@/lib/brinde";
 
 interface ActivityRatingProps {
   activityId: string;
@@ -16,10 +17,6 @@ interface ActivityRatingProps {
 }
 
 const POINTS_PER_RATING = 5;
-
-// Página de avaliação do hotel no TripAdvisor (convite exibido após nota 5)
-const TRIPADVISOR_REVIEW_URL =
-  "https://www.tripadvisor.com.br/UserReviewEdit-g3842968-d4586015-Hotel_Fazenda_Santa_Barbara-Engenheiro_Paulo_de_Frontin_State_of_Rio_de_Janeiro.html";
 
 export const ActivityRating = ({ activityId, activityName, onSuccess }: ActivityRatingProps) => {
   const { guest, register, refreshGuest, loginByStay } = useGuestAuth();
@@ -39,6 +36,8 @@ export const ActivityRating = ({ activityId, activityName, onSuccess }: Activity
   const [existingRating, setExistingRating] = useState<number | null>(null);
   const [isCheckingRating, setIsCheckingRating] = useState(false);
   const [showTripAdvisorInvite, setShowTripAdvisorInvite] = useState(false);
+  // Código do brinde liberado depois de 3 avaliações boas
+  const [codigoBrinde, setCodigoBrinde] = useState<string | null>(null);
 
   // Check if the logged-in guest has already rated this activity
   useEffect(() => {
@@ -212,8 +211,12 @@ export const ActivityRating = ({ activityId, activityName, onSuccess }: Activity
           description: "Obrigado pelo seu feedback!",
         });
         
-        // Nota máxima: convida para avaliar o hotel no TripAdvisor
-        if (rating === 5) {
+        // 3 avaliações boas: libera o brinde + convite do TripAdvisor
+        const brinde = currentGuestId ? await consultarBrinde(currentGuestId) : null;
+        if (brinde?.liberado && !brinde.entregue && brinde.codigo) {
+          setCodigoBrinde(brinde.codigo);
+        } else if (rating === 5) {
+          // Nota máxima: convida para avaliar o hotel no TripAdvisor
           setShowTripAdvisorInvite(true);
         }
 
@@ -237,6 +240,33 @@ export const ActivityRating = ({ activityId, activityName, onSuccess }: Activity
 
     setIsSubmitting(false);
   };
+
+  if (codigoBrinde) {
+    return (
+      <Card className="p-6 space-y-4 text-center">
+        <div className="text-5xl">🎁</div>
+        <h3 className="text-xl font-bold">Você ganhou um brinde!</h3>
+        <p className="text-muted-foreground">
+          Obrigado pelas avaliações! Conte como está sendo sua estadia no TripAdvisor e retire seu brinde na
+          recepção mostrando este código:
+        </p>
+        <div className="rounded-2xl border-2 border-dashed border-primary/40 bg-primary/5 py-3">
+          <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Código do brinde</div>
+          <div className="text-4xl font-extrabold tracking-[0.3em] text-primary">{codigoBrinde}</div>
+        </div>
+        <Button asChild size="lg" className="w-full bg-[#34E0A1] hover:bg-[#2bc78d] text-black font-semibold">
+          <a href={TRIPADVISOR_REVIEW_URL} target="_blank" rel="noopener noreferrer">
+            Avaliar no TripAdvisor
+            <ExternalLink className="ml-2 h-4 w-4" />
+          </a>
+        </Button>
+        <Button variant="ghost" className="w-full" onClick={() => setCodigoBrinde(null)}>
+          Fechar
+        </Button>
+        <p className="text-xs text-muted-foreground">O código também fica na tela inicial do app.</p>
+      </Card>
+    );
+  }
 
   if (showTripAdvisorInvite) {
     return (
