@@ -5,6 +5,7 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { useTheme } from "@/hooks/useTheme";
 import { usePageTracking } from "@/hooks/usePageTracking";
 import { useSiteName } from "@/hooks/useSiteName";
+import { PopupBoasVindas } from "@/components/hotel/PopupBoasVindas";
 import { HotelSplash } from "@/components/hotel/HotelSplash";
 import { useState, useEffect, lazy, Suspense } from "react";
 import Home from "./pages/Home";
@@ -110,6 +111,7 @@ const AppContent = () => {
     <div className="overflow-x-hidden w-full">
       <BrowserRouter>
         <AppRoutes />
+        <PopupBoasVindas />
       </BrowserRouter>
     </div>
   );
