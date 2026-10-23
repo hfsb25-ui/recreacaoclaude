@@ -201,7 +201,7 @@ const HotelHome = () => {
         {guest && <BrindeCard guestId={guest.id} />}
 
         {/* Notificações do hotel */}
-        {guest && <AtivarAvisos guestId={guest.id} />}
+        <AtivarAvisos guestId={guest?.id ?? null} />
 
         {/* Entrar */}
         {!guest && (

@@ -17,7 +17,7 @@ const lerDispensa = () => {
 };
 
 /** Cartão na tela inicial para o hóspede ligar as notificações do hotel. */
-export const AtivarAvisos = ({ guestId }: { guestId: string }) => {
+export const AtivarAvisos = ({ guestId }: { guestId?: string | null }) => {
   const { isSupported, precisaInstalar, permission, ativo, carregando, ativar } = usePushNotifications(guestId);
   const [dispensado, setDispensado] = useState(lerDispensa);
 
@@ -66,7 +66,7 @@ export const AtivarAvisos = ({ guestId }: { guestId: string }) => {
           <span className="text-sm text-[#3D4A41]">
             {precisaInstalar
               ? "No iPhone, adicione o app à Tela de Início para receber os avisos da recreação e do hotel."
-              : "Atividades começando, mudanças por causa da chuva e novidades da sua estadia."}
+              : "Atividades começando, mudanças por causa da chuva e promoções do hotel."}
           </span>
         </div>
         {precisaInstalar ? (
