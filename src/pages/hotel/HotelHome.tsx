@@ -6,6 +6,7 @@ import { useGuestAuth } from "@/hooks/useGuestAuth";
 import { HotelLayout, HotelLogo, FONTE_TITULO } from "@/components/hotel/HotelLayout";
 import { useHotelInfo } from "@/hooks/useHotelInfo";
 import { AtivarAvisos } from "@/components/hotel/AtivarAvisos";
+import { BrindeCard } from "@/components/hotel/BrindeCard";
 import { describeWeather, fetchForecast, type CurrentWeather } from "@/lib/weather";
 
 interface ProximaAtividade {
@@ -195,6 +196,9 @@ const HotelHome = () => {
             <ChevronRight className="h-5 w-5 text-[#5B6B60]" />
           </Link>
         )}
+
+        {/* Brinde liberado (3 avaliações boas) */}
+        {guest && <BrindeCard guestId={guest.id} />}
 
         {/* Notificações do hotel */}
         {guest && <AtivarAvisos guestId={guest.id} />}

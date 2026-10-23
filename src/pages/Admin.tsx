@@ -47,6 +47,7 @@ import { MigrationManager } from "@/components/admin/MigrationManager";
 import HotelInfoManager from "@/components/admin/HotelInfoManager";
 import PasseiosManager from "@/components/admin/PasseiosManager";
 import NotificacoesManager from "@/components/admin/NotificacoesManager";
+import BrindesManager from "@/components/admin/BrindesManager";
 
 const Admin = () => {
   const navigate = useNavigate();
@@ -537,6 +538,7 @@ const Admin = () => {
               {isGestor && (
                 <>
                   <TabsTrigger value="ratings" className="whitespace-nowrap text-xs sm:text-sm px-2 sm:px-3">Avaliações</TabsTrigger>
+                  <TabsTrigger value="brindes" className="whitespace-nowrap text-xs sm:text-sm px-2 sm:px-3">Brindes</TabsTrigger>
                   <TabsTrigger value="gamification" className="whitespace-nowrap text-xs sm:text-sm px-2 sm:px-3">Gamificação</TabsTrigger>
                   <TabsTrigger value="statistics" className="whitespace-nowrap text-xs sm:text-sm px-2 sm:px-3">Estatísticas</TabsTrigger>
                   <TabsTrigger value="kpis" className="whitespace-nowrap text-xs sm:text-sm px-2 sm:px-3">KPIs</TabsTrigger>
@@ -600,6 +602,9 @@ const Admin = () => {
 
               <TabsContent value="announcements" className="space-y-4">
                 <AnnouncementsManager />
+              </TabsContent>
+              <TabsContent value="brindes" className="space-y-4">
+                <BrindesManager />
               </TabsContent>
               <TabsContent value="notificacoes" className="space-y-4">
                 <NotificacoesManager />
