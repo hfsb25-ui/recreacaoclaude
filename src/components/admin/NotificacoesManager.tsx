@@ -22,9 +22,10 @@ import { toast } from "sonner";
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const db = supabase as any;
 
-type Publico = "hospedados" | "criancas" | "apto";
+type Publico = "todos" | "hospedados" | "criancas" | "apto";
 
 const PUBLICOS: { id: Publico; label: string }[] = [
+  { id: "todos", label: "Todos com o app (inclui ex-hóspedes)" },
   { id: "hospedados", label: "Todos os hospedados agora" },
   { id: "criancas", label: "Só famílias com crianças" },
   { id: "apto", label: "Um apartamento" },
@@ -63,7 +64,7 @@ const NotificacoesManager = () => {
   const [publico, setPublico] = useState<Publico>("hospedados");
   const [apto, setApto] = useState("");
   const [link, setLink] = useState("/programacao");
-  const [contagem, setContagem] = useState<{ hospedados: number; criancas: number; apto: number } | null>(null);
+  const [contagem, setContagem] = useState<{ todos?: number; hospedados: number; criancas: number; apto: number } | null>(null);
   const [historico, setHistorico] = useState<Envio[]>([]);
   const [confirmar, setConfirmar] = useState(false);
   const [enviando, setEnviando] = useState(false);
@@ -82,7 +83,7 @@ const NotificacoesManager = () => {
     return () => clearTimeout(t);
   }, [carregar, publico]);
 
-  const alcance = contagem ? contagem[publico] : 0;
+  const alcance = contagem ? contagem[publico] ?? 0 : 0;
   const podeEnviar = titulo.trim() && mensagem.trim() && (publico !== "apto" || apto.trim()) && alcance > 0;
 
   const enviar = async () => {
@@ -134,10 +135,14 @@ const NotificacoesManager = () => {
           </Button>
         </div>
 
-        <div className="grid gap-3 sm:grid-cols-2">
+        <div className="grid gap-3 sm:grid-cols-3">
+          <div className="rounded-xl bg-muted/60 p-3">
+            <div className="text-2xl font-bold">{contagem?.todos ?? "–"}</div>
+            <div className="text-xs text-muted-foreground">aparelhos com avisos ativos (todos)</div>
+          </div>
           <div className="rounded-xl bg-muted/60 p-3">
             <div className="text-2xl font-bold">{contagem?.hospedados ?? "–"}</div>
-            <div className="text-xs text-muted-foreground">aparelhos de hospedados com avisos ativos</div>
+            <div className="text-xs text-muted-foreground">de hospedados agora</div>
           </div>
           <div className="rounded-xl bg-muted/60 p-3">
             <div className="text-2xl font-bold">{contagem?.criancas ?? "–"}</div>

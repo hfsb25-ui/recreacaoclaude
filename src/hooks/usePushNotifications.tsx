@@ -27,7 +27,7 @@ const ehIosForaDoApp = () => {
   return ios && !instalado;
 };
 
-const salvarNoBanco = async (guestId: string, sub: PushSubscription) => {
+const salvarNoBanco = async (guestId: string | null, sub: PushSubscription) => {
   const j = sub.toJSON();
   const { data, error } = await db.rpc("push_inscrever", {
     p_guest_id: guestId,
@@ -50,8 +50,9 @@ const obterInscricao = async (criar: boolean) => {
   return sub;
 };
 
-// Liga o aparelho ao hóspede logado uma vez por abertura do app
+// Liga o aparelho ao hóspede logado (ou só registra o aparelho) uma vez por abertura do app
 const sincronizados = new Set<string>();
+const chave = (guestId?: string | null) => guestId || "sem-login";
 
 export const usePushNotifications = (guestId?: string | null) => {
   const isSupported = suportaPush();
@@ -62,14 +63,14 @@ export const usePushNotifications = (guestId?: string | null) => {
 
   // Se já deu permissão antes, mantém a inscrição ligada ao hóspede atual (o cadastro muda a cada estadia)
   useEffect(() => {
-    if (!isSupported || !guestId || Notification.permission !== "granted") return;
+    if (!isSupported || Notification.permission !== "granted") return;
     let cancelado = false;
     (async () => {
       try {
         const sub = await obterInscricao(true);
         if (!sub || cancelado) return;
-        if (!sincronizados.has(guestId)) {
-          if (await salvarNoBanco(guestId, sub)) sincronizados.add(guestId);
+        if (!sincronizados.has(chave(guestId))) {
+          if (await salvarNoBanco(guestId ?? null, sub)) sincronizados.add(chave(guestId));
         }
         if (!cancelado) setAtivo(true);
       } catch {
@@ -82,7 +83,7 @@ export const usePushNotifications = (guestId?: string | null) => {
   }, [isSupported, guestId]);
 
   const ativar = useCallback(async () => {
-    if (!isSupported || !guestId) return false;
+    if (!isSupported) return false;
     setCarregando(true);
     try {
       const perm = await Notification.requestPermission();
@@ -90,9 +91,9 @@ export const usePushNotifications = (guestId?: string | null) => {
       if (perm !== "granted") return false;
       const sub = await obterInscricao(true);
       if (!sub) return false;
-      const ok = await salvarNoBanco(guestId, sub);
+      const ok = await salvarNoBanco(guestId ?? null, sub);
       if (ok) {
-        sincronizados.add(guestId);
+        sincronizados.add(chave(guestId));
         setAtivo(true);
       }
       return ok;
@@ -113,7 +114,7 @@ export const usePushNotifications = (guestId?: string | null) => {
         await db.rpc("push_cancelar", { p_endpoint: sub.endpoint });
         await sub.unsubscribe();
       }
-      if (guestId) sincronizados.delete(guestId);
+      sincronizados.clear();
       setAtivo(false);
     } finally {
       setCarregando(false);

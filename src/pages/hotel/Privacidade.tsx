@@ -1,7 +1,7 @@
 import { HotelLayout, HotelPageHeader, FONTE_TITULO } from "@/components/hotel/HotelLayout";
 import { useHotelInfo, linkWhatsapp, formatarWhatsapp } from "@/hooks/useHotelInfo";
 
-const ATUALIZADA_EM = "19 de outubro de 2026";
+const ATUALIZADA_EM = "23 de outubro de 2026";
 
 const Secao = ({ titulo, children }: { titulo: string; children: React.ReactNode }) => (
   <section className="flex flex-col gap-2">
@@ -39,6 +39,11 @@ const Privacidade = () => {
             </li>
             <li>
               <b>Consumo:</b> os lançamentos do seu apartamento, que só você vê depois de entrar com o apartamento.
+            </li>
+            <li>
+              <b>Notificações:</b> se você ativar os avisos, guardamos o endereço de envio do seu aparelho para mandar
+              novidades e promoções do hotel, inclusive depois da estadia. Dá para desligar quando quiser nas configurações
+              do celular.
             </li>
             <li>
               <b>Uso do app:</b> contamos quantas visitas cada página recebe, sem identificar quem visitou.

@@ -12,7 +12,7 @@ const cors = {
 const resposta = (body: unknown, status = 200) =>
   new Response(JSON.stringify(body), { status, headers: { ...cors, "Content-Type": "application/json" } });
 
-const PUBLICOS = ["hospedados", "criancas", "apto"];
+const PUBLICOS = ["todos", "hospedados", "criancas", "apto"];
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: cors });
