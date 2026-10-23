@@ -166,10 +166,9 @@ export const QuizGame = ({ onComplete, onClose }: QuizGameProps) => {
           completed_in_ms: completionTime,
         });
 
-        await supabase
-          .from("guests")
-          .update({ total_points: (guest.total_points || 0) + totalPoints })
-          .eq("id", guest.id);
+        // Soma no banco (não usa o total guardado no celular, que pode estar desatualizado)
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        await (supabase as any).rpc("somar_pontos", { p_guest_id: guest.id, p_pontos: totalPoints });
 
         await refreshGuest();
         toast.success(`+${totalPoints} pontos adicionados!`);
