@@ -185,10 +185,12 @@ export const useGameSpins = () => {
 
       // If won points, update guest total
       if (selectedSector.type === "points" && selectedSector.points > 0) {
-        const { error: pointsError } = await supabase
-          .from("guests")
-          .update({ total_points: (guest.total_points || 0) + selectedSector.points })
-          .eq("id", guest.id);
+        // Soma no banco (não usa o total guardado no celular, que pode estar desatualizado)
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const { error: pointsError } = await (supabase as any).rpc("somar_pontos", {
+          p_guest_id: guest.id,
+          p_pontos: selectedSector.points,
+        });
 
         if (pointsError) throw pointsError;
         await refreshGuest();
