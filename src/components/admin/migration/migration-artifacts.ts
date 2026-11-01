@@ -33,6 +33,7 @@ export const MIGRATION_FUNCTIONS = [
   "delete-user",
   "list-users",
   "enviar-push",
+  "whatsapp-atendimento",
   "send-whatsapp-reminder",
 ] as const;
 
