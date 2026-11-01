@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
-import { BedDouble, RefreshCw, Search, Users, Baby, AlertTriangle } from "lucide-react";
+import { BedDouble, RefreshCw, Search, Users, Baby, AlertTriangle, MessageCircle } from "lucide-react";
+import { MensagemQuartoDialog, type QuartoAlvo } from "@/components/admin/MensagemQuartoDialog";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -8,6 +9,7 @@ import { Badge } from "@/components/ui/badge";
 
 interface Stay {
   id: string;
+  reservation_code: string;
   uh: string;
   guest_name: string;
   adults: number;
@@ -40,13 +42,14 @@ export const PmsStaysManager = () => {
   const [loading, setLoading] = useState(true);
   const [needsSetup, setNeedsSetup] = useState(false);
   const [query, setQuery] = useState("");
+  const [mensagemPara, setMensagemPara] = useState<QuartoAlvo | null>(null);
 
   const load = async () => {
     setLoading(true);
     const [{ data: list, error }, { data: log }] = await Promise.all([
       db
         .from("pms_stays")
-        .select("id, uh, guest_name, adults, children, arrival_date, departure_date, status")
+        .select("id, reservation_code, uh, guest_name, adults, children, arrival_date, departure_date, status")
         .order("uh", { ascending: true }),
       db.from("pms_sync_log").select("synced_at, rooms, guests, removed").order("synced_at", { ascending: false }).limit(1),
     ]);
@@ -165,6 +168,7 @@ export const PmsStaysManager = () => {
                 <th className="p-2 font-medium">Entrada</th>
                 <th className="p-2 font-medium">Saída</th>
                 <th className="p-2 font-medium">Status</th>
+                <th className="p-2 font-medium sr-only">Mensagem</th>
               </tr>
             </thead>
             <tbody>
@@ -181,12 +185,24 @@ export const PmsStaysManager = () => {
                       {s.status?.toLowerCase().includes("check") ? "Hospedado" : "Chega hoje"}
                     </Badge>
                   </td>
+                  <td className="p-2 text-right">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setMensagemPara({ uh: s.uh, guest_name: s.guest_name, reservation_code: s.reservation_code })}
+                      aria-label={`Mandar mensagem para o apto ${s.uh}`}
+                    >
+                      <MessageCircle className="h-4 w-4 sm:mr-1.5" />
+                      <span className="hidden sm:inline">Mensagem</span>
+                    </Button>
+                  </td>
                 </tr>
               ))}
             </tbody>
           </table>
         </div>
       )}
+      <MensagemQuartoDialog alvo={mensagemPara} onClose={() => setMensagemPara(null)} />
       <p className="text-xs text-muted-foreground">
         Os dados vêm do TOTVS PMS e são apagados automaticamente após o check-out.
       </p>

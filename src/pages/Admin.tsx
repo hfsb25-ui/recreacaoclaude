@@ -49,6 +49,7 @@ import PasseiosManager from "@/components/admin/PasseiosManager";
 import NotificacoesManager from "@/components/admin/NotificacoesManager";
 import BrindesManager from "@/components/admin/BrindesManager";
 import PopupsManager from "@/components/admin/PopupsManager";
+import AtendimentoManager from "@/components/admin/AtendimentoManager";
 
 const Admin = () => {
   const navigate = useNavigate();
@@ -547,6 +548,7 @@ const Admin = () => {
                   <TabsTrigger value="announcements" className="whitespace-nowrap text-xs sm:text-sm px-2 sm:px-3">Anúncios</TabsTrigger>
                   <TabsTrigger value="notificacoes" className="whitespace-nowrap text-xs sm:text-sm px-2 sm:px-3">Notificações</TabsTrigger>
                   <TabsTrigger value="popups" className="whitespace-nowrap text-xs sm:text-sm px-2 sm:px-3">Popups</TabsTrigger>
+                  <TabsTrigger value="atendimento" className="whitespace-nowrap text-xs sm:text-sm px-2 sm:px-3">Atendimento</TabsTrigger>
                   <TabsTrigger value="passeios" className="whitespace-nowrap text-xs sm:text-sm px-2 sm:px-3">Passeios</TabsTrigger>
                   <TabsTrigger value="menu" className="whitespace-nowrap text-xs sm:text-sm px-2 sm:px-3">Menu</TabsTrigger>
                   <TabsTrigger value="totem" className="whitespace-nowrap text-xs sm:text-sm px-2 sm:px-3">Totem</TabsTrigger>
@@ -607,6 +609,9 @@ const Admin = () => {
               </TabsContent>
               <TabsContent value="brindes" className="space-y-4">
                 <BrindesManager />
+              </TabsContent>
+              <TabsContent value="atendimento" className="space-y-4">
+                <AtendimentoManager />
               </TabsContent>
               <TabsContent value="popups" className="space-y-4">
                 <PopupsManager />

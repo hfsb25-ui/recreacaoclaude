@@ -10,3 +10,6 @@ verify_jwt = false
 
 [functions.pms-consumption-sync]
 verify_jwt = false
+
+[functions.whatsapp-atendimento]
+verify_jwt = false
