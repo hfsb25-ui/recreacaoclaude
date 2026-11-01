@@ -51,6 +51,7 @@ const AtendimentoManager = () => {
   const [numeros, setNumeros] = useState<Numero[]>([]);
   const [mensagens, setMensagens] = useState<Mensagem[]>([]);
   const [encaminhar, setEncaminhar] = useState(true);
+  const [desconhecidos, setDesconhecidos] = useState(true);
   const [configId, setConfigId] = useState<string | null>(null);
   const [status, setStatus] = useState<Status | null>(null);
   const [verificando, setVerificando] = useState(false);
@@ -68,13 +69,14 @@ const AtendimentoManager = () => {
     const [{ data: n }, { data: m }, { data: c }] = await Promise.all([
       db.from("atendimento_numeros").select("*").order("created_at"),
       db.from("whatsapp_mensagens").select("*").order("created_at", { ascending: false }).limit(40),
-      db.from("whatsapp_config").select("id, encaminhar_respostas").eq("is_active", true).limit(1).maybeSingle(),
+      db.from("whatsapp_config").select("id, encaminhar_respostas, encaminhar_desconhecidos").eq("is_active", true).limit(1).maybeSingle(),
     ]);
     setNumeros((n ?? []) as Numero[]);
     setMensagens((m ?? []) as Mensagem[]);
     if (c) {
       setConfigId(c.id);
       setEncaminhar(c.encaminhar_respostas !== false);
+      setDesconhecidos(c.encaminhar_desconhecidos !== false);
     }
   }, []);
 
@@ -122,6 +124,11 @@ const AtendimentoManager = () => {
   const mudarEncaminhar = async (v: boolean) => {
     setEncaminhar(v);
     if (configId) await db.from("whatsapp_config").update({ encaminhar_respostas: v }).eq("id", configId);
+  };
+
+  const mudarDesconhecidos = async (v: boolean) => {
+    setDesconhecidos(v);
+    if (configId) await db.from("whatsapp_config").update({ encaminhar_desconhecidos: v }).eq("id", configId);
   };
 
   const ativar = async () => {
@@ -185,6 +192,17 @@ const AtendimentoManager = () => {
               <Label htmlFor="enc" className="text-sm">Encaminhar</Label>
               <Switch id="enc" checked={encaminhar} onCheckedChange={mudarEncaminhar} />
             </div>
+          </div>
+          <div className="flex items-start justify-between gap-3 border-t pt-3">
+            <div>
+              <Label htmlFor="desc" className="text-sm font-medium">Encaminhar também contatos não identificados</Label>
+              <p className="text-xs text-muted-foreground">
+                {desconhecidos
+                  ? "Ligado: quem não é hóspede nem ex-hóspede também é encaminhado."
+                  : "Desligado: só hóspedes e ex-hóspedes são encaminhados. As outras mensagens ficam só no histórico abaixo."}
+              </p>
+            </div>
+            <Switch id="desc" checked={desconhecidos} onCheckedChange={mudarDesconhecidos} disabled={!encaminhar} />
           </div>
           {status?.conectado ? null : (
             <div className="space-y-2">

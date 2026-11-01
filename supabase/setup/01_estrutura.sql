@@ -4450,7 +4450,8 @@ CREATE EXTENSION IF NOT EXISTS pgcrypto;
 -- Chave secreta do endereço que a Evolution chama quando chega mensagem
 ALTER TABLE public.whatsapp_config
   ADD COLUMN IF NOT EXISTS webhook_token text NOT NULL DEFAULT encode(gen_random_bytes(18), 'hex'),
-  ADD COLUMN IF NOT EXISTS encaminhar_respostas boolean NOT NULL DEFAULT true;
+  ADD COLUMN IF NOT EXISTS encaminhar_respostas boolean NOT NULL DEFAULT true,
+  ADD COLUMN IF NOT EXISTS encaminhar_desconhecidos boolean NOT NULL DEFAULT true;
 
 -- Números que recebem as respostas dos hóspedes (dá para trocar quando quiser no admin)
 CREATE TABLE IF NOT EXISTS public.atendimento_numeros (

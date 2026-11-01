@@ -33,12 +33,13 @@ interface Config {
   instance_name: string;
   webhook_token: string;
   encaminhar_respostas: boolean;
+  encaminhar_desconhecidos?: boolean;
 }
 
 const carregarConfig = async (): Promise<Config | null> => {
   const { data } = await admin
     .from("whatsapp_config")
-    .select("id, instance_url, api_key, instance_name, webhook_token, encaminhar_respostas")
+    .select("*")
     .eq("is_active", true)
     .limit(1)
     .maybeSingle();
@@ -149,6 +150,11 @@ const receber = async (c: Config, corpo: any) => {
 
     if (destinos.length === 0) {
       resultados.push({ telefone, encaminhada: false, motivo: "sem números de atendimento" });
+      continue;
+    }
+    // Quem não é hóspede nem ex-hóspede: só registra, se o encaminhamento desses estiver desligado
+    if (!q && c.encaminhar_desconhecidos === false) {
+      resultados.push({ telefone, encaminhada: false, motivo: "contato não identificado" });
       continue;
     }
 
