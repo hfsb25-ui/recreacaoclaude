@@ -3,7 +3,37 @@ import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { LogOut, Download, CalendarIcon, Settings2, ChevronDown, ChevronUp } from "lucide-react";
+import {
+  Download,
+  CalendarIcon,
+  Settings2,
+  ChevronDown,
+  ChevronUp,
+  LayoutDashboard,
+  BedDouble,
+  Headset,
+  Gift,
+  Contact,
+  CalendarDays,
+  BookOpen,
+  Baby,
+  Star,
+  Trophy,
+  Bell,
+  Megaphone,
+  Newspaper,
+  MonitorSmartphone,
+  Hotel,
+  Map as MapIcon,
+  List as ListIcon,
+  BarChart3,
+  Gauge,
+  History,
+  UserCog,
+  Palette,
+  MessageCircle,
+  Database,
+} from "lucide-react";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -26,7 +56,7 @@ import { KPIDashboard } from "@/components/admin/KPIDashboard";
 import { PwaIconManager } from "@/components/admin/PwaIconManager";
 import TotemManager from "@/components/admin/TotemManager";
 import { useUserRole } from "@/hooks/useUserRole";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Card } from "@/components/ui/card";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -50,11 +80,17 @@ import NotificacoesManager from "@/components/admin/NotificacoesManager";
 import BrindesManager from "@/components/admin/BrindesManager";
 import PopupsManager from "@/components/admin/PopupsManager";
 import AtendimentoManager from "@/components/admin/AtendimentoManager";
+import { AdminShell, type PaginaAdmin } from "@/components/admin/painel/AdminShell";
+import { AdminPainel } from "@/components/admin/painel/AdminPainel";
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const dbAny = supabase as any;
 
 const Admin = () => {
   const navigate = useNavigate();
   const { role, loading: roleLoading, isGestor } = useUserRole();
-  const [currentTime, setCurrentTime] = useState(new Date());
+  const [userEmail, setUserEmail] = useState("");
+  const [badges, setBadges] = useState<{ brindes: number; mensagens: number; avaliacoes: number }>({ brindes: 0, mensagens: 0, avaliacoes: 0 });
   const [loading, setLoading] = useState(true);
   const [demorando, setDemorando] = useState(false);
   const [exportDialogOpen, setExportDialogOpen] = useState(false);
@@ -72,10 +108,24 @@ const Admin = () => {
     return `${year}-${month}-${day}`;
   };
 
+  // Contadores do menu (só gestor)
   useEffect(() => {
-    const timer = setInterval(() => setCurrentTime(new Date()), 1000);
-    return () => clearInterval(timer);
-  }, []);
+    if (!isGestor) return;
+    const carregar = async () => {
+      const hoje = new Date();
+      hoje.setHours(0, 0, 0, 0);
+      const doisDias = new Date(hoje.getTime() - 2 * 86400000);
+      const [b, m, a] = await Promise.all([
+        dbAny.from("brindes_tripadvisor").select("id", { count: "exact", head: true }).is("entregue_em", null),
+        dbAny.from("whatsapp_mensagens").select("id", { count: "exact", head: true }).eq("direcao", "entrada").gte("created_at", hoje.toISOString()),
+        dbAny.from("activity_ratings").select("id", { count: "exact", head: true }).lte("rating", 2).gte("created_at", doisDias.toISOString()),
+      ]);
+      setBadges({ brindes: b.count ?? 0, mensagens: m.count ?? 0, avaliacoes: a.count ?? 0 });
+    };
+    carregar();
+    const t = setInterval(carregar, 5 * 60 * 1000);
+    return () => clearInterval(t);
+  }, [isGestor]);
 
   useEffect(() => {
     checkAuth();
@@ -135,6 +185,7 @@ const Admin = () => {
         navigate("/auth");
         return;
       }
+      setUserEmail(session.user.email ?? "");
     } catch (e) {
       console.error("Erro ao conferir a sessão:", e);
       navigate("/auth");
@@ -406,287 +457,202 @@ const Admin = () => {
     );
   }
 
+  const irPara = (id: string) => {
+    window.location.hash = id;
+  };
+
+  const paginas: PaginaAdmin[] = [
+    {
+      id: "painel",
+      rotulo: "Painel",
+      grupo: null,
+      icone: LayoutDashboard,
+      titulo: "Painel",
+      sub: `Hoje, ${format(new Date(), "EEEE, d 'de' MMMM", { locale: ptBR })}`,
+      render: () => <AdminPainel isGestor={isGestor} irPara={irPara} />,
+    },
+    {
+      id: "hospedes",
+      rotulo: "Hospedados agora",
+      curto: "Hóspedes",
+      grupo: "Hóspedes",
+      icone: BedDouble,
+      sub: "Quem está no hotel, vindo do TOTVS",
+      render: () => (
+        <div className="space-y-4">
+          <PmsSummaryCards />
+          <PmsStaysManager />
+        </div>
+      ),
+    },
+    ...(isGestor
+      ? ([
+          { id: "atendimento", rotulo: "Atendimento", grupo: "Hóspedes", icone: Headset, badge: badges.mensagens, render: () => <AtendimentoManager /> },
+          { id: "brindes", rotulo: "Brindes", grupo: "Hóspedes", icone: Gift, badge: badges.brindes, render: () => <BrindesManager /> },
+          { id: "leads", rotulo: "Contatos (leads)", grupo: "Hóspedes", icone: Contact, render: () => <LeadsManager /> },
+        ] as PaginaAdmin[])
+      : []),
+    { id: "atividades", rotulo: "Programação", grupo: "Recreação", icone: CalendarDays, sub: "Atividades por dia e faixa etária", render: () => <ActivitiesManager /> },
+    { id: "catalogo", rotulo: "Catálogo de atividades", curto: "Catálogo", grupo: "Recreação", icone: BookOpen, render: () => <ActivityTemplatesManager /> },
+    { id: "faixas", rotulo: "Faixas etárias", grupo: "Recreação", icone: Baby, render: () => <AgeGroupsManager /> },
+    ...(isGestor
+      ? ([
+          { id: "avaliacoes", rotulo: "Avaliações", grupo: "Recreação", icone: Star, badge: badges.avaliacoes, render: () => <RatingsManager /> },
+          { id: "ranking", rotulo: "Ranking e jogos", grupo: "Recreação", icone: Trophy, render: () => <GamificationManager /> },
+          { id: "notificacoes", rotulo: "Notificações", curto: "Comunicar", grupo: "Comunicação", icone: Bell, sub: "Avisos no celular de quem baixou o app", render: () => <NotificacoesManager /> },
+          { id: "popups", rotulo: "Popups", grupo: "Comunicação", icone: Megaphone, render: () => <PopupsManager /> },
+          { id: "avisos", rotulo: "Anúncios", grupo: "Comunicação", icone: Newspaper, render: () => <AnnouncementsManager /> },
+          { id: "totem", rotulo: "Totem", grupo: "Comunicação", icone: MonitorSmartphone, render: () => <TotemManager /> },
+          { id: "hotel", rotulo: "Informações do hotel", grupo: "Hotel", icone: Hotel, render: () => <HotelInfoManager /> },
+          { id: "passeios", rotulo: "Passeios", grupo: "Hotel", icone: MapIcon, render: () => <PasseiosManager /> },
+          { id: "menu", rotulo: "Menu do app", grupo: "Hotel", icone: ListIcon, render: () => <MenuItemsManager /> },
+          { id: "estatisticas", rotulo: "Estatísticas", grupo: "Relatórios", icone: BarChart3, render: () => <StatisticsManager /> },
+          { id: "kpis", rotulo: "KPIs", grupo: "Relatórios", icone: Gauge, render: () => <KPIDashboard /> },
+          { id: "logins", rotulo: "Logins", grupo: "Relatórios", icone: History, render: () => <LoginHistoryManager /> },
+          { id: "usuarios", rotulo: "Usuários", grupo: "Sistema", icone: UserCog, render: () => <UsersManager /> },
+          {
+            id: "aparencia",
+            rotulo: "Aparência",
+            grupo: "Sistema",
+            icone: Palette,
+            sub: "Nome, logo, ícone, cores e clima",
+            render: () => (
+              <Card className="p-4">
+                <Tabs defaultValue="nome" className="w-full">
+                  <TabsList className="grid h-auto w-full grid-cols-3 gap-1 sm:grid-cols-5">
+                    <TabsTrigger value="nome" className="text-xs sm:text-sm">Nome</TabsTrigger>
+                    <TabsTrigger value="logo" className="text-xs sm:text-sm">Logo</TabsTrigger>
+                    <TabsTrigger value="pwa-icon" className="text-xs sm:text-sm">Ícone do app</TabsTrigger>
+                    <TabsTrigger value="theme" className="text-xs sm:text-sm">Cores</TabsTrigger>
+                    <TabsTrigger value="weather" className="text-xs sm:text-sm">Clima</TabsTrigger>
+                  </TabsList>
+                  <TabsContent value="nome" className="mt-4"><SiteNameManager /></TabsContent>
+                  <TabsContent value="logo" className="mt-4"><LogoManager /></TabsContent>
+                  <TabsContent value="pwa-icon" className="mt-4"><PwaIconManager /></TabsContent>
+                  <TabsContent value="theme" className="mt-4 space-y-4">
+                    <ThemeManager />
+                    <SplashScreenManager />
+                  </TabsContent>
+                  <TabsContent value="weather" className="mt-4"><WeatherLocationManager /></TabsContent>
+                </Tabs>
+              </Card>
+            ),
+          },
+          {
+            id: "whatsapp",
+            rotulo: "WhatsApp",
+            grupo: "Sistema",
+            icone: MessageCircle,
+            sub: "Conexão com a Evolution, alertas e relatório da recreação",
+            render: () => (
+              <div className="space-y-4">
+                <WhatsAppManager />
+                <RatingAlertsManager />
+                <RecreationReportManager />
+              </div>
+            ),
+          },
+          {
+            id: "dados",
+            rotulo: "Dados e backup",
+            grupo: "Sistema",
+            icone: Database,
+            render: () => (
+              <div className="space-y-4">
+                <Card className="flex flex-wrap items-center gap-3 p-4">
+                  <span className="mr-auto text-sm text-muted-foreground">Importar ou exportar o banco de dados do app.</span>
+                  <DatabaseImport />
+                  <DatabaseExport />
+                </Card>
+                <MigrationManager />
+              </div>
+            ),
+          },
+        ] as PaginaAdmin[])
+      : []),
+  ];
+
   return (
-    <div className="min-h-screen bg-[var(--gradient-bg)] p-4 sm:p-6 overflow-x-hidden w-full">
-      <div className="max-w-6xl mx-auto">
-        <div className="flex justify-between items-center mb-8">
-          <div>
-            <h1 className="text-4xl font-bold bg-[var(--gradient-tropical)] bg-clip-text text-transparent mb-2">
-              Painel Administrativo
-            </h1>
-            <div className="flex items-center gap-4">
-              <p className="text-muted-foreground">Gerencie a programação de recreação</p>
-              <div className="flex items-center gap-2 bg-card/50 px-3 py-1 rounded-full border border-primary/20 shadow-sm animate-in fade-in zoom-in duration-500">
-                <span className="text-xl font-mono font-bold text-primary tabular-nums">
-                  {format(currentTime, "HH:mm:ss")}
-                </span>
-                <span className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />
+    <>
+      <AdminShell
+        paginas={paginas}
+        atalhosCelular={isGestor ? ["painel", "hospedes", "atividades", "notificacoes"] : ["painel", "hospedes", "atividades", "catalogo"]}
+        usuario={{ email: userEmail, papel: role }}
+        onExportarPdf={() => setExportDialogOpen(true)}
+        onSair={handleSignOut}
+      />
+      <Dialog open={exportDialogOpen} onOpenChange={setExportDialogOpen}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Exportar Programação</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Data</label>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      className={cn("w-full justify-start text-left font-normal", !selectedDate && "text-muted-foreground")}
+                    >
+                      <CalendarIcon className="mr-2 h-4 w-4" />
+                      {selectedDate ? format(selectedDate, "dd/MM/yyyy", { locale: ptBR }) : <span>Selecione a data</span>}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0" align="start">
+                    <Calendar
+                      mode="single"
+                      selected={selectedDate}
+                      onSelect={(date) => date && setSelectedDate(date)}
+                      initialFocus
+                      className="pointer-events-auto"
+                    />
+                  </PopoverContent>
+                </Popover>
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Faixa Etária</label>
+                <Select value={selectedAgeGroup} onValueChange={setSelectedAgeGroup}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecione a faixa etária" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Todas as faixas etárias</SelectItem>
+                    {ageGroups.map((group) => (
+                      <SelectItem key={group.id} value={group.id}>
+                        {group.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
             </div>
-          </div>
-          <div className="flex gap-2">
-            {isGestor && <DatabaseImport />}
-            {isGestor && <DatabaseExport />}
-            <Dialog open={exportDialogOpen} onOpenChange={setExportDialogOpen}>
-              <DialogTrigger asChild>
-                <Button
-                  variant="outline"
-                  className="hover:bg-primary/10 hover:text-primary transition-[var(--transition-smooth)]"
-                >
-                  <Download className="mr-2 h-4 w-4" />
-                  Exportar PDF
-                </Button>
-              </DialogTrigger>
-              <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-                <DialogHeader>
-                  <DialogTitle>Exportar Programação</DialogTitle>
-                </DialogHeader>
-                <div className="space-y-4 py-4">
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <label className="text-sm font-medium">Data</label>
-                      <Popover>
-                        <PopoverTrigger asChild>
-                          <Button
-                            variant="outline"
-                            className={cn(
-                              "w-full justify-start text-left font-normal",
-                              !selectedDate && "text-muted-foreground"
-                            )}
-                          >
-                            <CalendarIcon className="mr-2 h-4 w-4" />
-                            {selectedDate ? format(selectedDate, "dd/MM/yyyy", { locale: ptBR }) : <span>Selecione a data</span>}
-                          </Button>
-                        </PopoverTrigger>
-                        <PopoverContent className="w-auto p-0" align="start">
-                          <Calendar
-                            mode="single"
-                            selected={selectedDate}
-                            onSelect={(date) => date && setSelectedDate(date)}
-                            initialFocus
-                            className="pointer-events-auto"
-                          />
-                        </PopoverContent>
-                      </Popover>
-                    </div>
-                    
-                    <div className="space-y-2">
-                      <label className="text-sm font-medium">Faixa Etária</label>
-                      <Select value={selectedAgeGroup} onValueChange={setSelectedAgeGroup}>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Selecione a faixa etária" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="all">Todas as faixas etárias</SelectItem>
-                          {ageGroups.map((group) => (
-                            <SelectItem key={group.id} value={group.id}>
-                              {group.name}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  </div>
 
-                  <Collapsible open={showPdfSettings} onOpenChange={setShowPdfSettings}>
-                    <CollapsibleTrigger asChild>
-                      <Button variant="ghost" className="w-full justify-between p-3 h-auto">
-                        <span className="flex items-center gap-2 text-sm">
-                          <Settings2 className="h-4 w-4" />
-                          Personalizar PDF
-                        </span>
-                        {showPdfSettings ? (
-                          <ChevronUp className="h-4 w-4" />
-                        ) : (
-                          <ChevronDown className="h-4 w-4" />
-                        )}
-                      </Button>
-                    </CollapsibleTrigger>
-                    <CollapsibleContent className="pt-2">
-                      <PdfSettingsManager 
-                        settings={pdfSettings} 
-                        onSettingsChange={handlePdfSettingsChange} 
-                      />
-                    </CollapsibleContent>
-                  </Collapsible>
-                  
-                  <Button onClick={handleExport} className="w-full">
-                    <Download className="mr-2 h-4 w-4" />
-                    Exportar
-                  </Button>
-                </div>
-              </DialogContent>
-            </Dialog>
-            <Button
-              onClick={handleSignOut}
-              variant="outline"
-              className="hover:bg-destructive/10 hover:text-destructive transition-[var(--transition-smooth)]"
-            >
-              <LogOut className="mr-2 h-4 w-4" />
-              Sair
+            <Collapsible open={showPdfSettings} onOpenChange={setShowPdfSettings}>
+              <CollapsibleTrigger asChild>
+                <Button variant="ghost" className="w-full justify-between p-3 h-auto">
+                  <span className="flex items-center gap-2 text-sm">
+                    <Settings2 className="h-4 w-4" />
+                    Personalizar PDF
+                  </span>
+                  {showPdfSettings ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+                </Button>
+              </CollapsibleTrigger>
+              <CollapsibleContent className="pt-2">
+                <PdfSettingsManager settings={pdfSettings} onSettingsChange={handlePdfSettingsChange} />
+              </CollapsibleContent>
+            </Collapsible>
+
+            <Button onClick={handleExport} className="w-full">
+              <Download className="mr-2 h-4 w-4" />
+              Exportar
             </Button>
           </div>
-        </div>
-
-        <PmsSummaryCards />
-
-        <Tabs defaultValue="age-groups" className="w-full max-w-full">
-          <div className="w-full overflow-x-auto mb-6 scrollbar-thin -mx-4 px-4 sm:mx-0 sm:px-0">
-            <TabsList className="inline-flex h-auto p-1 gap-1 w-max">
-              <TabsTrigger value="age-groups" className="whitespace-nowrap text-xs sm:text-sm px-2 sm:px-3">Faixas Etárias</TabsTrigger>
-              <TabsTrigger value="activity-templates" className="whitespace-nowrap text-xs sm:text-sm px-2 sm:px-3">Catálogo</TabsTrigger>
-              <TabsTrigger value="activities" className="whitespace-nowrap text-xs sm:text-sm px-2 sm:px-3">Atividades</TabsTrigger>
-              <TabsTrigger value="pms-guests" className="whitespace-nowrap text-xs sm:text-sm px-2 sm:px-3">Hóspedes</TabsTrigger>
-              {isGestor && (
-                <>
-                  <TabsTrigger value="ratings" className="whitespace-nowrap text-xs sm:text-sm px-2 sm:px-3">Avaliações</TabsTrigger>
-                  <TabsTrigger value="brindes" className="whitespace-nowrap text-xs sm:text-sm px-2 sm:px-3">Brindes</TabsTrigger>
-                  <TabsTrigger value="gamification" className="whitespace-nowrap text-xs sm:text-sm px-2 sm:px-3">Gamificação</TabsTrigger>
-                  <TabsTrigger value="statistics" className="whitespace-nowrap text-xs sm:text-sm px-2 sm:px-3">Estatísticas</TabsTrigger>
-                  <TabsTrigger value="kpis" className="whitespace-nowrap text-xs sm:text-sm px-2 sm:px-3">KPIs</TabsTrigger>
-                  <TabsTrigger value="hotel-info" className="whitespace-nowrap text-xs sm:text-sm px-2 sm:px-3">Informações do hotel</TabsTrigger>
-                  <TabsTrigger value="announcements" className="whitespace-nowrap text-xs sm:text-sm px-2 sm:px-3">Anúncios</TabsTrigger>
-                  <TabsTrigger value="notificacoes" className="whitespace-nowrap text-xs sm:text-sm px-2 sm:px-3">Notificações</TabsTrigger>
-                  <TabsTrigger value="popups" className="whitespace-nowrap text-xs sm:text-sm px-2 sm:px-3">Popups</TabsTrigger>
-                  <TabsTrigger value="atendimento" className="whitespace-nowrap text-xs sm:text-sm px-2 sm:px-3">Atendimento</TabsTrigger>
-                  <TabsTrigger value="passeios" className="whitespace-nowrap text-xs sm:text-sm px-2 sm:px-3">Passeios</TabsTrigger>
-                  <TabsTrigger value="menu" className="whitespace-nowrap text-xs sm:text-sm px-2 sm:px-3">Menu</TabsTrigger>
-                  <TabsTrigger value="totem" className="whitespace-nowrap text-xs sm:text-sm px-2 sm:px-3">Totem</TabsTrigger>
-                  <TabsTrigger value="site-name" className="whitespace-nowrap text-xs sm:text-sm px-2 sm:px-3">Nome</TabsTrigger>
-                  <TabsTrigger value="users" className="whitespace-nowrap text-xs sm:text-sm px-2 sm:px-3">Usuários</TabsTrigger>
-                  <TabsTrigger value="leads" className="whitespace-nowrap text-xs sm:text-sm px-2 sm:px-3">Leads</TabsTrigger>
-                  <TabsTrigger value="login-history" className="whitespace-nowrap text-xs sm:text-sm px-2 sm:px-3">Logins</TabsTrigger>
-                  <TabsTrigger value="migration" className="whitespace-nowrap text-xs sm:text-sm px-2 sm:px-3">Migração</TabsTrigger>
-                  <TabsTrigger value="settings" className="whitespace-nowrap text-xs sm:text-sm px-2 sm:px-3 flex items-center gap-1">
-                    <Settings2 className="h-3 w-3" />
-                    Configurações
-                  </TabsTrigger>
-                </>
-              )}
-            </TabsList>
-          </div>
-
-          <TabsContent value="age-groups" className="space-y-4">
-            <AgeGroupsManager />
-          </TabsContent>
-
-          <TabsContent value="activity-templates" className="space-y-4">
-            <ActivityTemplatesManager />
-          </TabsContent>
-
-          <TabsContent value="activities" className="space-y-4">
-            <ActivitiesManager />
-          </TabsContent>
-
-          <TabsContent value="pms-guests" className="space-y-4">
-            <PmsStaysManager />
-          </TabsContent>
-
-          {isGestor && (
-            <>
-              <TabsContent value="ratings" className="space-y-4">
-                <RatingsManager />
-              </TabsContent>
-
-              <TabsContent value="gamification" className="space-y-4">
-                <GamificationManager />
-              </TabsContent>
-
-              <TabsContent value="statistics" className="space-y-4">
-                <StatisticsManager />
-              </TabsContent>
-
-              <TabsContent value="kpis" className="space-y-4">
-                <KPIDashboard />
-              </TabsContent>
-
-              <TabsContent value="hotel-info" className="space-y-4">
-                <HotelInfoManager />
-              </TabsContent>
-
-              <TabsContent value="announcements" className="space-y-4">
-                <AnnouncementsManager />
-              </TabsContent>
-              <TabsContent value="brindes" className="space-y-4">
-                <BrindesManager />
-              </TabsContent>
-              <TabsContent value="atendimento" className="space-y-4">
-                <AtendimentoManager />
-              </TabsContent>
-              <TabsContent value="popups" className="space-y-4">
-                <PopupsManager />
-              </TabsContent>
-              <TabsContent value="notificacoes" className="space-y-4">
-                <NotificacoesManager />
-              </TabsContent>
-              <TabsContent value="passeios" className="space-y-4">
-                <PasseiosManager />
-              </TabsContent>
-
-              <TabsContent value="menu" className="space-y-4">
-                <MenuItemsManager />
-              </TabsContent>
-
-              <TabsContent value="totem" className="space-y-4">
-                <TotemManager />
-              </TabsContent>
-
-              <TabsContent value="site-name" className="space-y-4">
-                <SiteNameManager />
-              </TabsContent>
-
-              <TabsContent value="users" className="space-y-4">
-                <UsersManager />
-              </TabsContent>
-
-              <TabsContent value="leads" className="space-y-4">
-                <LeadsManager />
-              </TabsContent>
-
-              <TabsContent value="login-history" className="space-y-4">
-                <LoginHistoryManager />
-              </TabsContent>
-
-              <TabsContent value="migration" className="space-y-4">
-                <MigrationManager />
-              </TabsContent>
-
-              <TabsContent value="settings" className="space-y-4">
-                <Card className="p-4">
-                  <Tabs defaultValue="logo" className="w-full">
-                    <TabsList className="grid w-full grid-cols-2 sm:grid-cols-5 gap-1 h-auto">
-                      <TabsTrigger value="logo" className="text-xs sm:text-sm">Logo</TabsTrigger>
-                      <TabsTrigger value="pwa-icon" className="text-xs sm:text-sm">Ícone PWA</TabsTrigger>
-                      <TabsTrigger value="theme" className="text-xs sm:text-sm">Cores</TabsTrigger>
-                      <TabsTrigger value="weather" className="text-xs sm:text-sm">Clima</TabsTrigger>
-                      <TabsTrigger value="whatsapp" className="text-xs sm:text-sm">WhatsApp</TabsTrigger>
-                    </TabsList>
-                    <TabsContent value="logo" className="mt-4">
-                      <LogoManager />
-                    </TabsContent>
-                    <TabsContent value="pwa-icon" className="mt-4">
-                      <PwaIconManager />
-                    </TabsContent>
-                    <TabsContent value="theme" className="mt-4 space-y-4">
-                      <ThemeManager />
-                      <SplashScreenManager />
-                    </TabsContent>
-                    <TabsContent value="weather" className="mt-4">
-                      <WeatherLocationManager />
-                    </TabsContent>
-                    <TabsContent value="whatsapp" className="mt-4">
-                      <WhatsAppManager />
-                      <RatingAlertsManager />
-                      <RecreationReportManager />
-                    </TabsContent>
-                  </Tabs>
-                </Card>
-              </TabsContent>
-            </>
-          )}
-        </Tabs>
-      </div>
-    </div>
+        </DialogContent>
+      </Dialog>
+    </>
   );
 };
 
